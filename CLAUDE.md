@@ -1,0 +1,341 @@
+# CLAUDE.md — Operational Memory for Claude Code
+
+> Этот файл читается Claude Code автоматически в начале каждой сессии в проекте `ege-app`. Он содержит контекст, конвенции и правила, обязательные для соблюдения.
+
+---
+
+## Контекст пользователя (read-once, держи в голове)
+
+Пользователь — 18-летний студент в Германии, готовится к ЕГЭ-2027 (русский язык + профильная математика). Цель: высокий балл для поступления на специалиста по информационной безопасности. Дополнительно — спор с родителями, что сдаст ЕГЭ.
+
+- Python: базовый уровень — понимает код, делает мелкие правки, **не** пишет с нуля сложные системы.
+- Kotlin / Compose: с нуля. Объясняй технические решения коротко и по делу, но не пропускай совсем.
+- Время разработки: длинный горизонт (~13 месяцев до ЕГЭ). Это создаёт риск размытия мотивации — см. Safety Rules.
+
+Когда сомневаешься — **спрашивай пользователя, не угадывай**. Особенно перед: bulk-сетевыми запросами, удалением файлов, сменой архитектуры.
+
+---
+
+## Проект: что строим
+
+Личное Android-приложение для подготовки к ЕГЭ. **Два** предмета: профильная математика, русский. **Не** Google Play, **не** общедоступный продукт, **не** мульти-устройство.
+
+Архитектура — два независимых подпроекта:
+
+```
+C:\Projects\ege-app\
+├── CLAUDE.md                        ← этот файл
+├── PROJECT_OVERVIEW.md              ← для будущих чатов в claude.ai (не трогать)
+├── PHASE_N_PROMPT.md                ← инструкции текущей фазы
+│
+├── parser/                          (Python 3.13)
+│   ├── fipi-recon-archive/          ← запасной парашют (НЕ удалять)
+│   ├── scrapers/                    ← создашь в Фазе 1
+│   ├── pipeline/                    ← fetch/parse/normalize/store
+│   ├── cache/raw/                   ← idempotent кеш сырого HTML
+│   ├── assets/                      ← скачанные картинки
+│   ├── state.json                   ← чекпоинт парсера (last_seen, errors)
+│   ├── selectors.yaml               ← CSS-селекторы вынесены, чтобы быстро чинить
+│   ├── math.jsonl                   ← нормализованные задачи математики
+│   ├── russian.jsonl                ← нормализованные задачи русского
+│   ├── kim-fipi/                    ← открытые варианты КИМ ФИПИ (Stage 4)
+│   ├── build_db.py                  ← JSONL → corpus.db
+│   ├── corpus.db                    ← финальная SQLite БД
+│   └── requirements.txt
+│
+└── android/                         (создаётся в Фазе 2)
+    └── (стандартный Android Studio проект)
+```
+
+---
+
+## Tech stack — обязательный
+
+| Слой | Технология |
+|---|---|
+| Парсер | Python 3.13 + httpx + selectolax + PyYAML |
+| Запасной парсер | Playwright (только если sdamgia включит Cloudflare) |
+| Промежуточный формат | JSONL + папка `assets/` |
+| БД | SQLite (на Android — через Room) |
+| Mobile UI | Kotlin + Jetpack Compose |
+| Рендер формул | **AsyncImage / Coil** — sdamgia отдаёт формулы как готовые SVG-картинки с контент-адресуемым URL (`/formula/svg/{2hex}/{32hex}.svg`) и alt-текстом на русском. MathJax и WebView **не нужны** — это пересмотрено по итогам Stage 0 разведки (см. секцию «Tech stack — заметки после Stage 0»). |
+| HTTP в Android | Ktor Client |
+| AI | Claude API напрямую, модели: `claude-haiku-4-5-20251001` по умолчанию, `claude-sonnet-4-7` по запросу |
+
+---
+
+## Схема БД — трёхуровневая иерархия задач
+
+**Критично:** структура задач должна поддерживать радар по подвидам (Safety Rule #1).
+
+```sql
+CREATE TABLE subjects (
+    id INTEGER PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,           -- 'mathb', 'rus'
+    title TEXT NOT NULL,
+    sdamgia_subdomain TEXT NOT NULL
+);
+
+CREATE TABLE problem_types (             -- ЕГЭ-номера: №1, №2, ..., №19, плюс «Дополнительные Д1..Д14»
+    id INTEGER PRIMARY KEY,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+    number INTEGER NOT NULL,             -- 1..N для основных, 1..14 для дополнительных
+    title TEXT NOT NULL,                 -- «Планиметрия», «Чтение графиков и диаграмм», …
+    description TEXT,
+    is_supplementary INTEGER NOT NULL DEFAULT 0,  -- 0 = ЕГЭ-номер, 1 = «Задания Д1..Д14»
+    UNIQUE(subject_id, number, is_supplementary)
+);
+
+CREATE TABLE problem_subtypes (          -- темы КЭС: тригонометрия, показательные, ...
+    id INTEGER PRIMARY KEY,
+    type_id INTEGER NOT NULL REFERENCES problem_types(id),
+    kes_code TEXT,                       -- '1.5' и т.д., если sdamgia/ФИПИ дают
+    title TEXT NOT NULL,
+    UNIQUE(type_id, title)
+);
+
+CREATE TABLE problems (
+    id INTEGER PRIMARY KEY,
+    sdamgia_id TEXT NOT NULL UNIQUE,
+    prototype_id TEXT,                   -- если sdamgia группирует по прототипам
+    type_id INTEGER NOT NULL REFERENCES problem_types(id),
+    subtype_id INTEGER REFERENCES problem_subtypes(id),
+    statement_html TEXT NOT NULL,
+    answer TEXT,
+    answer_format TEXT,                  -- 'number' | 'string' | 'multipart' | NULL
+    images_json TEXT,                    -- JSON-массив относительных путей
+    scraped_at TEXT NOT NULL,
+    raw_hash TEXT NOT NULL
+);
+
+CREATE TABLE solutions (
+    problem_id INTEGER PRIMARY KEY REFERENCES problems(id),
+    solution_html TEXT NOT NULL,
+    explanation_text TEXT                -- plain-text для скармливания в Claude
+);
+
+CREATE TABLE user_progress (
+    problem_id INTEGER PRIMARY KEY REFERENCES problems(id),
+    status TEXT NOT NULL,                -- 'not_started' | 'attempted' | 'correct' | 'wrong' | 'reviewed'
+    user_answer TEXT,
+    attempts INTEGER DEFAULT 0,
+    last_attempt_at TEXT,
+    flagged INTEGER DEFAULT 0,
+    used_ai INTEGER DEFAULT 0            -- если жал «Спросить ИИ» хотя бы раз
+);
+
+CREATE TABLE ai_conversations (
+    id INTEGER PRIMARY KEY,
+    problem_id INTEGER NOT NULL REFERENCES problems(id),
+    user_question TEXT NOT NULL,
+    ai_response TEXT NOT NULL,
+    prompt_hash TEXT NOT NULL UNIQUE,    -- sha256(problem_id + normalize(question))
+    model TEXT NOT NULL,
+    tokens_in INTEGER,
+    tokens_out INTEGER,
+    cost_usd REAL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE error_atoms (               -- Фаза 5: SRS по ловушкам
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,                 -- 'Забыл ОДЗ', 'Перепутал sin/cos', ...
+    description TEXT,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+    related_subtype_ids TEXT,            -- JSON-массив
+    next_review_at TEXT,
+    review_interval_days INTEGER DEFAULT 1,
+    times_failed INTEGER DEFAULT 0
+);
+
+CREATE TABLE mock_exams (
+    id INTEGER PRIMARY KEY,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+    source TEXT NOT NULL,                -- 'generated' | 'fipi-official'
+    started_at TEXT,
+    completed_at TEXT,
+    raw_score INTEGER,                   -- первичный балл
+    scaled_score INTEGER,                -- вторичный балл
+    problem_ids_json TEXT NOT NULL,      -- список задач в варианте
+    answers_json TEXT                    -- ответы пользователя
+);
+
+CREATE TABLE daily_streak (              -- счётчик дней подряд
+    date TEXT PRIMARY KEY,               -- YYYY-MM-DD
+    problems_solved INTEGER NOT NULL,
+    streak_value INTEGER NOT NULL
+);
+
+CREATE VIRTUAL TABLE problems_fts USING fts5(
+    statement_html, content=problems, content_rowid=id
+);
+```
+
+---
+
+## Конвенции парсера (обязательные)
+
+1. **Rate limiting:** 1 запрос в 1.5-2 секунды + `random.uniform(0.5, 1.0)` джиттер. На 429/503 — экспоненциальный бэк-офф (1s, 2s, 4s, 8s, ...).
+2. **User-Agent:** реальный десктоп Chrome, не «python-httpx».
+3. **Чекпоинты:** каждые 50 успешных задач сохранять `state.json` со списком обработанных ID и временем. На рестарте — продолжать с места.
+4. **Idempotent cache:** каждый успешно скачанный HTML кешировать в `cache/raw/{sdamgia_id}.html`. Парсинг повторно — без повторного сетевого запроса.
+5. **Селекторы в `selectors.yaml`:** все CSS-селекторы вынесены. Это нужно чтобы починить парсер при изменении разметки sdamgia за минуты, а не часы.
+6. **Картинки:** скачивать в `assets/{sdamgia_id}/img_N.{ext}`, в JSONL хранить только относительные пути.
+7. **MathML:** не пытаться конвертировать в LaTeX. Хранить как есть, рендерить MathJax-ом в WebView на Android.
+8. **Smoke-тесты:** в `parser/tests/smoke_selectors.py` хранить N эталонных задач с ожидаемыми полями. Прогонять перед каждым обновлением парсера и после любого изменения `selectors.yaml`.
+
+---
+
+## Safety Rules — шесть страховок из premortem (обязательные)
+
+Эти правила не обсуждаются, они зашиты в архитектуру. Если возникает соблазн нарушить — **сначала спроси пользователя**.
+
+### Rule 1 — Радар по подвидам, не по типам
+Главный экран показывает ~50 секторов КЭС (тригонометрия, показательные функции, стереометрия и т.д.), **не** 19 (по номерам задач).
+- Минимум **15 решённых задач** в подвиде для окрашивания сектора.
+- Меньше — сектор серый, подпись «недостаточно данных».
+- Это закрывает ложную уверенность из-за смещённой выборки (пользователь обычно решает любимые подвиды).
+
+**Примечание после Stage 0 разведки (2026-05-16):**
+- Для **математики** радар работает по `problem_subtypes.id` (~150 подвидов КЭС, есть в каталоге sdamgia).
+- Для **русского** sdamgia не даёт семантической подкатегоризации внутри номера задачи (подвиды у русского — это источники: «Задания ФИПИ», «Задания демоверсий», «Задания для подготовки», «Задания тренировочных работ»). Поэтому для русского радар — по `problem_types.number` (27 секторов). Это сознательное упрощение; вернёмся к семантической подкатегоризации через Claude API только если радар русского окажется бесполезным на практике (Фаза 3+).
+
+### Rule 2 — AI-замок на первой попытке
+Кнопка «Спросить ИИ» на экране задачи **disabled**, пока пользователь не ввёл хотя бы один ответ (даже неправильный).
+- В UI: «Сначала попробуй — потом спрашивай».
+- Это закрывает риск AI как эмоциональной замены решения.
+
+### Rule 3 — Календарь пробников зашит в app
+16 пробников за год, **каждые 3 недели**. Первый — через **4 недели** после планируемого конца Фазы 5.
+- На главном экране — счётчик «дней до следующего пробника».
+- Дата хранится в БД, не в коде (пользователь может скорректировать).
+- Это закрывает «год — это вечность».
+
+### Rule 4 — Стресс-тест корпуса
+В конце Фазы 1 (Stage 4 парсера): скачать **10 открытых вариантов КИМ ФИПИ 2026** в папку `parser/kim-fipi/`. Для каждой задачи проверить покрытие в `corpus.db` через FTS-поиск или семантический подбор.
+- Покрытие <80% → парсер недотягивает, добирать.
+- Это закрывает риск неполной/устаревшей базы.
+
+### Rule 5 — Правило «50 задач в неделю»
+В каждую неделю, в которой был хоть один git-коммит, в app должно быть решено **минимум 50 задач**.
+- Реализация: в начале сессии Claude Code, если есть коммиты за последние 7 дней — проверить количество решённых задач в `user_progress` за тот же период.
+- Меньше 50 → **код заморожен**: в UI Claude Code предупреждает пользователя и предлагает закрыть редактор.
+- Это закрывает «sublime app, пустая голова».
+
+### Rule 6 — Контрольная точка через 8 недель
+Пользователь поставил себе в Google Calendar дату через 8 недель от старта Фазы 1.
+- В этот день: проверить количество решённых задач в `user_progress`.
+- Если <300 → переключение в pure-usage mode на месяц (никакого кода).
+- Это закрывает медленную деградацию мотивации.
+
+---
+
+## Working with the user
+
+- **Спрашивай, когда не уверен.** Особенно по: бюджету API, новым архитектурным решениям, удалению файлов, изменению структуры БД.
+- **Не угадывай дедлайны фаз.** Если фаза затягивается — доложи и предложи варианты (сжать / упростить / отложить).
+- **Один раз в начале фазы — стресс-тест.** В Фазе 1 это Stage 0 (разведка sdamgia). В Фазе 2 — тестовый запуск пустого Compose-проекта на эмуляторе.
+- **Коммиты:** используй `git`. Каждый завершённый stage внутри фазы — один коммит. После полной фазы — тэг `phase-N-done`.
+- **Логирование:** все сетевые запросы парсера логировать в `parser/logs/scraper.log` с timestamp. Это даёт пользователю доказательство «парсер шёл медленно, не делал ddos».
+
+---
+
+## Out of scope (не делать без явного запроса)
+
+- Google Play, signing keys, ProGuard для релиза.
+- Синхронизация между устройствами, бэкап в облако.
+- Социальные функции (чаты, лидерборды, шаринг прогресса).
+- Информатика как третий предмет (исключено осознанно).
+- Базовая математика, биология, обществознание.
+- Теория и курсы (app — про практику, теория — в учебниках/YouTube).
+
+---
+
+## Roadmap status
+
+| Фаза | Описание | Статус |
+|---|---|---|
+| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0 ✅ done (2026-05-16), Stage 1 ready |
+| 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏸ Waiting |
+| 3 | Главный экран — предиктор балла, радар, streak, журнал ошибок, прогресс-бары | ⏸ Waiting |
+| 4 | AI-кнопка, генератор варианта, импорт КИМ ФИПИ, история пробников | ⏸ Waiting |
+| 5 | SRS по ошибкам-формулировкам | ⏸ Waiting |
+
+После завершения каждой фазы — обновить эту таблицу в `CLAUDE.md`. Помечать ✅ Done.
+
+### Stages внутри Фазы 1
+
+| Stage | Описание | Статус |
+|---|---|---|
+| 0 | Разведка sdamgia (10/10 запросов, selectors.yaml) | ✅ Done 2026-05-16 |
+| 1 | Парсер математики профильной (selectors → JSONL) | ⏳ Ready |
+| 2 | Парсер русского | ⏸ Waiting |
+| 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ⏸ Waiting |
+| 4 | Стресс-тест по КИМ ФИПИ-2026 (Safety Rule #4) | ⏸ Waiting |
+
+---
+
+## Tech stack — заметки после Stage 0 разведки
+
+Изменения в архитектурных решениях по итогам разведки sdamgia 2026-05-16.
+
+### Формулы — НЕ MathML, а SVG-картинки
+**Что обнаружено:** sdamgia рендерит формулы на сервере и отдаёт как `<img class="tex">` с URL вида `https://ege.sdamgia.ru/formula/svg/{2hex}/{32hex}.svg` (контент-адресуемое хранилище, картинки дедуплицированы по хешу). Атрибут `alt` содержит **транскрипцию формулы на русском** («дробь: числитель: 4, знаменатель: 7 …»).
+
+**Последствия:**
+- На Android — отображение через AsyncImage / Coil. MathJax 4 в WebView **не нужен**. Это сильно упрощает Фазу 2 (меньше JS-инфраструктуры, нет проблем с производительностью WebView на старых телефонах).
+- Парсер скачивает SVG в `assets/{sdamgia_id}/formulas/{hash}.svg`, в JSONL хранит относительные пути.
+- В FTS5-индекс (Stage 3) попадает alt-текст формул вместе с обычным текстом условия — это бесплатный bonus к качеству поиска.
+- Для Claude API (Stage 4 покрытие КИМ ФИПИ): alt-текст пригоден напрямую, ничего конвертировать не надо.
+
+### React-SPA на корне поддоменов — НЕ наш интерфейс
+Корни `https://math-ege.sdamgia.ru/` и `https://rus-ege.sdamgia.ru/` отдают пустой React-SPA shell (8 КБ, `<div class="Root">` + бандлы `static/js/main.*.chunk.js`).
+
+**Парсим не SPA, а старый PHP-движок** на тех же поддоменах:
+- `/prob_catalog` — дерево типов/подвидов (статичный HTML, 228 КБ math / 393 КБ rus).
+- `/test?filter=all&category_id=N&page=K` — список задач подвида, **с полными условиями + решениями + ответами + КЭС-кодами**. Пагинация через `data-total`/`data-page`.
+- `/problem?id=N` — одна задача (для smoke-тестов; штатный обход через `/test`).
+
+Все три endpoint-а возвращают серверный HTML без JS-рендера. Парсятся httpx + selectolax. Cloudflare Turnstile в инфраструктуре есть, но при разведке (10 запросов) не активировался.
+
+### Стратегия обхода Stage 1 — через /test, не /problem
+В каждой странице `/test` отдаются полные задачи, не превью. Это значит:
+- ~150 подвидов × среднее 2-4 страницы на подвид ≈ **~400-600 запросов** для всей математики, а не 2-4 тыс. как было бы при пообходе через `/problem?id=N`.
+- При rate-limit 1.5-2с + jitter — это ~15-25 минут чистого обхода, не часы.
+- Резервный `/problem?id=N` используется только для задач, которые упоминаются в каталоге, но не попали ни в один `/test` (теоретическая ситуация — проверим на Stage 1).
+
+---
+
+## Запасной парашют
+
+В `parser/fipi-recon-archive/` лежат файлы разведки открытого банка ФИПИ из чатовой беседы:
+- `fipi_recon.py`, `fipi_recon2.py` — рабочие скрипты, тащат HTML с `ege.fipi.ru/bank/`.
+- `recon/`, `recon2/` — скачанные HTML-страницы для анализа структуры.
+
+**Когда использовать:**
+- Sdamgia блокирует парсер на >2 дня подряд → переключаемся на ФИПИ.
+- На sdamgia сменилась разметка и чинить дольше суток → ФИПИ как мост.
+
+**Что в ФИПИ:**
+- Структура URL: `https://ege.fipi.ru/bank/questions.php?proj={PROJ_ID}&page={N}&pagesize=100`.
+- PROJ_ID для математики профильной: `AC437B34557F88EA4115D2F374B0A07B`.
+- PROJ_ID для русского: `AF0ED3F2557F8FFC4C06F80B6803FD26`.
+- Кодировка: windows-1251 → сохранять `r.content` как байты, не `r.text`.
+- SSL: `verify=False` (у ФИПИ сломана цепочка сертификатов, для GET публичного HTML — безопасно).
+- В HTML нет правильных ответов — проверка через POST на `solve.php` или однократное прогона через Claude API.
+
+---
+
+## Budget & API limits
+
+- **Claude API hard limit:** $15/мес (выставляется в `console.anthropic.com`).
+- **Дефолтная модель в app:** `claude-haiku-4-5-20251001` (дёшево).
+- **Опциональная:** `claude-sonnet-4-7` по запросу пользователя (флаг «Подробно» в UI).
+- **Кеш ответов:** обязателен. `prompt_hash = sha256(problem_id + normalize(question))`. Тот же вопрос второй раз — из БД, токены не тратятся.
+- **Индикатор стоимости:** в шапке Settings — «Потрачено в этом месяце: $X.YZ / $15».
+
+---
+
+## Last update
+
+2026-05-16 — Stage 0 разведки sdamgia закрыт. Обновлены: схема `problem_types` (добавлен `is_supplementary` для «Дополнительных заданий Д1..Д14»), Safety Rule #1 (примечание про русский — радар по `problem_types.number`), Tech stack (формулы — SVG, не MathML), Roadmap (Stage 0 ✅, Stage 1 ready). Создан `parser/selectors.yaml`.

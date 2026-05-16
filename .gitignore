@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Parser runtime artefacts
+parser/cache/
+parser/assets/
+parser/logs/*.log
+parser/state.json
+parser/*.jsonl
+parser/corpus.db
+parser/coverage_report.md
+parser/view_corpus.html
+parser/kim-fipi/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Android (when Phase 2 starts)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.cxx/
+*.apk
+*.aab
+*.keystore
+
+# Secrets
+.env
+.env.local
+*.secret
+
+# Claude Code — локальные настройки/permissions конкретной машины не коммитим.
+# Если когда-нибудь появится shared конфигурация — она пойдёт в .claude/settings.json.
+.claude/settings.local.json

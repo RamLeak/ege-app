@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html XMLNS:m="http://www.w3.org/1998/Math/MathML">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" /><LINK href="../../styles.css" rel="STYLESHEET" type="text/css">
+<LINK href="../../xmodules/os/img/_styles.css?v=1.04" rel="STYLESHEET" type="text/css">
+<script type="text/javascript" src="../../lib/mml/mathjax-4-config.js"></script><script type="text/javascript" src="../../lib/mml/mathjax-4/mml-chtml.js"></script><script type="text/javascript" src="../../lib/t3utils.js?v=2.04"></script><script type="text/javascript">var home_directory="../../";</script><meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<META NAME="Document-state" CONTENT="Dynamic"><META HTTP-EQUIV="pragma" CONTENT="no-cache"><META HTTP-EQUIV="expires" CONTENT="0"><meta http-equiv="X-UA-Compatible" content="IE=10"/><link rel='shortcut icon' href='img/icon.png'><style>@media print {.noprint {display:none !important;}}</style><title>Открытый банк тестовых заданий</title>
+</head>
+<body class='questions-container' style='font-size:11pt'>
+		<script language="javascript">
+        var abort_answer_senging;
+		function onButtonClick(formid = '')
+		{
+			var aform=document.getElementById('checkform'+formid);
+            abort_answer_senging = false;
+            if (formid)
+                eval('setAnswer'+formid+'(aform);');
+            else
+			    setAnswer(aform);
+            if (abort_answer_senging) return;
+			;
+			//aform.submit();
+            if (aform.setBtn)
+                aform.setBtn.disabled=true;
+		}
+		function onResetClick(formid = '')
+		{
+			var aform=document.getElementById('checkform'+formid);
+			var aEl = document.createElement('input');
+			aEl.type = 'hidden';
+			aEl.name = 'reset';
+			aEl.value = 1;
+			aform.appendChild(aEl);
+			
+;
+			aform.submit();
+		}
+
+		function noAction()
+		{
+		}
+
+		</script>
+        <style type="text/css">
+			.img_scroll_container { height: 400px; overflow-y: scroll; text-align: center; width:100%;}
+			.img_scroll_container img { width: 700px }
+            .printbody .img_scroll_container { height: auto; overflow-y: hidden; }
+            .printbody .img_scroll_container img { width: 650px }
+            .active-distractor:hover{cursor:pointer; background-color: #f2f2f2;}
+            .active-distractor.checked-distractor{background-color: #e8e8e8;}
+		</style>
+		<script language="javascript">
+		var qguid='';
+		var qfiles_location='../../';
+
+		function ShowPictureQ(s,hint)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+			document.write('<IMG SRC="'+qfiles_location+s+'" ALIGN=ABSMIDDLE alt="'+hint+'" border="0"> ');
+		}
+
+		function ShowPictureQBL(s,hint,h,bl)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+			var vspace=h/2-bl;
+			if (vspace<0) vspace=-vspace;
+			document.write('<IMG SRC="'+qfiles_location+s+'" ALIGN=MIDDLE border="0" alt="'+hint+'" VSPACE='+(vspace)+' STYLE="position:relative; top:'+(h/2-bl)+'px;">');
+		}
+
+
+		
+		function ShowPictureQ2WH(s,s2,hint,w,h)
+		{
+            if (s.indexOf('.flv')>0 ||s.indexOf('.mp4')>0 ||s.indexOf('.swf')>0)
+                s='../../show_media.php?m='+encodeURIComponent(s)+'&w='+w+'&h='+h;
+
+			w=w+40;
+			h=h+30;
+
+						document.write('<a href="javascript:var wnd=window.open(\''+qfiles_location+s+'\',\'\',\',status=1,resizable=1,menubar=0,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+qfiles_location+s2+'" ALIGN=ABSMIDDLE style="cursor:pointer" alt="'+hint+'"></a> ');
+			//alert('вставил картинку!');
+		}
+
+		function ShowPictureQ3WH(s,s2,s3,hint,w,h)
+		{
+			ShowPictureQ2WH(s,s2,hint,w,h);
+		}
+
+		function ShowPictureQ2(s,s2,hint)
+		{
+			ShowPictureQ2WH(s,s2,hint,600,400);
+		};
+
+		function invertImage(img, s, s2)
+		{
+			if (img.src.indexOf(s)>0) img.src=qfiles_location+s2; else img.src=qfiles_location+s;
+		}
+
+		function ShowPictureQ3(s,s2,hint)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+            var onclick=(s.indexOf('.jpg')>0||s.indexOf('.png')>0||s.indexOf('.gif')>0 ?'onclick="invertImage(this, \''+s+'\', \''+s2+'\')"':'');
+			document.write('<IMG SRC="'+qfiles_location+s2+'" '+onclick+' ALIGN=ABSMIDDLE style="cursor:pointer" alt="'+hint+'" border="0"> ');
+		};
+
+		function showXGraphic(xml)
+		{
+			document.write("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=1><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		}
+		/*
+function ShowPictureQGX2(img,xml)
+{
+w=500;
+h=400;
+document.write('<IMG BORDER=0 SRC="'+qfiles_location+img+'" ALIGN=ABSMIDDLE>');
+}
+*/
+		function ShowPictureQGX2(img,xml)
+		{
+			w=500;
+			h=400;
+			document.write('<a href="javascript:var wnd=window.open(\'../../showxgprahic.php?qguid='+qguid+'&xml='+xml+'\',\'\',\',status=1,resizable=1,menubar=0,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+qfiles_location+img+'" ALIGN=ABSMIDDLE style="cursor:pointer"></a> ');
+		}
+
+		</script>
+		<script language='JavaScript'>
+var files_location='';
+var files_abs_location='';
+var space_after_img=true;
+function ShowPicture(s)
+{document.write('<IMG SRC="'+files_location+s+'" ALIGN=absmiddle border=0>'+(space_after_img?' ':''));}
+function ShowPicture2(s,s2,w,h)
+{if (w>800) w=800;
+ if (h>600) h=600;
+ align='ABSMIDDLE'; 
+document.write('<a href="javascript:var wnd=window.open(\''+files_location+s+'\',\'_blank\',\'resizable=1,menubar=0,scrollbars=1,width='+(w+40)+',height='+(h+20)+',left='+((screen.width-w-40)/2)+',top='+((screen.height-h-20)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+files_location+s2+'" ALIGN='+align+'></a>'+(space_after_img?' ':''));}
+function ShowPicture2S(objsrc,imgsrc,datasrc,w,h)
+{ShowPicture2(objsrc,imgsrc,w,h);}
+function ShowPictureBL(s,bl)
+{document.write('<IMG SRC="'+files_location+s+'" ALIGN=MIDDLE VSPACE='+bl+' STYLE="position:relative; top:-'+(bl)+'px;" border=0>');}
+function ShowPictureBL2(s,bl,h)
+{ var vspace=h/2-bl;
+  		if (vspace<0) vspace=-vspace;
+document.write('<IMG SRC="'+files_location+s+'" ALIGN=MIDDLE VSPACE='+((vspace))+' STYLE="position:relative; top:'+(h/2-bl-1)+'px;" border=0>');}
+function ShowPictureGX(img,xml)
+		{
+		w=500;
+		h=400;
+		document.write('<a href="javascript:var wnd=window.open(\'../../showxgprahic.php?xml='+files_abs_location+xml+'\',\'\',\',status=1,resizable=1,menubar=1,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+files_location+img+'" ALIGN=ABSMIDDLE style="cursor:pointer"></a> ');
+		}function TraceLink(indx,n)
+{ if (n.charAt(0)=='{')
+  		{
+			var guid=n.substring(1,9)+n.substring(10,14)+n.substring(15,19)+n.substring(20,24)+n.substring(25,37);
+			showdocbyguid(guid);
+  		}
+  		else
+  		{var wnd=window.open('../../tracelink.php?project_guid=B9ACA5BBB2E19E434CD6BEC25284C67F&cdf='+n,'link_wnd','toolbar=1,resizable=1,menubar=0, location=0,scrollbars=1,width=416,height=350,left=0,top=0');
+wnd.focus();
+ }
+}
+function showdocbyguid(guid)
+{var wnd=window.open('../../tracelink.php?project_guid=B9ACA5BBB2E19E434CD6BEC25284C67F&doc_guid='+guid.toUpperCase(),'link_wnd','toolbar=1,resizable=1,menubar=0, location=0,scrollbars=1,width=416,height=350,left=0,top=0');
+wnd.focus();
+}
+function delFile(fguid)
+{
+if (confirm('Удалить файл?'))
+  location.href='delete.php?proj=B9ACA5BBB2E19E434CD6BEC25284C67F&md=qprint&fguid='+fguid}
+function ShowFlash(url)
+{
+			w='100%'; h='100%';
+			url='../../'+files_location+url;
+			document.write('<object tabindex=0 ID=ilFlash classid=CLSID:D27CDB6E-AE6D-11cf-96B8-444553540000 width='+w+' height='+h+' codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,0,0">'+
+		'<param name=movie value="'+url+'"><PARAM play=true><PARAM SWLIVECONNECT=true><PARAM MENU=true><PARAM LOOP=false>'+
+		'<PARAM NAME=scale VALUE=noScale><embed src="'+url+'" quality=high bgcolor=#FFFFFF  width='+w+' height='+h+' scale=noScale type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockWaveFlash"></embed></object>');}
+	function showXGraphic(xml)
+		{
+		//alert("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=0><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		document.write("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=0><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		}
+	</script><script type='text/javascript'>
+	var solvedQst = localStorage.getItem("OS:B9ACA5BBB2E19E434CD6BEC25284C67F:SOLVED");
+	solvedQst = solvedQst ? new Set(solvedQst.split(",")): new Set();
+	var favQst = localStorage.getItem("OS:B9ACA5BBB2E19E434CD6BEC25284C67F:FAV");
+	favQst = favQst ? new Set(favQst.split(",")): new Set();
+
+
+
+var request = createAJAXRequest();
+
+function toggleQFavour(qblock) {    var fvbtn = document.getElementById(qblock).getElementsByClassName('favorite-button');
+    toggleFavour(fvbtn[0]);
+}
+
+function toggleFavour(btn) {	btn.classList.toggle('is-favorite');
+    btn.title = btn.classList.contains('is-favorite')?'В Избранном':'Добавить в Избранное';}
+
+function setToStr(set) {	if (browser.isIE) {		let str = '';
+		set.forEach(function(elem){
+		    str += elem + (str?",":"")
+ 	 	});
+ 	 	return str;	} else {		return Array.from(set).join(",")	}}
+
+
+function changeFavour(btn, qst) {	if (btn.classList.contains('is-favorite'))
+	    favQst.delete(qst);
+    else
+        favQst.add(qst);
+    localStorage.setItem("OS:B9ACA5BBB2E19E434CD6BEC25284C67F:FAV", setToStr(favQst));
+	toggleFavour(btn);}
+
+function changeStatus(qst, panel){
+    let answer = solvedQst.has(qst)? '0': '1';
+	if (answer == '0')		solvedQst.delete(qst);
+    else
+        solvedQst.add(qst);
+    localStorage.setItem("OS:B9ACA5BBB2E19E434CD6BEC25284C67F:SOLVED", setToStr(solvedQst));
+    setQSolved(panel, answer)
+}
+
+
+
+function checkButtonClick(form, setanswer, panel) {
+	form = document.getElementById(form);
+	setanswer(form);
+    if (!request.inProcess) {
+        request.open('POST', 'solve.php', true);
+        request.onreadystatechange = checkSolutionDone;
+        request.inProcess = true;
+        request.panel = panel;
+
+        var formData = new FormData(form);
+        formData.append("ajax", "1");
+        formData.append("proj", "B9ACA5BBB2E19E434CD6BEC25284C67F")
+
+		if (browser.isIE)
+			request.qst = form.guid.value;
+		else
+	        request.qst = formData.get("guid");
+
+        request.send(formData);
+
+        panel.getElementsByClassName('task-status')[0].innerHTML = "<img class='loader' src='img/loading_spinner.gif'>";    }
+}
+
+function checkSolutionDone() {    if (request.readyState==4)  {
+        request.inProcess = false;
+        answer = "0";
+        if (request.status==200) {
+            answer = request.responseText;
+        }
+        if (answer!='1' && answer!='2' && answer!='3') {
+        	answer = "0";
+        }
+        qst = request.qst;
+
+        if (answer == '0' || answer == '2')
+    		solvedQst.delete(qst);
+        else
+            solvedQst.add(qst);
+        localStorage.setItem("OS:B9ACA5BBB2E19E434CD6BEC25284C67F:SOLVED", setToStr(solvedQst));
+        setQSolved(request.panel, answer);
+    }
+}
+
+function setQSolved(block, answer) {	if (typeof(block) === 'string')
+	    block = document.getElementById(block);
+	var statusNode = block.getElementsByClassName('task-status')[0];
+    statusNode.className= "task-status task-status-" + answer ;
+    if (answer=='1')
+        statusNode.innerHTML = "РЕШЕНО";
+    else if (answer=='2')
+        statusNode.innerHTML = "НЕВЕРНО";
+    else if (answer=='3')
+        statusNode.innerHTML = "ВЕРНО";
+    else
+        statusNode.innerHTML = "НЕ РЕШЕНО";}
+
+</script>
+
+ <div class="qblock" id='q48F84F'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform48F84F' id='checkform48F84F' method="get"		>
+		<input type="Hidden" name="guid" value="0011FF4F34E082534C60E5C3716A2AB5">
+		<script language='JavaScript'> 
+ function setAnswer48F84F(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal>В терминологии сетей TCP/IP маской сети называют двоичное число, которое показывает, какая часть IP-адреса узла сети относится к адресу сети, а какая – к адресу узла в этой сети. Адрес сети получается в результате применения поразрядной конъюнкции к заданному адресу узла и его маске.</p> <p class=MsoNormal>Широковещательным адресом называется специализированный адрес, в котором на месте нулей в маске стоят единицы. Адрес сети и широковещательный адрес не могут быть использованы для адресации сетевых устройств.</p> <p class=MsoNormal>Сеть задана IP-адресом одного из входящих в неё узлов 98.81.154.195 и сетевой маской 255.252.0.0.</p> <p class=MsoNormal>Найдите наибольший в данной сети IP-адрес, который может быть назначен компьютеру. В ответе укажите найденный IP-адрес без разделителей.</p> <p class=MsoNormal><i>Например</i>, если бы найденный адрес был равен 111.22.3.44, то в ответе следовало бы записать 11122344.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='0011FF4F34E082534C60E5C3716A2AB5'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i48F84F'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>1.2 Принципы построения и аппаратные компоненты компьютерных сетей. Сетевые протоколы. Сеть Интернет. Адресация в сети Интернет. Протоколы стека TCP/IP. Система доменных имён. Разделение IP-сети на подсети с помощью масок подсетей</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">48F84F</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'0011FF4F34E082534C60E5C3716A2AB5')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform48F84F', setAnswer48F84F, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("0011FF4F34E082534C60E5C3716A2AB5"))
+	            toggleQFavour('i48F84F');
+	        if (solvedQst.has("0011FF4F34E082534C60E5C3716A2AB5"))
+	            setQSolved('i48F84F', '1');
+	    </script>
+	     <div class="qblock" id='q4D2E4A'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform4D2E4A' id='checkform4D2E4A' method="get"		>
+		<input type="Hidden" name="guid" value="00967C134010B39345278DAF2A02D1DB">
+		<script language='JavaScript'> 
+ function setAnswer4D2E4A(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'> <P class=MsoNormal>На рисунке справа схема дорог Н-ского района изображена в виде графа, в таблице содержатся сведения о протяжённости каждой из этих дорог (в километрах). </P>
+<TABLE class=MsoTableGrid border=0 cellSpacing=0 cellPadding=0 svWidth>
+<TBODY>
+<TR>
+<TD vAlign=top width=311>
+<TABLE border=1 cellSpacing=0 cellPadding=0 width=272>
+<TBODY>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center><B></B>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П1</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П2</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П3</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П4</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П5</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П6</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П7</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П1</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>15</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>15</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>9</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>7</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П2</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>15</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П3</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>15</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>12</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>20</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П4</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>9</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>12</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>14</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>10</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П5</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>7</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П6</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>14</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD></TR>
+<TR>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>П7</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>20</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>10</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD>
+<TD vAlign=bottom width=34 noWrap>
+<P class=MsoNormal align=center>&nbsp;</P></TD></TR></TBODY></TABLE>
+<P class=MsoNormal></P></TD>
+<TD vAlign=top width=311>
+<P class=MsoNormal><script language='javascript'> ShowPictureQ('docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/D1360EF24182A21341D8B4AB192CE0BB(copy1)/xs3qstsrcD1360EF24182A21341D8B4AB192CE0BB_1_1486125108.png','');</script></P></TD></TR></TBODY></TABLE>
+<P class=MsoNormal>Так как таблицу и схему рисовали независимо друг от друга, то нумерация населённых пунктов в таблице никак не связана с буквенными обозначениями на графе. Определите, какова протяжённость дороги из пункта К в пункт Г. В ответе запишите целое число <?import namespace = m urn = "http://www.w3.org/1998/Math/MathML" implementation = "#MathPlayer" declareNamespace /><m:math style="DISPLAY: inline-block; CURSOR: pointer"><m:mstyle displaystyle="true"><m:semantics><m:mo>–</m:mo> </m:semantics></m:mstyle></m:math>&nbsp;так, как оно указано <BR>в таблице.</P></TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='00967C134010B39345278DAF2A02D1DB'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i4D2E4A'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.10 Модели и моделирование. Цели моделирования. Адекватность модели моделируемому объекту или процессу. Формализация прикладных задач. Представление результатов моделирования в виде, удобном для восприятия человеком. Графическое представление данных (схемы, таблицы, графики).</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">4D2E4A</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'00967C134010B39345278DAF2A02D1DB')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform4D2E4A', setAnswer4D2E4A, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("00967C134010B39345278DAF2A02D1DB"))
+	            toggleQFavour('i4D2E4A');
+	        if (solvedQst.has("00967C134010B39345278DAF2A02D1DB"))
+	            setQSolved('i4D2E4A', '1');
+	    </script>
+	     <div class="qblock" id='q439C49'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform439C49' id='checkform439C49' method="get"		>
+		<input type="Hidden" name="guid" value="00BBEAF1E265B7714728FA1AD87DDB69">
+		<script language='JavaScript'> 
+ function setAnswer439C49(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Для хранения произвольного растрового изображения размером <br /> 1024&times;1024 пикселей отведён 1 Мбайт памяти без учёта размера заголовка файла. Для кодирования цвета каждого пикселя используется одинаковое количество бит, коды пикселей записываются в файл один за другим без промежутков. Какое максимальное количество цветов можно использовать <br /> в изображении?<span></span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='00BBEAF1E265B7714728FA1AD87DDB69'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i439C49'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.6 Кодирование изображений. Оценка информационного объёма графических данных при заданных разрешении и глубине кодирования цвета. Цветовые модели. Кодирование звука. Оценка информационного объёма звуковых данных при заданных частоте дискретизации и разрядности кодирования</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">439C49</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'00BBEAF1E265B7714728FA1AD87DDB69')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform439C49', setAnswer439C49, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("00BBEAF1E265B7714728FA1AD87DDB69"))
+	            toggleQFavour('i439C49');
+	        if (solvedQst.has("00BBEAF1E265B7714728FA1AD87DDB69"))
+	            setQSolved('i439C49', '1');
+	    </script>
+	     <div class="qblock" id='q4F4A4E'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform4F4A4E' id='checkform4F4A4E' method="get"		>
+		<input type="Hidden" name="guid" value="00C0194A5250863845D2F744330B0B86">
+		<script language='JavaScript'> 
+ function setAnswer4F4A4E(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><a name="_GoBack"></a>На рисунке справа схема дорог <i><span lang=EN-US>N</span></i>-ского района изображена в виде графа, в таблице содержатся сведения о длинах этих дорог (в километрах). </p> <p class=MsoNormal><span>&nbsp;</span></p>  <table class=MsoNormalTable border=0 cellspacing=0 cellpadding=0> <tr> <td width=319 valign=top> <table class=MsoNormalTable border=1 cellspacing=0 cellpadding=0> <tr> <td width=71 colspan=2 rowspan=2> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=231 colspan=7> <p class=MsoNormal align=center>Номер пункта</p> </td> </tr> <tr> <td width=33> <p class=MsoNormal align=center>1</p> </td> <td width=33> <p class=MsoNormal align=center>2</p> </td> <td width=33> <p class=MsoNormal align=center>3</p> </td> <td width=33> <p class=MsoNormal align=center>4</p> </td> <td width=33> <p class=MsoNormal align=center>5</p> </td> <td width=33> <p class=MsoNormal align=center>6</p> </td> <td width=33> <p class=MsoNormal align=center>7</p> </td> </tr> <tr> <td width=39 rowspan=7> <p class=MsoNormal align=center>Номер пункта</p> </td> <td width=32> <p class=MsoNormal align=center>1</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>45</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>10</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>2</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>45</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>40</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>55</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>3</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>15</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>60</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>4</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>1<span lang=EN-US>0</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>40</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>20</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>35</span></p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>5</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>15</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>55</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>6</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>55</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>60</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>20</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>55</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>45</span></p> </td> </tr> <tr> <td width=32> <p class=MsoNormal align=center>7</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>35</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> <td width=33 valign=top> <p class=MsoNormal align=center><span lang=EN-US>45</span></p> </td> <td width=33 valign=top> <p class=MsoNormal align=center>&nbsp;</p> </td> </tr> </table> <p class=MsoNormal align=center></p> </td> <td width=319> <p class=MsoNormal align=center><script language='javascript'> ShowPictureQ('docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/0863AA0C2117990F4D87CFECA2238CF3(copy1)/xs3qstsrc0863AA0C2117990F4D87CFECA2238CF3_1_1676476272.jpg');</script></p> </td> </tr> </table>  <p class=MsoNormal><span>&nbsp;</span></p> <p class=MsoNormal>Так как таблицу и схему рисовали независимо друг от друга, нумерация населённых пунктов в таблице никак<br> не связана с буквенными обозначениями на графе. Определите, какова длина дороги из пункта Г в пункт Е.<br> В ответе запишите целое число – так, как оно указано в таблице.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='00C0194A5250863845D2F744330B0B86'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i4F4A4E'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.10 Модели и моделирование. Цели моделирования. Адекватность модели моделируемому объекту или процессу. Формализация прикладных задач. Представление результатов моделирования в виде, удобном для восприятия человеком. Графическое представление данных (схемы, таблицы, графики).</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">4F4A4E</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'00C0194A5250863845D2F744330B0B86')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform4F4A4E', setAnswer4F4A4E, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("00C0194A5250863845D2F744330B0B86"))
+	            toggleQFavour('i4F4A4E');
+	        if (solvedQst.has("00C0194A5250863845D2F744330B0B86"))
+	            setQSolved('i4F4A4E', '1');
+	    </script>
+	     <div class="qblock" id='qFBDD40'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformFBDD40' id='checkformFBDD40' method="get"		>
+		<input type="Hidden" name="guid" value="0127475c109046ac98f722007fe65644">
+		<script language='JavaScript'> 
+ function setAnswerFBDD40(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormalCxSpFirst><a name="_GoBack"></a>Все шестибуквенные слова, составленные из букв Т, Е, О, Р, И, Я, записаны в алфавитном порядке и пронумерованы.</p> <p class=MsoNormalCxSpMiddle>Вот начало списка:</p> <p class=MsoNormalCxSpMiddle>1.  ЕЕЕЕЕЕ</p> <p class=MsoNormalCxSpMiddle>2.  ЕЕЕЕЕИ</p> <p class=MsoNormalCxSpMiddle>3.  ЕЕЕЕЕО</p> <p class=MsoNormalCxSpMiddle>4.  ЕЕЕЕЕР</p> <p class=MsoNormalCxSpMiddle>5.  ЕЕЕЕЕТ</p> <p class=MsoNormalCxSpMiddle>6.  ЕЕЕЕЕЯ</p> <p class=MsoNormalCxSpMiddle>……</p> <p class=MsoNormal>Определите, под каким номером в этом списке стоит первое слово с чётным номером, которое не начинается с букв Е, И или О и при этом содержит в своей записи ровно одну букву Я.</p> <p class=MsoNormal><i>Примечание</i>. Слово – последовательность идущих подряд букв, не обязательно осмысленная.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='0127475c109046ac98f722007fe65644'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFBDD40'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.2 Теоретические подходы к оценке количества информации. Единицы измерения количества информации. Алфавитный подход к оценке количества информации. Закон аддитивности информации. Формула Хартли. Информация и вероятность. Формула Шеннона</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">FBDD40</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'0127475c109046ac98f722007fe65644')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFBDD40', setAnswerFBDD40, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("0127475c109046ac98f722007fe65644"))
+	            toggleQFavour('iFBDD40');
+	        if (solvedQst.has("0127475c109046ac98f722007fe65644"))
+	            setQSolved('iFBDD40', '1');
+	    </script>
+	     <div class="qblock" id='qF7E942'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformF7E942' id='checkformF7E942' method="get"		>
+		<input type="Hidden" name="guid" value="016C3B0CF76280414C9C56529D142F22">
+		<script language='JavaScript'> 
+ function setAnswerF7E942(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'><table><tr><td>  <p class="MsoNormal">Откройте файл электронной таблицы, содержащей вещественные числа <m:math> <m:semantics> <m:mo>&#x2013;</m:mo> </m:semantics> </m:math>&nbsp;результаты ежечасного измерения температуры воздуха в течение трёх месяцев. Найдите, на какое максимальное количество градусов понизилась температура воздуха с 11:00 до 12:00 в мае, используя данные, представленные в таблице. </p> <p class="MsoNormal">В ответе запишите только целую часть числа.<span></span></p>  </td></tr><tr><td align='center'><script language="javascript">ShowPictureQ2WH('docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/016C3B0CF76280414C9C56529D142F22/img1_1739539937.zip','docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/016C3B0CF76280414C9C56529D142F22/simg1_1739539937.gif','',600,400)</script></td></tr></table></TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='016C3B0CF76280414C9C56529D142F22'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iF7E942'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>4.2 Анализ данных с помощью электронных таблиц. Вычисление суммы, среднего арифметического, наибольшего (наименьшего) значения диапазона. Вычисление коэффициента корреляции двух рядов данных. Построение столбчатых, линейчатых и круговых диаграмм. Построение графиков функций. Подбор линии тренда, решение задач прогнозирования. Решение задач оптимизации с помощью электронных таблиц</div><div>4.4 Вероятностные модели. Методы Монте-Карло. Имитационное моделирование. Системы массового обслуживания</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">F7E942</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'016C3B0CF76280414C9C56529D142F22')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformF7E942', setAnswerF7E942, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("016C3B0CF76280414C9C56529D142F22"))
+	            toggleQFavour('iF7E942');
+	        if (solvedQst.has("016C3B0CF76280414C9C56529D142F22"))
+	            setQSolved('iF7E942', '1');
+	    </script>
+	     <div class="qblock" id='qFBEF42'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformFBEF42' id='checkformFBEF42' method="get"		>
+		<input type="Hidden" name="guid" value="016C41F42986A27443C608B66EA65BAD">
+		<script language='JavaScript'> 
+ function setAnswerFBEF42(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoHeader>Прибор автоматической фиксации нарушений правил дорожного движения делает цветные фотографии размером 1280&times;1024 пикселей, используя палитру из 16&nbsp;384 цветов. Снимки сохраняются в памяти камеры, группируются в пакеты по несколько штук, а затем передаются в центр обработки информации со скоростью передачи данных 94<span lang=EN-US>&nbsp;</span>371<span lang=EN-US>&nbsp;</span>840 бит/с. Каково максимально возможное число снимков в одном пакете, если на передачу одного пакета отводится не более 128 секунд? </p> <p class=MsoHeader>В ответе запишите целое число.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='016C41F42986A27443C608B66EA65BAD'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFBEF42'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.6 Кодирование изображений. Оценка информационного объёма графических данных при заданных разрешении и глубине кодирования цвета. Цветовые модели. Кодирование звука. Оценка информационного объёма звуковых данных при заданных частоте дискретизации и разрядности кодирования</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">FBEF42</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'016C41F42986A27443C608B66EA65BAD')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFBEF42', setAnswerFBEF42, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("016C41F42986A27443C608B66EA65BAD"))
+	            toggleQFavour('iFBEF42');
+	        if (solvedQst.has("016C41F42986A27443C608B66EA65BAD"))
+	            setQSolved('iFBEF42', '1');
+	    </script>
+	     <div class="qblock" id='qFe814D'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformFe814D' id='checkformFe814D' method="get"		>
+		<input type="Hidden" name="guid" value="017fc52b319c485e9550c1c5b53fae4c">
+		<script language='JavaScript'> 
+ function setAnswerFe814D(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'><table><tr><td>   <table class=MsoNormalTable border=1 cellspacing=0 cellpadding=0> <tr> <td width=638 valign=top> <p class=MsoNormal align=center>&nbsp;<span><span><script language='javascript'> ShowPictureQ('docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/328E59EEC2DF97BF47E40A2CABFE08F4(copy1)/xs3qstsrc017fc52b319c485e9550c1c5b53fae4c_7_1760093129.png');</script></span></span><b><i>Задание выполняется с использованием прилагаемых файлов.</i></b></p> </td> </tr> </table>  <p class=MsoNormal>&nbsp;</p> <p class=MsoNormal>В файле содержится информация о совокупности <i>N</i> вычислительных процессов, которые могут выполняться параллельно или последовательно. Приостановка выполнения процесса не допускается. Будем говорить, что процесс <i>B</i> зависит от процесса <i>A</i>, если для выполнения процесса <i>B</i> необходимы результаты выполнения процесса <i>A</i>. В этом случае процессы <i>A</i> и <i>B</i> могут выполняться только последовательно.</p> <p class=MsoNormal>Информация о процессах представлена в файле в виде таблицы. В первом столбце таблицы указан идентификатор процесса (ID), во втором столбце таблицы – время его выполнения в миллисекундах, в третьем столбце перечислены <br> с разделителем «;» ID процессов, от которых зависит данный процесс. Если процесс независимый, то в таблице указано значение 0.</p> <p class=MsoNormal>&nbsp;</p> <p class=MsoNormal><i>Типовой пример организации данных в файле</i></p> <p class=MsoNormal><i>&nbsp;</i></p>  <table class=MsoNormalTable border=1 cellspacing=0 cellpadding=0> <tr> <td width=141> <p class=MsoNormal align=center><span lang=EN-US>ID</span> процесса <i><span lang=EN-US>B</span></i></p> </td> <td width=194> <p class=MsoNormal align=center>Время выполнения</p> <p class=MsoNormal align=center>процесса <i><span lang=EN-US>B</span></i> (мс)</p> </td> <td width=168> <p class=MsoNormal align=center><span lang=EN-US>ID</span> процесса(-ов) <i><span lang=EN-US>A</span></i></p> </td> </tr> <tr> <td width=141 valign=top> <p class=MsoNormal align=center>1</p> </td> <td width=194 valign=top> <p class=MsoNormal align=center>3</p> </td> <td width=168 valign=top> <p class=MsoNormal align=center>0</p> </td> </tr> <tr> <td width=141 valign=top> <p class=MsoNormal align=center>2</p> </td> <td width=194 valign=top> <p class=MsoNormal align=center>4</p> </td> <td width=168 valign=top> <p class=MsoNormal align=center>1</p> </td> </tr> <tr> <td width=141 valign=top> <p class=MsoNormal align=center>3</p> </td> <td width=194 valign=top> <p class=MsoNormal align=center>2</p> </td> <td width=168 valign=top> <p class=MsoNormal align=center>2; 4</p> </td> </tr> <tr> <td width=141 valign=top> <p class=MsoNormal align=center>4</p> </td> <td width=194 valign=top> <p class=MsoNormal align=center>5</p> </td> <td width=168 valign=top> <p class=MsoNormal align=center>0</p> </td> </tr> <tr> <td width=141 valign=top> <p class=MsoNormal align=center>5</p> </td> <td width=194 valign=top> <p class=MsoNormal align=center>8</p> </td> <td width=168 valign=top> <p class=MsoNormal align=center>1; 4</p> </td> </tr> </table>  <p class=MsoNormal>&nbsp;</p> <p class=MsoNormal>Определите <b>минимальное</b> время, через которое завершится выполнение всей совокупности процессов, при условии, что все независимые друг от друга процессы могут выполняться параллельно.</p> <p class=MsoNormal><i>Например</i>, для приведённой таблицы это 13 мс (процесс 5 может выполниться только после окончания процесса 4, их общая продолжительность 5 + 8 = 13 мс).</p> <p class=MsoNormal><b>&nbsp;</b></p> <p class=MsoNormal><b>Типовой пример имеет иллюстративный характер. Для выполнения задания используйте данные из прилагаемого файла.</b></p>  </td></tr><tr><td align='center'><script language="javascript">ShowPictureQ2WH('docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/017fc52b319c485e9550c1c5b53fae4c/img1_1760103837.zip','docs/B9ACA5BBB2E19E434CD6BEC25284C67F/questions/017fc52b319c485e9550c1c5b53fae4c/simg1_1760103837.gif','',600,400)</script></td></tr></table></TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='017fc52b319c485e9550c1c5b53fae4c'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFe814D'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>1.1 Основные тенденции развития компьютерных технологий. Параллельные вычисления. Многопроцессорные системы. Распределённые вычислительные системы и обработка больших данных</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">Fe814D</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'017fc52b319c485e9550c1c5b53fae4c')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFe814D', setAnswerFe814D, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("017fc52b319c485e9550c1c5b53fae4c"))
+	            toggleQFavour('iFe814D');
+	        if (solvedQst.has("017fc52b319c485e9550c1c5b53fae4c"))
+	            setQSolved('iFe814D', '1');
+	    </script>
+	     <div class="qblock" id='qFDF14C'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformFDF14C' id='checkformFDF14C' method="get"		>
+		<input type="Hidden" name="guid" value="01A1757E2CAC97D64B3F21472E1A65C0">
+		<script language='JavaScript'> 
+ function setAnswerFDF14C(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Ниже представлены две таблицы из базы данных. Каждая строка таблицы 2 содержит информацию о ребёнке и об одном из его родителей. Информация представлена значением поля ID в соответствующей строке таблицы 1. Определите на основании приведённых данных <span >ID</span><span> </span>дедушки Аганян Б.Г. </p> <p class="MsoNormal"><i >Примечание.</i> Дедушка <m:math> <m:semantics> <m:mo>&#x2013;</m:mo> </m:semantics> </m:math>&nbsp;это отец одного из родителей.<i ></i></p>  <table class="MsoNormalTable" border="0" cellspacing="0" cellpadding="0" width="489"> <tr> <td width="257" nowrap="nowrap" colspan="3" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><b>Таблица 1</b></p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center">&nbsp;</p> </td> <td width="204" nowrap="nowrap" colspan="2" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><b>Таблица 2</b></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><b >ID</b></p> </td> <td width="129" valign="top"> <p class="MsoNormalCxSpMiddle"><b >Фамилия_И.О.</b></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><b >Пол</b></p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><b >ID_Родителя</b></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><b >ID_Ребёнка</b></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>16</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Дурново И.М.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>26</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>27</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>26</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Виеру А.В.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>46</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>27</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>27</span></p> </td> <td width="129" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>Виеру В.А.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>27</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>28</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>28</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Виеру В.В.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>66</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>28</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>36</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Аганян Т.А.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>26</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>36</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>37</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Аганян Б.Г.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>46</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>36</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>38</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Аганян Г.Г.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>36</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>37</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>46</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Баурн А.С.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>38</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>37</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>47</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Баурн В.А.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>16</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>38</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>48</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Альберт К.Г.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>36</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>48</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>49</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Альберт И.К.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">М</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>38</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>48</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>56</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Лещенко Н.В.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>27</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>56</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>66</span></p> </td> <td width="129" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle" align="center"><span>Чивадзе Г.В.</span></p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">Ж</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>66</span></p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center"><span>56</span></p> </td> </tr> <tr> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">&hellip;</p> </td> <td width="129" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">&hellip;</p> </td> <td width="64" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">&hellip;</p> </td> <td width="28" nowrap="nowrap" valign="bottom"> <p class="MsoNormalCxSpMiddle">&nbsp;</p> </td> <td width="103" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">&hellip;</p> </td> <td width="101" valign="top"> <p class="MsoNormalCxSpMiddle" align="center">&hellip;</p> </td> </tr> </table>  <p class="MsoNormal"><span>&nbsp;</span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='01A1757E2CAC97D64B3F21472E1A65C0'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFDF14C'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>4.5 Табличные (реляционные) базы данных. Таблица – представление сведений об однотипных объектах. Поле, запись. Ключ таблицы. Работа с готовой базой данных. Заполнение базы данных. Поиск, сортировка и фильтрация данных. Запросы на выборку данных. Запросы с параметрами. Вычисляемые поля в запросах. Многотабличные базы данных. Типы связей между таблицами. Внешний ключ. Целостность базы данных. Запросы к многотабличным базам данных</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">FDF14C</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'01A1757E2CAC97D64B3F21472E1A65C0')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFDF14C', setAnswerFDF14C, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("01A1757E2CAC97D64B3F21472E1A65C0"))
+	            toggleQFavour('iFDF14C');
+	        if (solvedQst.has("01A1757E2CAC97D64B3F21472E1A65C0"))
+	            setQSolved('iFDF14C', '1');
+	    </script>
+	     <div class="qblock" id='qF47F49'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformF47F49' id='checkformF47F49' method="get"		>
+		<input type="Hidden" name="guid" value="01B3010E225499B74D57096A9A289BDC">
+		<script language='JavaScript'> 
+ function setAnswerF47F49(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><a name="_GoBack"></a><span>Все четырёхбуквенные слова, составленные из букв А, Б, З, И, записаны в алфавитном порядке и пронумерованы<br> начиная с 1.</span></p> <p class=MsoNormal><span>Ниже приведено начало списка.</span></p> <p class=MsoNormal><span>1.  АААА</span></p> <p class=MsoNormal><span>2.  АААБ</span></p> <p class=MsoNormal><span>3.  АААЗ</span></p> <p class=MsoNormal><span>4.  АААИ</span></p> <p class=MsoNormal><span>5.  ААБА</span></p> <p class=MsoNormal><span>…</span></p> <p class=MsoNormal><span>Под каким номером стоит слово ИЗБА?</span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='01B3010E225499B74D57096A9A289BDC'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iF47F49'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>2.2 Теоретические подходы к оценке количества информации. Единицы измерения количества информации. Алфавитный подход к оценке количества информации. Закон аддитивности информации. Формула Хартли. Информация и вероятность. Формула Шеннона</div><div>2.5 Кодирование текстов. Кодировка ASCII. Однобайтные кодировки. Стандарт UNICODE. Кодировка UTF-8. Определение информационного объёма текстовых сообщений</div><div>2.6 Кодирование изображений. Оценка информационного объёма графических данных при заданных разрешении и глубине кодирования цвета. Цветовые модели. Кодирование звука. Оценка информационного объёма звуковых данных при заданных частоте дискретизации и разрядности кодирования</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">F47F49</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'01B3010E225499B74D57096A9A289BDC')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformF47F49', setAnswerF47F49, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("01B3010E225499B74D57096A9A289BDC"))
+	            toggleQFavour('iF47F49');
+	        if (solvedQst.has("01B3010E225499B74D57096A9A289BDC"))
+	            setQSolved('iF47F49', '1');
+	    </script>
+	    
+<div id='bottom_marker'></div>
+
+<script type='text/javascript'>
+function setSize() {  if (window.parent) {
+    window.parent.setQCount(2340);
+    //var rect = document.body.getBoundingClientRect();
+    //window.parent.setContainerSize(rect.bottom - rect.top);
+    //window.parent.setContainerSize(Math.max(
+    //      document.body.offsetHeight, document.documentElement.offsetHeight,
+    //      document.body.clientHeight, document.documentElement.clientHeight)
+    //);
+    resizeContainer();
+  }
+}
+
+var cWidth = document.body.offsetWidth;
+
+function resizeContainer(){
+    var rect = document.getElementById('bottom_marker').getBoundingClientRect(); //document.body.lastChild.getBoundingClientRect();
+    window.parent.setContainerSize(rect.bottom);}
+
+function windowResize() {
+    if (cWidth != document.body.offsetWidth) {    	cWidth = document.body.offsetWidth;
+    	resizeContainer();
+    }}
+
+if (window.parent) {
+    window.parent.setQCount(2340, 1, 10);
+    
+    if (MathJax) {
+        MathJax.Hub.Register.StartupHook("End",function () { setSize(); setTimeout(resizeContainer, 1000) });
+    }
+
+	if (window.addEventListener)
+        window.addEventListener('resize', windowResize);
+    else if (window.attachEvent)
+        window.attachEvent('onresize', windowResize);
+}
+
+</script>
+<SCRIPT language=JavaScript src="../../lib/bdetect.js" type=text/javascript></SCRIPT>
+
+<script language='JavaScript'>
+var crtm="1778905613";
+function SubmitForm(aform,pgname)
+{
+var aEl = document.createElement('input');
+if (!browser.isMac || !browser.isIE)
+  aEl.type = 'hidden';
+aEl.style.display = 'none';
+aEl.name = 'crtm';
+aEl.value = crtm;
+aform.appendChild(aEl);
+aform.action=pgname;
+aform.submit();
+
+}
+function GetPageName(pgname,extparams){
+if (pgname=='') pgname='/bank/questions.php';
+if (extparams=='')
+	pgname=pgname+"?crtm="+crtm;
+else	pgname=pgname+"?crtm="+crtm+"&"+extparams;
+return pgname;}
+function ShowPage(pgname,extparams,wndname,wndparam){
+if (wndname=='') {
+
+  location.href=GetPageName(pgname,extparams);
+
+  }
+  else
+ {if (wndparam=='')
+wnd=window.open(GetPageName(pgname,extparams),wndname);
+else wnd=window.open(GetPageName(pgname,extparams),wndname,wndparam);
+wnd.focus();}
+}
+</script>
+<script language='javascript'>
+                function onXS3DocumectLoad() {setSize();
+ }
+
+		if (window.addEventListener)
+            window.addEventListener('load', onXS3DocumectLoad);
+        else if (window.attachEvent)
+            window.attachEvent('onload', onXS3DocumectLoad);
+        else
+            window.onload = onXS3DocumectLoad;
+ </script><script language='javascript'>
+                function onXS3DocumectUnload(e) {
+			    	document.cookie = "md_auto=qprint; path=/; SameSite=Lax";
+			   		//return false;
+		    }
+		if (window.addEventListener)
+            window.addEventListener('beforeunload', onXS3DocumectUnload);
+        else if (window.attachEvent)
+            window.attachEvent('onbeforeunload', onXS3DocumectUnload);
+        else
+            window.onbeforeunload = onXS3DocumectUnload;
+        </script></body>
+</html>

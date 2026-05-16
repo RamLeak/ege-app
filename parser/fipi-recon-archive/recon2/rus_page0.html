@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html XMLNS:m="http://www.w3.org/1998/Math/MathML">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" /><LINK href="../../styles.css" rel="STYLESHEET" type="text/css">
+<LINK href="../../xmodules/os/img/_styles.css?v=1.04" rel="STYLESHEET" type="text/css">
+<script type="text/javascript" src="../../lib/mml/mathjax-4-config.js"></script><script type="text/javascript" src="../../lib/mml/mathjax-4/mml-chtml.js"></script><script type="text/javascript" src="../../lib/t3utils.js?v=2.04"></script><script type="text/javascript">var home_directory="../../";</script><meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<META NAME="Document-state" CONTENT="Dynamic"><META HTTP-EQUIV="pragma" CONTENT="no-cache"><META HTTP-EQUIV="expires" CONTENT="0"><meta http-equiv="X-UA-Compatible" content="IE=10"/><link rel='shortcut icon' href='img/icon.png'><style>@media print {.noprint {display:none !important;}}</style><title>Открытый банк тестовых заданий</title>
+</head>
+<body class='questions-container' style='font-size:11pt'>
+		<script language="javascript">
+        var abort_answer_senging;
+		function onButtonClick(formid = '')
+		{
+			var aform=document.getElementById('checkform'+formid);
+            abort_answer_senging = false;
+            if (formid)
+                eval('setAnswer'+formid+'(aform);');
+            else
+			    setAnswer(aform);
+            if (abort_answer_senging) return;
+			;
+			//aform.submit();
+            if (aform.setBtn)
+                aform.setBtn.disabled=true;
+		}
+		function onResetClick(formid = '')
+		{
+			var aform=document.getElementById('checkform'+formid);
+			var aEl = document.createElement('input');
+			aEl.type = 'hidden';
+			aEl.name = 'reset';
+			aEl.value = 1;
+			aform.appendChild(aEl);
+			
+;
+			aform.submit();
+		}
+
+		function noAction()
+		{
+		}
+
+		</script>
+        <style type="text/css">
+			.img_scroll_container { height: 400px; overflow-y: scroll; text-align: center; width:100%;}
+			.img_scroll_container img { width: 700px }
+            .printbody .img_scroll_container { height: auto; overflow-y: hidden; }
+            .printbody .img_scroll_container img { width: 650px }
+            .active-distractor:hover{cursor:pointer; background-color: #f2f2f2;}
+            .active-distractor.checked-distractor{background-color: #e8e8e8;}
+		</style>
+		<script language="javascript">
+		var qguid='';
+		var qfiles_location='../../';
+
+		function ShowPictureQ(s,hint)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+			document.write('<IMG SRC="'+qfiles_location+s+'" ALIGN=ABSMIDDLE alt="'+hint+'" border="0"> ');
+		}
+
+		function ShowPictureQBL(s,hint,h,bl)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+			var vspace=h/2-bl;
+			if (vspace<0) vspace=-vspace;
+			document.write('<IMG SRC="'+qfiles_location+s+'" ALIGN=MIDDLE border="0" alt="'+hint+'" VSPACE='+(vspace)+' STYLE="position:relative; top:'+(h/2-bl)+'px;">');
+		}
+
+
+		
+		function ShowPictureQ2WH(s,s2,hint,w,h)
+		{
+            if (s.indexOf('.flv')>0 ||s.indexOf('.mp4')>0 ||s.indexOf('.swf')>0)
+                s='../../show_media.php?m='+encodeURIComponent(s)+'&w='+w+'&h='+h;
+
+			w=w+40;
+			h=h+30;
+
+						document.write('<a href="javascript:var wnd=window.open(\''+qfiles_location+s+'\',\'\',\',status=1,resizable=1,menubar=0,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+qfiles_location+s2+'" ALIGN=ABSMIDDLE style="cursor:pointer" alt="'+hint+'"></a> ');
+			//alert('вставил картинку!');
+		}
+
+		function ShowPictureQ3WH(s,s2,s3,hint,w,h)
+		{
+			ShowPictureQ2WH(s,s2,hint,w,h);
+		}
+
+		function ShowPictureQ2(s,s2,hint)
+		{
+			ShowPictureQ2WH(s,s2,hint,600,400);
+		};
+
+		function invertImage(img, s, s2)
+		{
+			if (img.src.indexOf(s)>0) img.src=qfiles_location+s2; else img.src=qfiles_location+s;
+		}
+
+		function ShowPictureQ3(s,s2,hint)
+		{
+			while ((p=s.indexOf(". "))>0)
+			s=s.substring(0,p+1)+s.substring(p+2);
+            var onclick=(s.indexOf('.jpg')>0||s.indexOf('.png')>0||s.indexOf('.gif')>0 ?'onclick="invertImage(this, \''+s+'\', \''+s2+'\')"':'');
+			document.write('<IMG SRC="'+qfiles_location+s2+'" '+onclick+' ALIGN=ABSMIDDLE style="cursor:pointer" alt="'+hint+'" border="0"> ');
+		};
+
+		function showXGraphic(xml)
+		{
+			document.write("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=1><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		}
+		/*
+function ShowPictureQGX2(img,xml)
+{
+w=500;
+h=400;
+document.write('<IMG BORDER=0 SRC="'+qfiles_location+img+'" ALIGN=ABSMIDDLE>');
+}
+*/
+		function ShowPictureQGX2(img,xml)
+		{
+			w=500;
+			h=400;
+			document.write('<a href="javascript:var wnd=window.open(\'../../showxgprahic.php?qguid='+qguid+'&xml='+xml+'\',\'\',\',status=1,resizable=1,menubar=0,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+qfiles_location+img+'" ALIGN=ABSMIDDLE style="cursor:pointer"></a> ');
+		}
+
+		</script>
+		<script language='JavaScript'>
+var files_location='';
+var files_abs_location='';
+var space_after_img=true;
+function ShowPicture(s)
+{document.write('<IMG SRC="'+files_location+s+'" ALIGN=absmiddle border=0>'+(space_after_img?' ':''));}
+function ShowPicture2(s,s2,w,h)
+{if (w>800) w=800;
+ if (h>600) h=600;
+ align='ABSMIDDLE'; 
+document.write('<a href="javascript:var wnd=window.open(\''+files_location+s+'\',\'_blank\',\'resizable=1,menubar=0,scrollbars=1,width='+(w+40)+',height='+(h+20)+',left='+((screen.width-w-40)/2)+',top='+((screen.height-h-20)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+files_location+s2+'" ALIGN='+align+'></a>'+(space_after_img?' ':''));}
+function ShowPicture2S(objsrc,imgsrc,datasrc,w,h)
+{ShowPicture2(objsrc,imgsrc,w,h);}
+function ShowPictureBL(s,bl)
+{document.write('<IMG SRC="'+files_location+s+'" ALIGN=MIDDLE VSPACE='+bl+' STYLE="position:relative; top:-'+(bl)+'px;" border=0>');}
+function ShowPictureBL2(s,bl,h)
+{ var vspace=h/2-bl;
+  		if (vspace<0) vspace=-vspace;
+document.write('<IMG SRC="'+files_location+s+'" ALIGN=MIDDLE VSPACE='+((vspace))+' STYLE="position:relative; top:'+(h/2-bl-1)+'px;" border=0>');}
+function ShowPictureGX(img,xml)
+		{
+		w=500;
+		h=400;
+		document.write('<a href="javascript:var wnd=window.open(\'../../showxgprahic.php?xml='+files_abs_location+xml+'\',\'\',\',status=1,resizable=1,menubar=1,scrollbars=1,width='+w+', height='+h+',left='+((screen.width-w)/2)+',top='+((screen.height-h)/2)+'\');wnd.focus();"><IMG BORDER=0 SRC="'+files_location+img+'" ALIGN=ABSMIDDLE style="cursor:pointer"></a> ');
+		}function TraceLink(indx,n)
+{ if (n.charAt(0)=='{')
+  		{
+			var guid=n.substring(1,9)+n.substring(10,14)+n.substring(15,19)+n.substring(20,24)+n.substring(25,37);
+			showdocbyguid(guid);
+  		}
+  		else
+  		{var wnd=window.open('../../tracelink.php?project_guid=AF0ED3F2557F8FFC4C06F80B6803FD26&cdf='+n,'link_wnd','toolbar=1,resizable=1,menubar=0, location=0,scrollbars=1,width=416,height=350,left=0,top=0');
+wnd.focus();
+ }
+}
+function showdocbyguid(guid)
+{var wnd=window.open('../../tracelink.php?project_guid=AF0ED3F2557F8FFC4C06F80B6803FD26&doc_guid='+guid.toUpperCase(),'link_wnd','toolbar=1,resizable=1,menubar=0, location=0,scrollbars=1,width=416,height=350,left=0,top=0');
+wnd.focus();
+}
+function delFile(fguid)
+{
+if (confirm('Удалить файл?'))
+  location.href='delete.php?proj=AF0ED3F2557F8FFC4C06F80B6803FD26&md=qprint&fguid='+fguid}
+function ShowFlash(url)
+{
+			w='100%'; h='100%';
+			url='../../'+files_location+url;
+			document.write('<object tabindex=0 ID=ilFlash classid=CLSID:D27CDB6E-AE6D-11cf-96B8-444553540000 width='+w+' height='+h+' codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=6,0,0,0">'+
+		'<param name=movie value="'+url+'"><PARAM play=true><PARAM SWLIVECONNECT=true><PARAM MENU=true><PARAM LOOP=false>'+
+		'<PARAM NAME=scale VALUE=noScale><embed src="'+url+'" quality=high bgcolor=#FFFFFF  width='+w+' height='+h+' scale=noScale type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockWaveFlash"></embed></object>');}
+	function showXGraphic(xml)
+		{
+		//alert("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=0><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		document.write("<object classid=\"CLSID:A40BD42C-2DF9-4DB6-AE58-6411A05C7827\" ID=GraphX, width=258, height=410 ><param name=DEsignMode value=0><param name=\"Buffer\" value='<?xml version=\"1.0\"?>"+xml+"'></object>");
+		}
+	</script><script type='text/javascript'>
+	var solvedQst = localStorage.getItem("OS:AF0ED3F2557F8FFC4C06F80B6803FD26:SOLVED");
+	solvedQst = solvedQst ? new Set(solvedQst.split(",")): new Set();
+	var favQst = localStorage.getItem("OS:AF0ED3F2557F8FFC4C06F80B6803FD26:FAV");
+	favQst = favQst ? new Set(favQst.split(",")): new Set();
+
+
+
+var request = createAJAXRequest();
+
+function toggleQFavour(qblock) {    var fvbtn = document.getElementById(qblock).getElementsByClassName('favorite-button');
+    toggleFavour(fvbtn[0]);
+}
+
+function toggleFavour(btn) {	btn.classList.toggle('is-favorite');
+    btn.title = btn.classList.contains('is-favorite')?'В Избранном':'Добавить в Избранное';}
+
+function setToStr(set) {	if (browser.isIE) {		let str = '';
+		set.forEach(function(elem){
+		    str += elem + (str?",":"")
+ 	 	});
+ 	 	return str;	} else {		return Array.from(set).join(",")	}}
+
+
+function changeFavour(btn, qst) {	if (btn.classList.contains('is-favorite'))
+	    favQst.delete(qst);
+    else
+        favQst.add(qst);
+    localStorage.setItem("OS:AF0ED3F2557F8FFC4C06F80B6803FD26:FAV", setToStr(favQst));
+	toggleFavour(btn);}
+
+function changeStatus(qst, panel){
+    let answer = solvedQst.has(qst)? '0': '1';
+	if (answer == '0')		solvedQst.delete(qst);
+    else
+        solvedQst.add(qst);
+    localStorage.setItem("OS:AF0ED3F2557F8FFC4C06F80B6803FD26:SOLVED", setToStr(solvedQst));
+    setQSolved(panel, answer)
+}
+
+
+
+function checkButtonClick(form, setanswer, panel) {
+	form = document.getElementById(form);
+	setanswer(form);
+    if (!request.inProcess) {
+        request.open('POST', 'solve.php', true);
+        request.onreadystatechange = checkSolutionDone;
+        request.inProcess = true;
+        request.panel = panel;
+
+        var formData = new FormData(form);
+        formData.append("ajax", "1");
+        formData.append("proj", "AF0ED3F2557F8FFC4C06F80B6803FD26")
+
+		if (browser.isIE)
+			request.qst = form.guid.value;
+		else
+	        request.qst = formData.get("guid");
+
+        request.send(formData);
+
+        panel.getElementsByClassName('task-status')[0].innerHTML = "<img class='loader' src='img/loading_spinner.gif'>";    }
+}
+
+function checkSolutionDone() {    if (request.readyState==4)  {
+        request.inProcess = false;
+        answer = "0";
+        if (request.status==200) {
+            answer = request.responseText;
+        }
+        if (answer!='1' && answer!='2' && answer!='3') {
+        	answer = "0";
+        }
+        qst = request.qst;
+
+        if (answer == '0' || answer == '2')
+    		solvedQst.delete(qst);
+        else
+            solvedQst.add(qst);
+        localStorage.setItem("OS:AF0ED3F2557F8FFC4C06F80B6803FD26:SOLVED", setToStr(solvedQst));
+        setQSolved(request.panel, answer);
+    }
+}
+
+function setQSolved(block, answer) {	if (typeof(block) === 'string')
+	    block = document.getElementById(block);
+	var statusNode = block.getElementsByClassName('task-status')[0];
+    statusNode.className= "task-status task-status-" + answer ;
+    if (answer=='1')
+        statusNode.innerHTML = "РЕШЕНО";
+    else if (answer=='2')
+        statusNode.innerHTML = "НЕВЕРНО";
+    else if (answer=='3')
+        statusNode.innerHTML = "ВЕРНО";
+    else
+        statusNode.innerHTML = "НЕ РЕШЕНО";}
+
+</script>
+
+ <div class="qblock" id='q4D1A4B'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform4D1A4B' id='checkform4D1A4B' method="get"		>
+		<input type="Hidden" name="guid" value="004579B3C47B9B3149EEA1091929EEBB">
+		<script language='JavaScript'> 
+ function setAnswer4D1A4B(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal"><b >Расставьте все недостающие знаки препинания:</b> укажите все цифры, <br /> на месте которых в предложении должны стоять запятые.</p> <p class="MsoNormal">В Академии художеств В.И. Суриков учился (1) по его словам (2) <br /> &laquo;со страшной жадностью к занятиям&raquo; и при таком усердии (3) разумеется (4) окончил её с золотой медалью.<span></span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='004579B3C47B9B3149EEA1091929EEBB'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i4D1A4B'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.8.6 Знаки препинания в предложениях с вводными конструкциями, обращениями, междометиями </div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">4D1A4B</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'004579B3C47B9B3149EEA1091929EEBB')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform4D1A4B', setAnswer4D1A4B, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("004579B3C47B9B3149EEA1091929EEBB"))
+	            toggleQFavour('i4D1A4B');
+	        if (solvedQst.has("004579B3C47B9B3149EEA1091929EEBB"))
+	            setQSolved('i4D1A4B', '1');
+	    </script>
+	     <div class="qblock" id='q462A4A'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform462A4A' id='checkform462A4A' method="get"		>
+		<input type="Hidden" name="guid" value="0096D905E2D9BE2946E4F54021DF8855">
+		<script language='JavaScript'> 
+ function setAnswer462A4A(aform)
+ {;}
+ </script>
+<TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Определите предложение, в котором оба выделенных слова пишутся <b >СЛИТНО</b>. Раскройте скобки и выпишите эти два слова.<span></span></p>  <table width="100%" cellpadding=3><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Деревья ТО(ЖЕ) болеют, (ПО) ЭТОМУ за ними необходим хороший уход.</p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">(В) ТЕЧЕНИЕ суток Ольга ждала вестей <m:math><m:mstyle displaystyle="true"> <m:semantics> <m:mo>&#x2013;</m:mo>  </m:semantics> </m:mstyle></m:math>&nbsp;(НА) УТРО в дверь постучали.</p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Для официально-делового стиля ТО(ЖЕ) характерно разнообразие жанров, и следует иметь (В) ВИДУ, что многие из них закреплены за определённым подстилем.</p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Речевой этикет (В) ЦЕЛОМ явление универсальное, но в ТО(ЖЕ) время каждый народ выработал свою специфическую систему правил речевого поведения.</p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">(ЗА) ЧАСТУЮ главная мысль художественного текста понятна не сразу, ТАК(ЧТО) в трактовке образов, сюжетов, характеров следует избегать поспешности.</p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr></table></TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='0096D905E2D9BE2946E4F54021DF8855'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i462A4A'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.7.9 Слитное, дефисное и раздельное написание слов разных частей речи</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">462A4A</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'0096D905E2D9BE2946E4F54021DF8855')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform462A4A', setAnswer462A4A, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("0096D905E2D9BE2946E4F54021DF8855"))
+	            toggleQFavour('i462A4A');
+	        if (solvedQst.has("0096D905E2D9BE2946E4F54021DF8855"))
+	            setQSolved('i462A4A', '1');
+	    </script>
+	     <div class="qblock" id='q4E5B4C'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform4E5B4C' id='checkform4E5B4C' method="get"		>
+		<input type="Hidden" name="guid" value="00A8C4927D0EB00D489F7A94D30ECED0">
+		<script language='JavaScript'> 
+ function setAnswer4E5B4C(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><a name="_GoBack"></a><b>Расставьте знаки препинания: </b>укажите цифры, на месте которых в предложениях должны стоять запятые.</p> <p class=MsoNormal>&nbsp;</p> <p class=MsoNormal>С моря дул влажный холодный ветер и (1) казалось (2) разносил по степи задумчивую мелодию набежавшей на берег волны. Его порывы&nbsp;(3) как правило (4) приносили с собой долгожданную прохладу.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='00A8C4927D0EB00D489F7A94D30ECED0'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i4E5B4C'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.8.6 Знаки препинания в предложениях с вводными конструкциями, обращениями, междометиями </div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">4E5B4C</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'00A8C4927D0EB00D489F7A94D30ECED0')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform4E5B4C', setAnswer4E5B4C, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("00A8C4927D0EB00D489F7A94D30ECED0"))
+	            toggleQFavour('i4E5B4C');
+	        if (solvedQst.has("00A8C4927D0EB00D489F7A94D30ECED0"))
+	            setQSolved('i4E5B4C', '1');
+	    </script>
+	     <div class="qblock" id='q445A48'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform445A48' id='checkform445A48' method="get"		>
+		<input type="Hidden" name="guid" value="00F809138D83B51C47D7911FE188C04D">
+		<script language='JavaScript'> 
+ function setAnswer445A48(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><b>Расставьте знаки препинания:</b> укажите все цифры, на месте которых в предложениях должны стоять запятые.</p> <p class=MsoNormal><b>Деятельность Саввы Ивановича Мамонтова (1) конечно (2) занимает достойное место в истории русской культуры: он был одним из крупнейших меценатов России, создателем Абрамцевского художественного кружка. В этом (3) по мнению историков (4) заключалась высокая патриотическая миссия Мамонтова.</b></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='00F809138D83B51C47D7911FE188C04D'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i445A48'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.8.6 Знаки препинания в предложениях с вводными конструкциями, обращениями, междометиями </div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">445A48</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'00F809138D83B51C47D7911FE188C04D')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform445A48', setAnswer445A48, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("00F809138D83B51C47D7911FE188C04D"))
+	            toggleQFavour('i445A48');
+	        if (solvedQst.has("00F809138D83B51C47D7911FE188C04D"))
+	            setQSolved('i445A48', '1');
+	    </script>
+	     <div class="qblock" id='qF6854B'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformF6854B' id='checkformF6854B' method="get"		>
+		<input type="Hidden" name="guid" value="014FD80B0070BCD24B88C2FBAC777B52">
+		<script language='JavaScript'> 
+ function setAnswerF6854B(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Отредактируйте предложение: исправьте лексическую ошибку, <b >исключив лишнее слово</b>. Выпишите это слово.</p> <p class="MsoNormal">Певец, с которым мы познакомились во время поездки, пришёл на собрание писателей и подарил нам бесплатно несколько своих пластинок.</p> <p class="MsoNormal"><span>&nbsp;</span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='014FD80B0070BCD24B88C2FBAC777B52'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iF6854B'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.3.3 Основные лексические нормы современного русского литературного языка. Многозначные слова и омонимы, их употребление. Синонимы, антонимы, паронимы и их употребление. Иноязычные слова и их употребление. Лексическая сочетаемость. Тавтология. Плеоназм</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">F6854B</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'014FD80B0070BCD24B88C2FBAC777B52')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformF6854B', setAnswerF6854B, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("014FD80B0070BCD24B88C2FBAC777B52"))
+	            toggleQFavour('iF6854B');
+	        if (solvedQst.has("014FD80B0070BCD24B88C2FBAC777B52"))
+	            setQSolved('iF6854B', '1');
+	    </script>
+	     <div class="qblock" id='qFE2041'> 	    <div id="hint" class="hint" name="hint">Выберите один или несколько правильных ответов.</div>
+	    		<form action='javascript:noAction()' name='checkformFE2041' id='checkformFE2041' method="get"		>
+		<input type="Hidden" name="guid" value="0156C288762281B04682F8AAAA75BC5E">
+		<script language='JavaScript'>
+			     function setAnswerFE2041(aform)
+ {			     	 var ans='';
+			     	 for (var i=0; i<5; i++) {
+				        if (aform.elements['test'+i].checked) ans+='1'; else ans+='0';
+			         }
+
+				     aEl = aform.elements['answer'];
+				     if (!aEl) {
+				         aEl = document.createElement('input');
+				         aEl.type = 'hidden';
+				         aEl.name = 'answer';
+				         aform.appendChild(aEl);
+			         }
+				     aEl.value = ans;
+			      }
+
+					function selectVariantFE2041(n) {
+						for (i=0; i<5; i++) {
+							element = document.getElementById('checkformFE2041').elements['test'+i];
+							chk=(i==n?!element.checked:element.checked);
+							element.checked=chk;
+							var tr = element.parentNode.parentNode;
+							if (chk) {
+								if (!tr.classList.contains('checked-distractor'))
+							        tr.classList.add('checked-distractor');
+					        } else {
+		    					tr.classList.remove('checked-distractor');
+		    	            }
+						}
+					}
+			</script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Укажите варианты ответов, в которых во всех словах одного ряда пропущена безударная проверяемая гласная корня. Запишите номера ответов.<span></span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width="100%" cellpadding=3 class="distractors-table"><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test0" value="1"  style='cursor:pointer' onclick='selectVariantFE2041(-1)'></td><td width=0>&nbsp;<b>1)</b>&nbsp;</td><td width="100%" onclick='selectVariantFE2041(0)'>  <p class="MsoNormal">акад..мический, губ..рнатор, заг..релый<span></span></p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test1" value="2"  style='cursor:pointer' onclick='selectVariantFE2041(-1)'></td><td width=0>&nbsp;<b>2)</b>&nbsp;</td><td width="100%" onclick='selectVariantFE2041(1)'>  <p class="MsoNormal">удл..нить, выв..дение, выб..рать<span></span></p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test2" value="3"  style='cursor:pointer' onclick='selectVariantFE2041(-1)'></td><td width=0>&nbsp;<b>3)</b>&nbsp;</td><td width="100%" onclick='selectVariantFE2041(2)'>  <p class="MsoNormal">мех..нический, сист..матизировать, тр..нажёр<span></span></p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test3" value="4"  style='cursor:pointer' onclick='selectVariantFE2041(-1)'></td><td width=0>&nbsp;<b>4)</b>&nbsp;</td><td width="100%" onclick='selectVariantFE2041(3)'>  <p class="MsoNormal">экон..мичный, изл..гать, эл..мент<span></span></p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test4" value="5"  style='cursor:pointer' onclick='selectVariantFE2041(-1)'></td><td width=0>&nbsp;<b>5)</b>&nbsp;</td><td width="100%" onclick='selectVariantFE2041(4)'>  <p class="MsoNormal">вд..леке, выск..зать, сбер..гать<span></span></p>  </td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='0156C288762281B04682F8AAAA75BC5E'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFE2041'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.7.2 Правописание гласных и согласных в корне</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Выбор ответов из предложенных вариантов</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">FE2041</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'0156C288762281B04682F8AAAA75BC5E')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFE2041', setAnswerFE2041, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("0156C288762281B04682F8AAAA75BC5E"))
+	            toggleQFavour('iFE2041');
+	        if (solvedQst.has("0156C288762281B04682F8AAAA75BC5E"))
+	            setQSolved('iFE2041', '1');
+	    </script>
+	     <div class="qblock" id='qFE9149'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkformFE9149' id='checkformFE9149' method="get"		>
+		<input type="Hidden" name="guid" value="01BBC5E2F3C3AD1C4FD6285EFFB64837">
+		<script language='JavaScript'> 
+ function setAnswerFE9149(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><b><span>Расставьте знаки препинания:</span></b><span> укажите цифру(-ы), на месте которой(-ых) в предложении должна(-ы) стоять запятая(-ые).</span></p> <p class=MsoNormal><b>Считается (1) что вирусы непредсказуемы (2) и способны вызывать <span>чрезвычайные эпидемиологические ситуации (3) борьба (4) с которыми (5)</span> на этапе их возникновения трудна или невозможна.</b></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='01BBC5E2F3C3AD1C4FD6285EFFB64837'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='iFE9149'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.8.7 Знаки препинания в сложном предложении</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">FE9149</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'01BBC5E2F3C3AD1C4FD6285EFFB64837')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkformFE9149', setAnswerFE9149, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("01BBC5E2F3C3AD1C4FD6285EFFB64837"))
+	            toggleQFavour('iFE9149');
+	        if (solvedQst.has("01BBC5E2F3C3AD1C4FD6285EFFB64837"))
+	            setQSolved('iFE9149', '1');
+	    </script>
+	     <div class="qblock" id='q047D4B'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform047D4B' id='checkform047D4B' method="get"		>
+		<input type="Hidden" name="guid" value="024307DF47068F5B4263DF468E1A8175">
+		<script language='JavaScript'> 
+ function setAnswer047D4B(aform)
+ {;}
+ </script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><b>Расставьте все недостающие знаки препинания: </b>укажите цифру(-ы), на месте которой(-ых)<b> </b>в предложениях должна(-ы) стоять запятая(-ые).</p> <p class=MsoNormal><b>В лесу (1) к радости (2) мы сорвали несколько гроздей схваченной морозом рябины. Это была (3) пожалуй (4) последняя память о лете, об осени.</b></p> <p class=MsoNormal><span>&nbsp;</span></p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='024307DF47068F5B4263DF468E1A8175'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i047D4B'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.8.6 Знаки препинания в предложениях с вводными конструкциями, обращениями, междометиями </div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">047D4B</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'024307DF47068F5B4263DF468E1A8175')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform047D4B', setAnswer047D4B, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("024307DF47068F5B4263DF468E1A8175"))
+	            toggleQFavour('i047D4B');
+	        if (solvedQst.has("024307DF47068F5B4263DF468E1A8175"))
+	            setQSolved('i047D4B', '1');
+	    </script>
+	     <div class="qblock" id='q005141'> 	    <div id="hint" class="hint" name="hint">Впишите правильный ответ.</div>
+	    		<form action='javascript:noAction()' name='checkform005141' id='checkform005141' method="get"		>
+		<input type="Hidden" name="guid" value="025825474E8290034DB847DC9562AE6C">
+		<script language='JavaScript'> 
+ function setAnswer005141(aform)
+ {;}
+ </script>
+<TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class="MsoNormal">Определите предложение, в котором НЕ с выделенным словом пишется <b >СЛИТНО</b>. Раскройте скобки и выпишите это слово.<span></span></p>  <table width="100%" cellpadding=3><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">На деревьях появились ещё (НЕ) РАСПУСТИВШИЕСЯ почки.</p> <p class="MsoNormal"><span>&nbsp;</span></p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Можно только мчаться вперёд, (НЕ) ЗАМЕДЛЯЯ скорости.</p> <p class="MsoNormal"><span>&nbsp;</span></p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Гоголевский Башмачкин олицетворял (НЕ) ИЗБЕЖНОСТЬ трагедии &laquo;маленького человека&raquo;.</p> <p class="MsoNormal"><span>&nbsp;</span></p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">Начинало казаться, что нам уже никогда (НЕ) ВЫБРАТЬСЯ из этого леса.</p> <p class="MsoNormal"><span>&nbsp;</span></p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr><tr ><td width=0>&nbsp;&nbsp;</td><td width="100%" align=left><p class="MsoNormal">(НЕ) ОСОЗНАВАЯ своего предназначения, герои пьес А.П. Чехова часто проживают свой век бессмысленно.</p> <p class="MsoNormal"><span>&nbsp;</span></p> <p class="MsoNormal"><span>&nbsp;</span></p></td></tr></table></TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width='100%' cellspacing=0 cellpadding=1><tr><td width=100%><input type=text name="answer" size=40 value="" maxlength="250"></td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='025825474E8290034DB847DC9562AE6C'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i005141'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.7.7 Правописание не и ни</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Краткий ответ</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">005141</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'025825474E8290034DB847DC9562AE6C')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform005141', setAnswer005141, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("025825474E8290034DB847DC9562AE6C"))
+	            toggleQFavour('i005141');
+	        if (solvedQst.has("025825474E8290034DB847DC9562AE6C"))
+	            setQSolved('i005141', '1');
+	    </script>
+	     <div class="qblock" id='q003B4D'> 	    <div id="hint" class="hint" name="hint">Выберите один или несколько правильных ответов.</div>
+	    		<form action='javascript:noAction()' name='checkform003B4D' id='checkform003B4D' method="get"		>
+		<input type="Hidden" name="guid" value="027E24FF409FBD4643C9685B812D429C">
+		<script language='JavaScript'>
+			     function setAnswer003B4D(aform)
+ {			     	 var ans='';
+			     	 for (var i=0; i<5; i++) {
+				        if (aform.elements['test'+i].checked) ans+='1'; else ans+='0';
+			         }
+
+				     aEl = aform.elements['answer'];
+				     if (!aEl) {
+				         aEl = document.createElement('input');
+				         aEl.type = 'hidden';
+				         aEl.name = 'answer';
+				         aform.appendChild(aEl);
+			         }
+				     aEl.value = ans;
+			      }
+
+					function selectVariant003B4D(n) {
+						for (i=0; i<5; i++) {
+							element = document.getElementById('checkform003B4D').elements['test'+i];
+							chk=(i==n?!element.checked:element.checked);
+							element.checked=chk;
+							var tr = element.parentNode.parentNode;
+							if (chk) {
+								if (!tr.classList.contains('checked-distractor'))
+							        tr.classList.add('checked-distractor');
+					        } else {
+		    					tr.classList.remove('checked-distractor');
+		    	            }
+						}
+					}
+			</script><TABLE WIDTH="100%" border='0' bgcolor='gray' cellspacing='1' cellpadding=2>
+  <TR><TD valign=top width=100% bgcolor="#FAFBCA" class='cell_0'>  <p class=MsoNormal><a name="_GoBack"></a>Укажите все варианты ответов, в которых во всех словах одного ряда содержится безударная проверяемая гласная корня. Запишите номера ответов.</p>  </TD></TR>
+  <TR bgcolor="#FFFFFF"><TD>
+	  <TABLE WIDTH="100%" class='submit-outblock'>
+	  	<TR><TD class='varinats-block'><a name="variants"></a><br><div><table width="100%" cellpadding=3 class="distractors-table"><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test0" value="1"  style='cursor:pointer' onclick='selectVariant003B4D(-1)'></td><td width=0>&nbsp;1)&nbsp;</td><td width="100%" onclick='selectVariant003B4D(0)'>  <p class=MsoNormal><a name="_GoBack"></a>росток, положиться, торопливый</p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test1" value="2"  style='cursor:pointer' onclick='selectVariant003B4D(-1)'></td><td width=0>&nbsp;2)&nbsp;</td><td width="100%" onclick='selectVariant003B4D(1)'>  <p class=MsoNormal><a name="_GoBack"></a>укрощать, понимание, творить</p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test2" value="3"  style='cursor:pointer' onclick='selectVariant003B4D(-1)'></td><td width=0>&nbsp;3)&nbsp;</td><td width="100%" onclick='selectVariant003B4D(2)'>  <p class=MsoNormal><a name="_GoBack"></a>облагать (налогом), целлофановый, размахнуться</p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test3" value="4"  style='cursor:pointer' onclick='selectVariant003B4D(-1)'></td><td width=0>&nbsp;4)&nbsp;</td><td width="100%" onclick='selectVariant003B4D(3)'>  <p class=MsoNormal><a name="_GoBack"></a>шелестеть, отторгать, напрягаясь</p>  </td></tr><tr  class='active-distractor'><td width=0 valign=middle><input type="checkbox" name="test4" value="5"  style='cursor:pointer' onclick='selectVariant003B4D(-1)'></td><td width=0>&nbsp;5)&nbsp;</td><td width="100%" onclick='selectVariant003B4D(4)'>  <p class=MsoNormal><a name="_GoBack"></a>роскошный, теоретический, (ранняя) седина</p>  </td></tr></table></div><br></TD></TR>
+	  	<TR><TD class='submit-block'></TD></TR>
+	  </TABLE>
+  </TD></TR></TABLE>	</form>
+	<form name='chkcodeform'>
+			<input type='hidden' name='guid' value='027E24FF409FBD4643C9685B812D429C'>
+			<input type='hidden' name='answer' value="">
+			<input type='hidden' name='chkcode' value=''>
+		</form> </div> <div id='i003B4D'>
+    <div class="separator"></div>
+    <div class="task-header-panel">
+        <div class="info-button" onclick='this.parentNode.classList.toggle("show-info")'>i</div>
+        <div class="task-info-panel">
+            <div class="task-info-title">
+                <span>СВОЙСТВА ЗАДАНИЯ</span>
+                <span class="task-info-title-close-button" onclick='this.parentNode.parentNode.parentNode.classList.toggle("show-info")'></span>
+            </div>
+            <div class="task-info-content">
+                <table><tbody>
+                    <tr><td class="param-name">КЭС:</td><td class="param-row"><div>3.7.2 Правописание гласных и согласных в корне</div></td></tr>                                                                                <tr><td class="param-name">Тип ответа:</td><td>Выбор ответов из предложенных вариантов</td></tr>                                      </tbody></table>
+            </div>
+        </div>
+        <div class="id-text">Номер: <span class="canselect">003B4D</span></div>
+        <div class="favorite-button" title="Добавить в Избранное" onclick="changeFavour(this,'027E24FF409FBD4643C9685B812D429C')"></div>
+                         <div class="answer-panel">
+             <span class="status-title-text hidden-xs">Статус задания:</span>
+             <span class="task-status task-status-0">НЕ РЕШЕНО</span>
+             <span class="answer-button" onclick="checkButtonClick('checkform003B4D', setAnswer003B4D, this.parentNode)">Ответить</span>
+        </div>
+
+    </div>
+</div>	    <script type='text/javascript'>
+	        if (favQst.has("027E24FF409FBD4643C9685B812D429C"))
+	            toggleQFavour('i003B4D');
+	        if (solvedQst.has("027E24FF409FBD4643C9685B812D429C"))
+	            setQSolved('i003B4D', '1');
+	    </script>
+	    
+<div id='bottom_marker'></div>
+
+<script type='text/javascript'>
+function setSize() {  if (window.parent) {
+    window.parent.setQCount(2005);
+    //var rect = document.body.getBoundingClientRect();
+    //window.parent.setContainerSize(rect.bottom - rect.top);
+    //window.parent.setContainerSize(Math.max(
+    //      document.body.offsetHeight, document.documentElement.offsetHeight,
+    //      document.body.clientHeight, document.documentElement.clientHeight)
+    //);
+    resizeContainer();
+  }
+}
+
+var cWidth = document.body.offsetWidth;
+
+function resizeContainer(){
+    var rect = document.getElementById('bottom_marker').getBoundingClientRect(); //document.body.lastChild.getBoundingClientRect();
+    window.parent.setContainerSize(rect.bottom);}
+
+function windowResize() {
+    if (cWidth != document.body.offsetWidth) {    	cWidth = document.body.offsetWidth;
+    	resizeContainer();
+    }}
+
+if (window.parent) {
+    window.parent.setQCount(2005, 1, 10);
+    
+    if (MathJax) {
+        MathJax.Hub.Register.StartupHook("End",function () { setSize(); setTimeout(resizeContainer, 1000) });
+    }
+
+	if (window.addEventListener)
+        window.addEventListener('resize', windowResize);
+    else if (window.attachEvent)
+        window.attachEvent('onresize', windowResize);
+}
+
+</script>
+<SCRIPT language=JavaScript src="../../lib/bdetect.js" type=text/javascript></SCRIPT>
+
+<script language='JavaScript'>
+var crtm="1778905615";
+function SubmitForm(aform,pgname)
+{
+var aEl = document.createElement('input');
+if (!browser.isMac || !browser.isIE)
+  aEl.type = 'hidden';
+aEl.style.display = 'none';
+aEl.name = 'crtm';
+aEl.value = crtm;
+aform.appendChild(aEl);
+aform.action=pgname;
+aform.submit();
+
+}
+function GetPageName(pgname,extparams){
+if (pgname=='') pgname='/bank/questions.php';
+if (extparams=='')
+	pgname=pgname+"?crtm="+crtm;
+else	pgname=pgname+"?crtm="+crtm+"&"+extparams;
+return pgname;}
+function ShowPage(pgname,extparams,wndname,wndparam){
+if (wndname=='') {
+
+  location.href=GetPageName(pgname,extparams);
+
+  }
+  else
+ {if (wndparam=='')
+wnd=window.open(GetPageName(pgname,extparams),wndname);
+else wnd=window.open(GetPageName(pgname,extparams),wndname,wndparam);
+wnd.focus();}
+}
+</script>
+<script language='javascript'>
+                function onXS3DocumectLoad() {setSize();
+ }
+
+		if (window.addEventListener)
+            window.addEventListener('load', onXS3DocumectLoad);
+        else if (window.attachEvent)
+            window.attachEvent('onload', onXS3DocumectLoad);
+        else
+            window.onload = onXS3DocumectLoad;
+ </script><script language='javascript'>
+                function onXS3DocumectUnload(e) {
+			    	document.cookie = "md_auto=qprint; path=/; SameSite=Lax";
+			   		//return false;
+		    }
+		if (window.addEventListener)
+            window.addEventListener('beforeunload', onXS3DocumectUnload);
+        else if (window.attachEvent)
+            window.attachEvent('onbeforeunload', onXS3DocumectUnload);
+        else
+            window.onbeforeunload = onXS3DocumectUnload;
+        </script></body>
+</html>
