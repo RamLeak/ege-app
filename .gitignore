@@ -42,3 +42,9 @@ android/.cxx/
 # Claude Code — локальные настройки/permissions конкретной машины не коммитим.
 # Если когда-нибудь появится shared конфигурация — она пойдёт в .claude/settings.json.
 .claude/settings.local.json
+
+# Recon archive — старые ФИПИ-эксперименты не нужны в git
+parser/fipi-recon-archive/
+
+# Большие сырые HTML архивы — оставляем recon-sdamgia/ для дебага, но если разрастётся:
+# parser/recon-sdamgia/  # раскомментируй если папка станет >5 МБ
