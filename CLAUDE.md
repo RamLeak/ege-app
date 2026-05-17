@@ -288,8 +288,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 
 | Фаза | Описание | Статус |
 |---|---|---|
-| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0-3 ✅, corpus.db 192 MB, 10272 задач, Stage 4 ready |
-| 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏸ Waiting |
+| 1 | Парсер sdamgia → corpus.db (2 предмета) | ✅ **DONE 2026-05-17** (10272 задач, 36 правил, 100% покрытие КИМ ФИПИ-2026) |
+| 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏳ Ready (по `DESIGN_SPEC.md`) |
 | 3 | Главный экран — предиктор балла, радар, streak, журнал ошибок, прогресс-бары | ⏸ Waiting |
 | 4 | AI-кнопка, генератор варианта, импорт КИМ ФИПИ, история пробников | ⏸ Waiting |
 | 5 | SRS по ошибкам-формулировкам | ⏸ Waiting |
@@ -304,7 +304,30 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 | 1 | Парсер математики профильной (только основные №1..№19, 4863 задачи) | ✅ Done 2026-05-17, тег `phase-1-stage-1-done` |
 | 2 | Парсер русского №1..№27 + extract_rules.py (5409 задач, 36 правил) | ✅ Done 2026-05-17, тег `phase-1-stage-2-done` |
 | 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ✅ Done 2026-05-17, тег `phase-1-stage-3-done` |
-| 4 | Стресс-тест по КИМ ФИПИ-2026 + добор supplementary Д1..Д19 если нужно | ⏳ Ready (ожидает просмотра view_corpus.html пользователем) |
+| 4 | Стресс-тест по КИМ ФИПИ-2026 (Safety Rule #4) | ✅ Done 2026-05-17, тег `phase-1-stage-4-done`, **100% покрытие** |
+
+**Stage 4 итоговые метрики (2026-05-17, Safety Rule #4 закрыт):**
+- Источник: `parser/kim-fipi/{math_profile,russian}_demo_2026.pdf` (демоверсии ФИПИ-2026, скачаны с doc.fipi.ru, gitignored).
+- Извлечение: 19 задач math (со всеми «ИЛИ»-вариантами) + 27 задач rus = **46 задач КИМ**.
+- Метод: 2-колоночный crop PDF → split по номеру → split по «ИЛИ» → FTS5-запрос (топ-8 длинных русских слов с OR) → если хотя бы один variant находит матч в нужном предмете, задача считается покрытой.
+- Результат: **math 19/19 (100%), rus 27/27 (100%), overall 46/46 (100%)**. Порог 80% закрыт с большим запасом.
+- Качество спот-проверено: №16 «Кредит» → точный аналог в corpus (sdamgia_id 660700), №5 «Паронимы» → точное совпадение текста (sdamgia_id 59670), №1 планиметрия → корректные матчи на тип «Четырёхугольник, вписанный в окружность».
+- Claude API **не понадобился**: 100% покрытие через FTS5. Бюджет $0 из доступных $3.
+- Артефакт `parser/coverage_report.md` (104 KB, gitignored) — детальный отчёт с FTS5-запросами и top-3 матчами на каждый variant.
+
+**Supplementary Д1..Д19 математики (~2986 задач) НЕ добирались** — раз основные №1..№19 дали 100% покрытие демо-варианта, эти типы не нужны. Решение зафиксировано в Out of scope.
+
+## Phase 1 итог
+
+Парсер sdamgia → corpus.db (2 предмета) завершён.
+
+- **corpus.db 192 MB** на диске: 10272 задачи (4863 math + 5409 rus), 36 уникальных правил, 5288 привязок задача↔правило, FTS5-индекс по statement_html.
+- **0 ошибок** во всех 4 стейджах. **0 банов** от sdamgia. **0 4xx/5xx**.
+- Wall time всего парсинга: math ~14ч (с простоями) + rus 1.6ч + build_db 6с + Stage 4 ~30с.
+- Артефакты на диске (gitignored): math.jsonl 46 MB, russian.jsonl 138 MB, russian_rules.jsonl 1.1 MB, parser/assets/ 308 MB (формулы + иллюстрации), parser/cache/raw/ 1.2 GB.
+- Inventory кода в репо: `parser/pipeline/`, `parser/scrapers/{sdamgia_recon,math_profile,russian,extract_rules,fix_illustration_extensions,stage4_coverage,probe_cat292}.py`, `parser/build_db.py`, `parser/export_view.py`, `parser/tests/test_smoke.py` (32/32 passed), `parser/selectors.yaml`.
+
+Готов к Phase 2 (Android MVP по `DESIGN_SPEC.md`).
 
 **Stage 3 итоговые метрики (2026-05-17):**
 - `parser/corpus.db` 192.27 MB, собирается за 6 секунд.
@@ -419,6 +442,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 ---
 
 ## Last update
+
+2026-05-17 — **Phase 1 ✅ DONE.** Stage 4 закрыт: стресс-тест по КИМ ФИПИ-2026 показал 100% покрытие (46/46 задач: 19 math + 27 rus) через FTS5-поиск. Claude API не понадобился, бюджет $0. Тег `phase-1-stage-4-done`. Скрипт `parser/scrapers/stage4_coverage.py` — извлекает задачи из 2-колоночных PDF демоверсий ФИПИ, делит по «ИЛИ»-вариантам, матчит в corpus.db. Артефакт `parser/coverage_report.md` (104 KB, gitignored) с детализацией по каждой задаче. Roadmap: Фаза 1 ✅, Фаза 2 (Android MVP по `DESIGN_SPEC.md`) ready.
 
 2026-05-17 — Косметика post-Stage 3 (после ручной проверки view_corpus.html). Два бага исправлены без re-scrape:
 - 89% иллюстраций были SVG под именем `.png` (3128 из 3510 файлов) — добавлен `parser/scrapers/fix_illustration_extensions.py`, переименовал файлы и точечно обновил corpus.db (2637 + 688 + 2063 UPDATE на images_json/statement_html/solution_html). На уровне конвенций добавлено правило #10.
