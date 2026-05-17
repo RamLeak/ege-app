@@ -96,7 +96,8 @@ CREATE TABLE problem_subtypes (          -- темы КЭС: тригономе�
 
 CREATE TABLE problems (
     id INTEGER PRIMARY KEY,
-    sdamgia_id TEXT NOT NULL UNIQUE,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),  -- денормализация для быстрого фильтра + UNIQUE-ключ
+    sdamgia_id TEXT NOT NULL,
     prototype_id TEXT,                   -- если sdamgia группирует по прототипам
     type_id INTEGER NOT NULL REFERENCES problem_types(id),
     subtype_id INTEGER REFERENCES problem_subtypes(id),
@@ -107,7 +108,8 @@ CREATE TABLE problems (
     source TEXT,                         -- «ОБЗ ФИПИ», «РЕШУ ЕГЭ» — для русского из блока align-left. Для математики NULL (тематика — через subtype).
     difficulty TEXT,                     -- «обычная», «повышенная» — только для русского. Для математики NULL.
     scraped_at TEXT NOT NULL,
-    raw_hash TEXT NOT NULL
+    raw_hash TEXT NOT NULL,
+    UNIQUE(subject_id, sdamgia_id)       -- sdamgia использует общий ID-пул для разных предметов: на Stage 3 обнаружено 9 коллизий с math (низкие ID 902-915 и др., историческое наследие). Поэтому уникальность по паре.
 );
 
 CREATE TABLE solutions (
@@ -284,7 +286,7 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 
 | Фаза | Описание | Статус |
 |---|---|---|
-| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0 ✅, 1 ✅ math 4863, 2 ✅ rus 5409 + 36 правил, Stage 3 ready |
+| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0-3 ✅, corpus.db 192 MB, 10272 задач, Stage 4 ready |
 | 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏸ Waiting |
 | 3 | Главный экран — предиктор балла, радар, streak, журнал ошибок, прогресс-бары | ⏸ Waiting |
 | 4 | AI-кнопка, генератор варианта, импорт КИМ ФИПИ, история пробников | ⏸ Waiting |
@@ -299,8 +301,16 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 | 0 | Разведка sdamgia (10/10 запросов, selectors.yaml) | ✅ Done 2026-05-16 |
 | 1 | Парсер математики профильной (только основные №1..№19, 4863 задачи) | ✅ Done 2026-05-17, тег `phase-1-stage-1-done` |
 | 2 | Парсер русского №1..№27 + extract_rules.py (5409 задач, 36 правил) | ✅ Done 2026-05-17, тег `phase-1-stage-2-done` |
-| 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ⏳ Ready |
-| 4 | Стресс-тест по КИМ ФИПИ-2026 + добор supplementary Д1..Д19 если нужно | ⏸ Waiting |
+| 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ✅ Done 2026-05-17, тег `phase-1-stage-3-done` |
+| 4 | Стресс-тест по КИМ ФИПИ-2026 + добор supplementary Д1..Д19 если нужно | ⏳ Ready (ожидает просмотра view_corpus.html пользователем) |
+
+**Stage 3 итоговые метрики (2026-05-17):**
+- `parser/corpus.db` 192.27 MB, собирается за 6 секунд.
+- 2 subjects, 46 problem_types, 223 problem_subtypes, **10272 problems**, 10272 solutions, 36 rules, 5288 problem_rules, 10272 entries в FTS5.
+- Integrity: `PRAGMA integrity_check = ok`, `PRAGMA foreign_key_check = 0 issues`, 0 orphan solutions, 0 orphan problem_rules.
+- Распределение: mathb 4863 (100%) + rus 5409 (100%).
+- 9 коллизий sdamgia_id между math и rus (исторические низкие ID 902-915) — решено через `UNIQUE(subject_id, sdamgia_id)` вместо `sdamgia_id UNIQUE`. Расхождение со старой схемой зафиксировано в CLAUDE.md.
+- `view_corpus.html` 833 KB — выборка 10 math + 10 rus с формулами/иллюстрациями/правилами. Открывается двойным кликом из `parser/`.
 
 **Stage 2 итоговые метрики (2026-05-17):**
 - 5409 / 5409 задач русского (100% покрытие main №1..№27), 101 / 101 подвидов, 0 ошибок.
@@ -407,6 +417,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 ---
 
 ## Last update
+
+2026-05-17 — Stage 3 закрыт. Создан `parser/build_db.py` — собирает `parser/corpus.db` (192 MB) из math.jsonl + russian.jsonl + russian_rules.jsonl + russian_problem_meta.jsonl + parser/assets/. Все 10272 задачи в `problems`, FTS5-индекс готов, 0 orphan записей, integrity_check ok. Создан `parser/export_view.py` — генерирует `parser/view_corpus.html` (10 math + 10 rus задач для визуальной проверки). Минорное отклонение от изначальной схемы: добавлен `subject_id` в `problems` и UNIQUE через пару `(subject_id, sdamgia_id)` — 9 коллизий ID между math и rus (историческое наследие sdamgia). Тег `phase-1-stage-3-done`.
 
 2026-05-17 — Stage 2 закрыт. 5409 задач русского №1..№27 (100% покрытие main) в `parser/russian.jsonl`, 36 уникальных правил в `parser/russian_rules.jsonl`, per-problem метаданные (источник/сложность/rule_hash) в `parser/russian_problem_meta.jsonl`. Тег `phase-1-stage-2-done`. 0 ошибок, 0 банов, 0 4xx-5xx. Изменения в схеме БД: добавлены таблицы `rules` + `problem_rules` (many-to-many), колонки `problems.source` и `problems.difficulty` (только для русского). Math rules — user-curated, не парсятся из sdamgia. Парсер `parse_catalog` теперь автоматически детектирует разделитель `<h3>Дополнительные задания для подготовки</h3>` и помечает всё после него как supplementary — работает для обоих предметов. Smoke 32/32 зелёные.
 
