@@ -36,35 +36,45 @@ except Exception:
     pass
 
 SCHEMA_SQL = """
+-- Все PRIMARY KEY вынесены на уровень таблицы и колонкам явно проставлен NOT NULL.
+-- Причина: inline-форма `id INTEGER PRIMARY KEY` делает колонку rowid-alias и
+-- `PRAGMA table_info` возвращает notnull=0, что не совпадает с тем, что Room
+-- генерит из @PrimaryKey val id: Long (notnull=1). Это ломало
+-- `Room.createFromAsset` на старте Android-приложения. Семантически таблицы
+-- остаются rowid-таблицами с тем же PK; меняется только декларативная форма.
+
 CREATE TABLE subjects (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
-    sdamgia_subdomain TEXT NOT NULL
+    sdamgia_subdomain TEXT NOT NULL,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE problem_types (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     subject_id INTEGER NOT NULL REFERENCES subjects(id),
     number INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     is_supplementary INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
     UNIQUE(subject_id, number, title, is_supplementary)
 );
 
 CREATE TABLE problem_subtypes (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     type_id INTEGER NOT NULL REFERENCES problem_types(id),
     kes_code TEXT,
     title TEXT NOT NULL,
     sdamgia_category_id INTEGER UNIQUE,   -- параметр /test?category_id=N; UNIQUE через оба предмета (sdamgia использует глобальный пул).
+    PRIMARY KEY (id),
     UNIQUE(type_id, title)
 );
 CREATE INDEX idx_subtypes_sdamgia ON problem_subtypes(sdamgia_category_id);
 
 CREATE TABLE problems (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     subject_id INTEGER NOT NULL REFERENCES subjects(id),
     sdamgia_id TEXT NOT NULL,
     prototype_id TEXT,
@@ -78,6 +88,7 @@ CREATE TABLE problems (
     difficulty TEXT,
     scraped_at TEXT NOT NULL,
     raw_hash TEXT NOT NULL,
+    PRIMARY KEY (id),
     UNIQUE(subject_id, sdamgia_id)   -- 9 коллизий между math и rus (низкие ID 902-915 и др., историческое наследие sdamgia)
 );
 CREATE INDEX idx_problems_subject ON problems(subject_id);
@@ -85,18 +96,20 @@ CREATE INDEX idx_problems_type ON problems(type_id);
 CREATE INDEX idx_problems_subtype ON problems(subtype_id);
 
 CREATE TABLE solutions (
-    problem_id INTEGER PRIMARY KEY REFERENCES problems(id),
+    problem_id INTEGER NOT NULL REFERENCES problems(id),
     solution_html TEXT NOT NULL,
-    explanation_text TEXT
+    explanation_text TEXT,
+    PRIMARY KEY (problem_id)
 );
 
 CREATE TABLE rules (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     subject_id INTEGER NOT NULL REFERENCES subjects(id),
     title TEXT NOT NULL,
     content_html TEXT NOT NULL,
     source TEXT,
-    rule_hash TEXT NOT NULL UNIQUE
+    rule_hash TEXT NOT NULL UNIQUE,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE problem_rules (
@@ -107,17 +120,18 @@ CREATE TABLE problem_rules (
 CREATE INDEX idx_problem_rules_rule ON problem_rules(rule_id);
 
 CREATE TABLE user_progress (
-    problem_id INTEGER PRIMARY KEY REFERENCES problems(id),
+    problem_id INTEGER NOT NULL REFERENCES problems(id),
     status TEXT NOT NULL DEFAULT 'not_started',
     user_answer TEXT,
     attempts INTEGER DEFAULT 0,
     last_attempt_at TEXT,
     flagged INTEGER DEFAULT 0,
-    used_ai INTEGER DEFAULT 0
+    used_ai INTEGER DEFAULT 0,
+    PRIMARY KEY (problem_id)
 );
 
 CREATE TABLE ai_conversations (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     problem_id INTEGER NOT NULL REFERENCES problems(id),
     user_question TEXT NOT NULL,
     ai_response TEXT NOT NULL,
@@ -126,22 +140,24 @@ CREATE TABLE ai_conversations (
     tokens_in INTEGER,
     tokens_out INTEGER,
     cost_usd REAL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE error_atoms (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     subject_id INTEGER NOT NULL REFERENCES subjects(id),
     related_subtype_ids TEXT,
     next_review_at TEXT,
     review_interval_days INTEGER DEFAULT 1,
-    times_failed INTEGER DEFAULT 0
+    times_failed INTEGER DEFAULT 0,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE mock_exams (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL,
     subject_id INTEGER NOT NULL REFERENCES subjects(id),
     source TEXT NOT NULL,
     started_at TEXT,
@@ -149,13 +165,15 @@ CREATE TABLE mock_exams (
     raw_score INTEGER,
     scaled_score INTEGER,
     problem_ids_json TEXT NOT NULL,
-    answers_json TEXT
+    answers_json TEXT,
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE daily_streak (
-    date TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
     problems_solved INTEGER NOT NULL,
-    streak_value INTEGER NOT NULL
+    streak_value INTEGER NOT NULL,
+    PRIMARY KEY (date)
 );
 
 CREATE VIRTUAL TABLE problems_fts USING fts5(
