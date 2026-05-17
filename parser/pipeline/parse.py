@@ -97,83 +97,67 @@ def _decode_html_attr(s: str) -> str:
 
 # ---------- catalog ----------
 
-def parse_catalog(html: str) -> list[TypeBlock]:
-    """Распарсить /prob_catalog (одинаковая структура для math и rus).
+# Маркер раздела «устаревшие задания» в caталоге sdamgia. Структурно это
+# `<hr><center><h3>Дополнительные задания для подготовки</h3></center>`.
+# Всё, что в DOM идёт ПОСЛЕ этого узла на верхнем уровне cat_main, помечается
+# is_supplementary=True независимо от формата заголовка.
+SEPARATOR_TEXT = "Дополнительные задания для подготовки"
 
-    Возвращает плоский список TypeBlock в порядке появления на странице.
-    «Задания Д1..Д14» (только у математики) попадают сюда с
-    is_supplementary=True и собственной number (Д1→1, Д2→2, ...).
-    Если у блока нет pcat_num — это «Дополнительное», номер парсим из заголовка.
+
+def _parse_type_node(cat_node: Node) -> Optional[TypeBlock]:
+    """Распарсить одну верхнеуровневую div.cat_category из /prob_catalog.
+
+    is_supplementary тут определяется ТОЛЬКО по regex заголовка «Задания Д\\d+»
+    (для математики). Финальный флаг supplementary может быть переопределён
+    в parse_catalog после детектирования разделителя.
     """
-    tree = HTMLParser(html)
-    root = tree.css_first("div.cat_main")
-    if not root:
-        return []
+    title_block = _first(cat_node, "b.cat_name")
+    if not title_block:
+        return None
 
-    types: list[TypeBlock] = []
-    # supplementary-нумерация — отдельный счётчик: Д1 → 1, Д2 → 2, ...
-    for cat_node in root.css("div.cat_main > div.cat_category"):
-        title_block = _first(cat_node, "b.cat_name")
-        if not title_block:
+    pcat_num_node = _first(title_block, "span.pcat_num")
+    pcat_text = _clean_text(pcat_num_node.text()) if pcat_num_node else ""
+    full_title = _clean_text(title_block.text())
+    has_theory_span = title_block.css_first("span.theory") is not None
+    title_no_T = full_title[1:].strip() if has_theory_span and full_title.startswith("Т") else full_title
+
+    is_supplementary = False
+    number: Optional[int] = None
+    title_clean = title_no_T
+    if pcat_text and pcat_text.isdigit():
+        number = int(pcat_text)
+        title_clean = re.sub(r"^" + re.escape(pcat_text) + r"\s*\.?\s*", "", title_no_T).strip()
+    else:
+        # Старый fallback для математики: «Задания Д1..Д19» — regex ловит цифру.
+        # Для русского «Задания Д A7» / «Задания Д B6» regex не сработает —
+        # такие будут помечены как supplementary через разделитель в parse_catalog.
+        m = re.search(r"Задания\s+Д(\d+)", title_no_T)
+        if m:
+            number = int(m.group(1))
+            is_supplementary = True
+            title_clean = re.sub(r"^Задания\s+Д\d+\s*[.]?\s*", "", title_no_T).strip()
+
+    # Счётчик задач в типе — div.cat_count.cat_sum как прямой ребёнок cat_node.
+    total_count = 0
+    for child in cat_node.iter():
+        if child.tag != "div":
             continue
+        classes = (child.attributes.get("class") or "").split()
+        if "cat_count" in classes and "cat_sum" in classes:
+            try:
+                total_count = int(_clean_text(child.text()))
+            except ValueError:
+                total_count = 0
+            break
 
-        # Полный текст заголовка типа без span.theory и без pcat_num.
-        # Берём text() и удаляем мусор.
-        pcat_num_node = _first(title_block, "span.pcat_num")
-        pcat_text = _clean_text(pcat_num_node.text()) if pcat_num_node else ""
-        full_title = _clean_text(title_block.text())
-        # Ведущее «Т» от span.theory нужно срезать ТОЛЬКО если theory-span реально
-        # присутствует в этом b.cat_name — иначе настоящие названия типа
-        # «Текстовые задачи» / «Тригонометрические…» потеряют первую букву.
-        has_theory_span = title_block.css_first("span.theory") is not None
-        title_no_T = full_title[1:].strip() if has_theory_span and full_title.startswith("Т") else full_title
-
-        # Определяем номер и supplementary-флаг.
-        is_supplementary = False
-        number: Optional[int] = None
-        title_clean = title_no_T
-        if pcat_text and pcat_text.isdigit():
-            number = int(pcat_text)
-            # «1. Планиметрия» → «Планиметрия». Срезаем всё до и включая «1.».
-            title_clean = re.sub(r"^" + re.escape(pcat_text) + r"\s*\.?\s*", "", title_no_T).strip()
-        else:
-            # Supplementary: «Задания Д1. ...» / «Задания Д14. ...»
-            m = re.search(r"Задания\s+Д(\d+)", title_no_T)
-            if m:
-                number = int(m.group(1))
-                is_supplementary = True
-                # «Задания Д1. Чтение графиков» → «Чтение графиков»
-                # Иногда: «Задания Д8 C1. Уравнения» → «C1. Уравнения» (оставляем как есть)
-                title_clean = re.sub(r"^Задания\s+Д\d+\s*[.]?\s*", "", title_no_T).strip()
-
-        # Счётчик задач в типе — div.cat_count.cat_sum как прямой ребёнок cat_node.
-        # selectolax (lexbor) не поддерживает :scope, поэтому обходим детей руками.
-        total_count = 0
-        for child in cat_node.iter():
-            if child.tag != "div":
-                continue
-            classes = (child.attributes.get("class") or "").split()
-            if "cat_count" in classes and "cat_sum" in classes:
-                try:
-                    total_count = int(_clean_text(child.text()))
-                except ValueError:
-                    total_count = 0
-                break
-
-        # Подвиды: cat_node > div.cat_children > div.cat_category[data-id].
-        # Опять обходим без :scope.
-        subtypes: list[SubtypeRow] = []
-        children_div: Optional[Node] = None
-        for child in cat_node.iter():
-            if child.tag == "div" and "cat_children" in (child.attributes.get("class") or "").split():
-                children_div = child
-                break
-        if not children_div:
-            types.append(TypeBlock(
-                number=number, is_supplementary=is_supplementary,
-                title=title_clean, total_count=total_count, subtypes=[],
-            ))
-            continue
+    # Подвиды.
+    subtypes: list[SubtypeRow] = []
+    children_div: Optional[Node] = None
+    for child in cat_node.iter():
+        if child.tag == "div" and "cat_children" in (child.attributes.get("class") or "").split():
+            children_div = child
+            break
+    if children_div:
         for sub_node in children_div.iter():
             if sub_node.tag != "div":
                 continue
@@ -199,13 +183,57 @@ def parse_catalog(html: str) -> list[TypeBlock]:
                 url=href or f"/test?filter=all&category_id={data_id}",
             ))
 
-        types.append(TypeBlock(
-            number=number,
-            is_supplementary=is_supplementary,
-            title=title_clean,
-            total_count=total_count,
-            subtypes=subtypes,
-        ))
+    return TypeBlock(
+        number=number,
+        is_supplementary=is_supplementary,
+        title=title_clean,
+        total_count=total_count,
+        subtypes=subtypes,
+    )
+
+
+def parse_catalog(html: str) -> list[TypeBlock]:
+    """Распарсить /prob_catalog (одинаковая структура для math и rus).
+
+    Двойная детекция supplementary:
+    1. По разделителю — узел `<h3>Дополнительные задания для подготовки</h3>`
+       внутри cat_main. Всё, что в DOM идёт после него на уровне детей cat_main,
+       помечается is_supplementary=True. Это работает и для математики
+       (Д1..Д19), и для русского (Д A7/B6/L. Великовой/C27/...).
+    2. По regex заголовка «Задания Д\\d+» (старый fallback математики).
+    Финальный is_supplementary = primary OR fallback (OR между двумя сигналами).
+    """
+    tree = HTMLParser(html)
+    root = tree.css_first("div.cat_main")
+    if not root:
+        return []
+
+    types: list[TypeBlock] = []
+    after_separator = False
+
+    # Обходим прямых детей cat_main в порядке документа. iter() в selectolax
+    # возвращает direct children — проверено на математике и в smoke-тестах.
+    for child in root.iter():
+        if not after_separator:
+            # Маркер может появиться как сам <h3>, либо как <center>/<hr>
+            # с вложенным h3. text() возвращает текст любого вложенного содержимого.
+            if SEPARATOR_TEXT in (child.text() or ""):
+                after_separator = True
+                continue  # сам маркер не парсим как тип
+        if child.tag != "div":
+            continue
+        classes = (child.attributes.get("class") or "").split()
+        if "cat_category" not in classes:
+            continue
+        if "cat_header" in classes:
+            continue
+        type_block = _parse_type_node(child)
+        if type_block is None:
+            continue
+        if after_separator:
+            type_block.is_supplementary = True
+        types.append(type_block)
+
     return types
 
 

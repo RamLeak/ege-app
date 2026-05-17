@@ -11,6 +11,7 @@ parser/cache/
 parser/assets/
 parser/logs/*.log
 parser/state.json
+parser/state_*.json
 parser/*.jsonl
 parser/corpus.db
 parser/coverage_report.md

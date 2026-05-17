@@ -102,8 +102,10 @@ CREATE TABLE problems (
     subtype_id INTEGER REFERENCES problem_subtypes(id),
     statement_html TEXT NOT NULL,
     answer TEXT,
-    answer_format TEXT,                  -- 'number' | 'string' | 'multipart' | NULL
+    answer_format TEXT,                  -- 'number' | 'string' | 'multipart' | 'alternatives' | NULL
     images_json TEXT,                    -- JSON-массив относительных путей
+    source TEXT,                         -- «ОБЗ ФИПИ», «РЕШУ ЕГЭ» — для русского из блока align-left. Для математики NULL (тематика — через subtype).
+    difficulty TEXT,                     -- «обычная», «повышенная» — только для русского. Для математики NULL.
     scraped_at TEXT NOT NULL,
     raw_hash TEXT NOT NULL
 );
@@ -166,10 +168,34 @@ CREATE TABLE daily_streak (              -- счётчик дней подряд
     streak_value INTEGER NOT NULL
 );
 
+-- Справочные правила (для русского — извлекаются из sdamgia,
+-- для математики — пишутся вручную, см. примечание ниже).
+CREATE TABLE rules (
+    id INTEGER PRIMARY KEY,
+    subject_id INTEGER NOT NULL REFERENCES subjects(id),
+    title TEXT NOT NULL,                 -- «Союзы противопоставления», «Согласные в корне»
+    content_html TEXT NOT NULL,          -- полный HTML блока «Правило» с тегами
+    source TEXT,                         -- 'sdamgia' | 'user-curated'
+    rule_hash TEXT NOT NULL UNIQUE       -- sha256(нормализованный_text) — для дедупликации
+);
+
+-- Связь many-to-many: одно правило часто прикреплено к десяткам задач,
+-- одна задача может ссылаться на 0..N правил (обычно 1).
+CREATE TABLE problem_rules (
+    problem_id INTEGER NOT NULL REFERENCES problems(id),
+    rule_id INTEGER NOT NULL REFERENCES rules(id),
+    PRIMARY KEY (problem_id, rule_id)
+);
+CREATE INDEX idx_problem_rules_rule ON problem_rules(rule_id);
+
 CREATE VIRTUAL TABLE problems_fts USING fts5(
     statement_html, content=problems, content_rowid=id
 );
 ```
+
+**Правила: разделение русского и математики.**
+- **Русский:** правила извлекаются автоматически из блока «Правило» (скрытый `align-left > div span[font-weight:bold]` + соседний `div.pbody`) на каждой задаче. Скрипт `parser/scrapers/extract_rules.py` пост-процессит уже скачанные HTML в `cache/raw/`, дедуплицирует по `rule_hash`, заполняет `rules` и `problem_rules`. `rules.source = 'sdamgia'`.
+- **Математика:** правила НЕ парсятся из sdamgia. У пользователя есть свои правила (рукописные/из учебников), которые будут добавлены вручную в `rules` с `source = 'user-curated'` на Фазе 3+. У задач математики поле «правило» в Android-UI скрыто пока в `problem_rules` нет записей для этой задачи.
 
 ---
 
@@ -250,6 +276,7 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 - Базовая математика, биология, обществознание.
 - Теория и курсы (app — про практику, теория — в учебниках/YouTube).
 - **Дополнительные задания математики Д1..Д14 НЕ парсятся в Phase 1.** Причина: пользователь хочет тренироваться только на актуальном формате ЕГЭ-2026, чтобы избежать ложной уверенности от устаревших формулировок. Если Stage 4 покажет покрытие КИМ ФИПИ-2026 ниже 80% — рассмотрим добор Д-задач как fallback, но решение принимает пользователь, не Claude Code автономно.
+- **Устаревшие задания русского (Д А7, Д А9, Д А10, Д А11, Д А12, Д А20, Д А24, Д В1-В7, а также «B13/B14/L. Великовой/C27» и прочие после разделителя) НЕ парсятся в Phase 1.** Причина та же: тренируемся только на актуальном формате ЕГЭ-2026. Маркер на sdamgia: всё, что в каталоге `/prob_catalog` идёт после узла `<h3>Дополнительные задания для подготовки</h3>` (в живом UI sdamgia может также показывать заголовок «Задания, не входящие в ЕГЭ этого года»). Парсер `parse_catalog` автоматически детектирует этот разделитель и помечает все типы после него как `is_supplementary=True`. Та же логика обхода работает для обоих предметов.
 
 ---
 
@@ -257,7 +284,7 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 
 | Фаза | Описание | Статус |
 |---|---|---|
-| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0 ✅, Stage 1 ✅ (math 4863 задач), Stage 2 ready |
+| 1 | Парсер sdamgia → corpus.db (2 предмета) | 🟢 Stage 0 ✅, 1 ✅ math 4863, 2 ✅ rus 5409 + 36 правил, Stage 3 ready |
 | 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏸ Waiting |
 | 3 | Главный экран — предиктор балла, радар, streak, журнал ошибок, прогресс-бары | ⏸ Waiting |
 | 4 | AI-кнопка, генератор варианта, импорт КИМ ФИПИ, история пробников | ⏸ Waiting |
@@ -271,9 +298,18 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 |---|---|---|
 | 0 | Разведка sdamgia (10/10 запросов, selectors.yaml) | ✅ Done 2026-05-16 |
 | 1 | Парсер математики профильной (только основные №1..№19, 4863 задачи) | ✅ Done 2026-05-17, тег `phase-1-stage-1-done` |
-| 2 | Парсер русского | ⏳ Ready (ждёт мини-разведки от пользователя) |
-| 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ⏸ Waiting |
+| 2 | Парсер русского №1..№27 + extract_rules.py (5409 задач, 36 правил) | ✅ Done 2026-05-17, тег `phase-1-stage-2-done` |
+| 3 | `build_db.py` → corpus.db + FTS5 + view_corpus.html | ⏳ Ready |
 | 4 | Стресс-тест по КИМ ФИПИ-2026 + добор supplementary Д1..Д19 если нужно | ⏸ Waiting |
+
+**Stage 2 итоговые метрики (2026-05-17):**
+- 5409 / 5409 задач русского (100% покрытие main №1..№27), 101 / 101 подвидов, 0 ошибок.
+- 1123 HTTP-запроса: 1123 успешных, 0 timeout, 0 4xx, 0 5xx, 0 банов.
+- Wall time: 97.3 минут (1.6ч). Темп ~55 задач/мин — заметно быстрее математики из-за минимума формул в русском.
+- 36 уникальных правил, 5288 привязок задача↔правило. Дедупликация ~147 задач на правило в среднем (max 325 для правила про сложносочинённое предложение).
+- 121 задача без правила — это №1-3, у которых на sdamgia не выводится исходный текст (известное ограничение, см. Stage 0 анализ).
+- Артефакты: `russian.jsonl` 138 MB, `russian_rules.jsonl` 1.1 MB, `russian_problem_meta.jsonl` 590 KB.
+- Smoke: 32/32 зелёные (включая стресс на №5 паронимы).
 
 **Stage 1 итоговые метрики (2026-05-17):**
 - 4863 / 4863 задач (100% покрытие main математики), 146 / 146 подвидов.
@@ -371,6 +407,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 ---
 
 ## Last update
+
+2026-05-17 — Stage 2 закрыт. 5409 задач русского №1..№27 (100% покрытие main) в `parser/russian.jsonl`, 36 уникальных правил в `parser/russian_rules.jsonl`, per-problem метаданные (источник/сложность/rule_hash) в `parser/russian_problem_meta.jsonl`. Тег `phase-1-stage-2-done`. 0 ошибок, 0 банов, 0 4xx-5xx. Изменения в схеме БД: добавлены таблицы `rules` + `problem_rules` (many-to-many), колонки `problems.source` и `problems.difficulty` (только для русского). Math rules — user-curated, не парсятся из sdamgia. Парсер `parse_catalog` теперь автоматически детектирует разделитель `<h3>Дополнительные задания для подготовки</h3>` и помечает всё после него как supplementary — работает для обоих предметов. Smoke 32/32 зелёные.
 
 2026-05-17 — Stage 1 закрыт. 4863 задачи математики (100% покрытие main №1..№19) лежат в `parser/math.jsonl`, формулы и иллюстрации в `parser/assets/`. Тег `phase-1-stage-1-done`. 0 ошибок, 0 банов. Добавлена конвенция #9 в «Конвенции парсера» (не использовать bash `&` для запуска парсера — только `run_in_background`). Подвиды Д1..Д19 (~2986 задач) отложены до Stage 4 по решению пользователя. Stage 2 (русский) ожидает мини-разведки от пользователя.
 
