@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- В Stage 1 только тёмная тема — упрощает первый запуск (DESIGN_SPEC §2: "только тёмную пока"). -->
+    <style name="Theme.EGE100" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/bg_main_dark</item>
+        <item name="android:navigationBarColor">@color/bg_main_dark</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowBackground">@color/bg_main_dark</item>
+    </style>
+</resources>

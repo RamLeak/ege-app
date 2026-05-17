@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- iOS-style accent colors (DESIGN_SPEC.md §2, dark theme as default for Stage 1). -->
+    <color name="ios_blue_dark">#0A84FF</color>
+    <color name="ios_green_dark">#30D158</color>
+    <color name="ios_red_dark">#FF453A</color>
+    <color name="ios_orange_dark">#FF9F0A</color>
+
+    <color name="bg_main_dark">#000000</color>
+    <color name="bg_card_dark">#1C1C1E</color>
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#99EBEBF5</color>
+</resources>

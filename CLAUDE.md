@@ -289,10 +289,30 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 | Фаза | Описание | Статус |
 |---|---|---|
 | 1 | Парсер sdamgia → corpus.db (2 предмета) | ✅ **DONE 2026-05-17** (10272 задач, 36 правил, 100% покрытие КИМ ФИПИ-2026) |
-| 2 | Android MVP — навигация, экран задачи, проверка ответа | ⏳ Ready (по `DESIGN_SPEC.md`) |
+| 2 | Android MVP — навигация, экран задачи, проверка ответа | 🟡 In progress (Stage 1 ✅) |
 | 3 | Главный экран — предиктор балла, радар, streak, журнал ошибок, прогресс-бары | ⏸ Waiting |
 | 4 | AI-кнопка, генератор варианта, импорт КИМ ФИПИ, история пробников | ⏸ Waiting |
 | 5 | SRS по ошибкам-формулировкам | ⏸ Waiting |
+
+### Stages внутри Фазы 2
+
+| Stage | Описание | Статус |
+|---|---|---|
+| 1 | Каркас Android-проекта (Compose + Room/SQLite + Coil + Navigation + corpus.db как asset) | ✅ Done 2026-05-17, тег `phase-2-stage-1-done` |
+| 2 | Каталог задач (предмет → тип → подвид → задача) | ⏸ Waiting |
+| 3 | Экран задачи (условие, формулы, ответ, проверка, решение) | ⏸ Waiting |
+| 4 | Правило (bottom sheet) + Избранное + Свайпы | ⏸ Waiting |
+| 5 | Полировка (тёмная тема, spring-анимации, шрифты по DESIGN_SPEC.md) | ⏸ Waiting |
+
+**Stage 1 итоговые метрики (2026-05-17):**
+- Создан `android/` проект: package `com.daniel.ege100`, app name `EGE100`, minSdk 26, targetSdk 36.
+- Стек: Kotlin 2.0.21 + Compose BOM 2024.12.01 + Material 3 + Navigation 2.8.5 + Room 2.6.1 + Coil 2.7.0 + Ktor 3.0.3 (пустой, под Phase 4). AGP 8.7.3, Gradle 8.11.1.
+- `corpus.db` (192 MB) скопирована в `android/app/src/main/assets/` — gitignored, локальная копия из `parser/corpus.db`.
+- Подключение БД на этом этапе — **через raw SQLite + ручное копирование asset в databases/**, а не через Room.createFromAsset. Причина: corpus.db собрана `build_db.py` со своим набором колонок/индексов, Room строго валидирует @Entity ↔ таблица. Объявлять все 10+ Entity ради одного `SELECT COUNT(*)` в Stage 1 — преждевременно. Зависимость `androidx.room:room-runtime` остаётся подключённой, полноценные Entity/Dao добавим в Stage 2.
+- В Stage 1 одна Activity, один экран: тёмная тема, центрированный текст «БД подключена / Задач в корпусе: 10272». Smoke-тест на самом устройстве — на стороне пользователя (Samsung Galaxy через Telegram, USB-отладки нет).
+- APK: `android/app/build/outputs/apk/debug/app-debug.apk` — **204 MB**, в пределах ожидаемого (192 MB БД + Compose runtime + Coil/Ktor/Room рантаймы).
+- `aapt noCompress += "db"` в `app/build.gradle.kts` — не сжимаем sqlite в APK (раздувание сжатого .db ломает копирование на части устройств).
+- Тёмная тема только (Light палитра в Theme.kt задана на будущее, но фактически приложение принудительно тёмное на этом этапе — упрощает первый запуск, согласно DESIGN_SPEC.md §2 «только тёмную пока»).
 
 После завершения каждой фазы — обновить эту таблицу в `CLAUDE.md`. Помечать ✅ Done.
 
@@ -442,6 +462,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 ---
 
 ## Last update
+
+2026-05-17 — **Phase 2 Stage 1 ✅ DONE.** Создан Android-проект `android/` с пакетом `com.daniel.ege100` (имя на иконке — `EGE100`). Стек: Kotlin 2.0.21 + Compose BOM 2024.12.01 + Material 3 + Room 2.6.1 + Coil 2.7.0 + Navigation 2.8.5 + Ktor 3.0.3 (пустой). AGP 8.7.3, Gradle 8.11.1, JBR 21 от Android Studio. corpus.db (192 MB) лежит в `app/src/main/assets/` (gitignored), подключается через ручное копирование в databases/ + raw SQLite — Room.createFromAsset отложен до Stage 2, когда напишем @Entity под существующую схему. APK собран: 204 MB, в `android/app/build/outputs/apk/debug/app-debug.apk`. UI: одна Activity, тёмная тема, центрированный текст «БД подключена / Задач в корпусе: 10272». Smoke-тест на устройстве — на стороне пользователя (Samsung Galaxy через Telegram). Тег `phase-2-stage-1-done`.
 
 2026-05-17 — **Phase 1 ✅ DONE.** Stage 4 закрыт: стресс-тест по КИМ ФИПИ-2026 показал 100% покрытие (46/46 задач: 19 math + 27 rus) через FTS5-поиск. Claude API не понадобился, бюджет $0. Тег `phase-1-stage-4-done`. Скрипт `parser/scrapers/stage4_coverage.py` — извлекает задачи из 2-колоночных PDF демоверсий ФИПИ, делит по «ИЛИ»-вариантам, матчит в corpus.db. Артефакт `parser/coverage_report.md` (104 KB, gitignored) с детализацией по каждой задаче. Roadmap: Фаза 1 ✅, Фаза 2 (Android MVP по `DESIGN_SPEC.md`) ready.
 

@@ -25,15 +25,21 @@ parser/kim-fipi/
 .DS_Store
 Thumbs.db
 
-# Android (when Phase 2 starts)
+# Android
 android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
 android/.cxx/
+android/.kotlin/
 *.apk
 *.aab
 *.keystore
+
+# corpus.db в android/app/src/main/assets — это копия parser/corpus.db (192 MB).
+# В git хранится только в parser/; на стороне Android — скопировать локально
+# перед сборкой (см. README/CLAUDE.md).
+android/app/src/main/assets/corpus.db
 
 # Secrets
 .env

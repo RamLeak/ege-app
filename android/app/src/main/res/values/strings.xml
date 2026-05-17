@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EGE100</string>
+    <string name="db_connected">БД подключена</string>
+    <string name="problems_in_corpus">Задач в корпусе</string>
+    <string name="db_connecting">Открываю corpus.db…</string>
+    <string name="db_error_prefix">Ошибка БД:</string>
+</resources>
