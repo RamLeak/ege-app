@@ -34,11 +34,45 @@ _RE_LOCAL_SRC = re.compile(
     r'src="(?!https?://)(?!data:)(?!//)(?!/img/)([^"]+)"'
 )
 
+# Декларация display:none внутри атрибута style. На sdamgia решения и правила
+# отдаются с display:none — раскрываются их собственным JS, которого у нас нет.
+# Чистим декларацию целиком; пустой style — удаляем.
+_RE_STYLE_ATTR = re.compile(r"""style\s*=\s*(['"])(.*?)\1""", re.IGNORECASE | re.DOTALL)
+_RE_DISPLAY_NONE_DECL = re.compile(r"display\s*:\s*none\s*;?", re.IGNORECASE)
+
 
 def rewrite_src(html_text: str) -> str:
     if not html_text:
         return ""
     return _RE_LOCAL_SRC.sub(r'src="assets/\1"', html_text)
+
+
+def strip_display_none(html_text: str) -> str:
+    """Удалить декларацию display:none из всех style-атрибутов.
+
+    Sdamgia использует display:none + кастомный JS-toggle. Когда мы кладём
+    такой HTML в <details>/<div> — содержимое остаётся скрытым из-за
+    inline display:none. Здесь чистим самую декларацию, остальные стили
+    (padding, color, clear, etc.) сохраняем. Пустой style удаляем целиком.
+    """
+    if not html_text:
+        return ""
+
+    def replace_style(m: "re.Match[str]") -> str:
+        quote = m.group(1)
+        value = m.group(2)
+        new_value = _RE_DISPLAY_NONE_DECL.sub("", value).strip()
+        new_value = re.sub(r";\s*;", ";", new_value).strip(";").strip()
+        if not new_value:
+            return ""  # удалить атрибут целиком
+        return f"style={quote}{new_value}{quote}"
+
+    return _RE_STYLE_ATTR.sub(replace_style, html_text)
+
+
+def sanitize(html_text: str) -> str:
+    """Полная очистка для безопасной вставки в view_corpus.html."""
+    return strip_display_none(rewrite_src(html_text))
 
 
 PAGE_CSS = """
@@ -83,9 +117,9 @@ def render_problem(row: dict) -> str:
     if answer:
         answer_html = f'<div class="answer">Ответ: {html.escape(answer)}</div>'
 
-    stmt = rewrite_src(row["statement_html"] or "")
-    sol = rewrite_src(row["solution_html"] or "")
-    rule_html = rewrite_src(row["rule_content_html"] or "")
+    stmt = sanitize(row["statement_html"] or "")
+    sol = sanitize(row["solution_html"] or "")
+    rule_html = sanitize(row["rule_content_html"] or "")
 
     extras = []
     if row.get("source"):

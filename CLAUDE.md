@@ -212,6 +212,8 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 7. **MathML:** не пытаться конвертировать в LaTeX. Хранить как есть, рендерить MathJax-ом в WebView на Android.
 8. **Smoke-тесты:** в `parser/tests/smoke_selectors.py` хранить N эталонных задач с ожидаемыми полями. Прогонять перед каждым обновлением парсера и после любого изменения `selectors.yaml`.
 9. **Запуск парсера в background — только через Claude Code `run_in_background=true`.** Bash `&` оставляет процесс-зомби после выхода shell (на Windows процесс не получает SIGHUP сразу) — параллельный запуск через `&` И `run_in_background` уже один раз дал 12 дубликатов в `math.jsonl` (см. инцидент 2026-05-16, исправлено dedup-скриптом). При resume всегда: проверить `Get-CimInstance Win32_Process -Filter Name="python.exe"` на висящие процессы ДО запуска нового.
+10. **Угадывание расширения файла по URL — НЕЛЬЗЯ для иллюстраций sdamgia.** Для URL вида `https://math-ege.sdamgia.ru/get_file?id=N` в пути нет расширения, а Content-Type sdamgia не возвращает в стабильном виде. Старый normalize.py использовал fallback `.png` → 3128 из 3510 файлов оказались SVG под именем `.png` (см. инцидент 2026-05-17). Лечение пост-фактум: `parser/scrapers/fix_illustration_extensions.py` (читает magic bytes, переименовывает + точечно UPDATE'ит corpus.db). На будущее (при добавлении новых иллюстраций): определять реальный тип по magic bytes после скачивания, а не по URL.
+11. **Inline `display:none` в HTML sdamgia.** Решения, правила и некоторые блоки задач отдаются с `style="...;display:none"` — на самом sdamgia они раскрываются собственным JS, которого у нас нет. При рендере HTML в любом нашем UI (view_corpus.html, Android WebView) **обязательно** прогонять через sanitize-функцию, которая удаляет декларацию `display:none` из inline styles. Эталонная реализация — `strip_display_none()` в `parser/export_view.py`.
 
 ---
 
@@ -417,6 +419,10 @@ CREATE VIRTUAL TABLE problems_fts USING fts5(
 ---
 
 ## Last update
+
+2026-05-17 — Косметика post-Stage 3 (после ручной проверки view_corpus.html). Два бага исправлены без re-scrape:
+- 89% иллюстраций были SVG под именем `.png` (3128 из 3510 файлов) — добавлен `parser/scrapers/fix_illustration_extensions.py`, переименовал файлы и точечно обновил corpus.db (2637 + 688 + 2063 UPDATE на images_json/statement_html/solution_html). На уровне конвенций добавлено правило #10.
+- HTML sdamgia отдаёт блоки с inline `display:none` — `parser/export_view.py` теперь прогоняет через `strip_display_none()`. На уровне конвенций добавлено правило #11 — обязательное для всех будущих UI (включая Android WebView).
 
 2026-05-17 — Stage 3 закрыт. Создан `parser/build_db.py` — собирает `parser/corpus.db` (192 MB) из math.jsonl + russian.jsonl + russian_rules.jsonl + russian_problem_meta.jsonl + parser/assets/. Все 10272 задачи в `problems`, FTS5-индекс готов, 0 orphan записей, integrity_check ok. Создан `parser/export_view.py` — генерирует `parser/view_corpus.html` (10 math + 10 rus задач для визуальной проверки). Минорное отклонение от изначальной схемы: добавлен `subject_id` в `problems` и UNIQUE через пару `(subject_id, sdamgia_id)` — 9 коллизий ID между math и rus (историческое наследие sdamgia). Тег `phase-1-stage-3-done`.
 
