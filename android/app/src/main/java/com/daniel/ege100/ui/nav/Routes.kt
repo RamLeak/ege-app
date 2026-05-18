@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 /**
  * Type-safe routes для NavHost (Navigation Compose 2.8 + kotlinx.serialization).
  *
- * Bottom-tabs: HomeStub | Catalog | JournalStub. Stage 2 содержательно
- * наполняет только Catalog → Types → Subtypes → Problems → ProblemDetail.
+ * Bottom-tabs: HomeStub | Catalog | JournalStub. Stage 3 polish добавляет
+ * 2 экрана тренажёра ударений (Categories + Trainer).
  */
 @Serializable
 object HomeStubRoute
@@ -23,10 +23,6 @@ data class TypesRoute(val subjectId: Long)
 @Serializable
 data class SubtypesRoute(val typeId: Long)
 
-/**
- * Список задач. Если `subtypeId == null` — все задачи типа (режим
- * «🎯 Все задачи типа», DESIGN_SPEC §6.5).
- */
 @Serializable
 data class ProblemListRoute(
     val typeId: Long,
@@ -34,4 +30,25 @@ data class ProblemListRoute(
 )
 
 @Serializable
-data class ProblemDetailRoute(val problemId: Long)
+data class ProblemDetailRoute(
+    val problemId: Long,
+    val typeId: Long,
+    val subtypeId: Long? = null,
+)
+
+@Serializable
+object AccentCategoriesRoute
+
+/**
+ * Stage 3 polish 2: 3 режима входа.
+ *   - categoryId="nouns"/.../"adverbs" + defaultOrder="alphabetical" — категория А-Я.
+ *   - categoryId=null + defaultOrder="random" — все слова перемешать (🎲).
+ *   - categoryId=null + defaultOrder="alphabetical" — все слова по алфавиту (🔤).
+ *
+ * Toggle ⇆ внутри тренажёра позволяет переключаться между Alphabetical и Random.
+ */
+@Serializable
+data class AccentTrainerRoute(
+    val categoryId: String? = null,
+    val defaultOrder: String = "alphabetical",
+)

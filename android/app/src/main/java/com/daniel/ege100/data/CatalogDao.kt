@@ -87,4 +87,66 @@ interface CatalogDao {
 
     @Query("SELECT * FROM problems WHERE id = :problemId")
     suspend fun getProblem(problemId: Long): ProblemEntity?
+
+    // --- Stage 3: решения + навигация в пределах подвида/типа ---
+
+    @Query("SELECT * FROM solutions WHERE problem_id = :problemId")
+    suspend fun getSolution(problemId: Long): SolutionEntity?
+
+    /**
+     * Позиция текущей задачи (1-based) в выборке по подвиду — для шапки «3/150».
+     * Сортировка по id (та же, что в getProblemsBySubtype), так что соответствует
+     * порядку в каталоге.
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM problems
+        WHERE subtype_id = :subtypeId AND id <= :currentId
+        """
+    )
+    suspend fun positionInSubtype(currentId: Long, subtypeId: Long): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM problems
+        WHERE type_id = :typeId AND id <= :currentId
+        """
+    )
+    suspend fun positionInType(currentId: Long, typeId: Long): Int
+
+    @Query(
+        """
+        SELECT id FROM problems
+        WHERE subtype_id = :subtypeId AND id > :currentId
+        ORDER BY id ASC LIMIT 1
+        """
+    )
+    suspend fun nextProblemIdInSubtype(currentId: Long, subtypeId: Long): Long?
+
+    @Query(
+        """
+        SELECT id FROM problems
+        WHERE subtype_id = :subtypeId AND id < :currentId
+        ORDER BY id DESC LIMIT 1
+        """
+    )
+    suspend fun prevProblemIdInSubtype(currentId: Long, subtypeId: Long): Long?
+
+    @Query(
+        """
+        SELECT id FROM problems
+        WHERE type_id = :typeId AND id > :currentId
+        ORDER BY id ASC LIMIT 1
+        """
+    )
+    suspend fun nextProblemIdInType(currentId: Long, typeId: Long): Long?
+
+    @Query(
+        """
+        SELECT id FROM problems
+        WHERE type_id = :typeId AND id < :currentId
+        ORDER BY id DESC LIMIT 1
+        """
+    )
+    suspend fun prevProblemIdInType(currentId: Long, typeId: Long): Long?
 }

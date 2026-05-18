@@ -40,6 +40,10 @@ android/.kotlin/
 # В git хранится только в parser/; на стороне Android — скопировать локально
 # перед сборкой (см. README/CLAUDE.md).
 android/app/src/main/assets/corpus.db
+# accent_words.json — исходник в корне проекта; копия в assets/ gitignored.
+android/app/src/main/assets/accent_words.json
+# word_blanks.json — исходник в parser/word_blanks.json; копия в assets/ gitignored.
+android/app/src/main/assets/word_blanks.json
 
 # Secrets
 .env

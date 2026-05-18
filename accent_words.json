@@ -1,0 +1,962 @@
+{
+  "version": "ege-2023",
+  "source": "Орфоэпический словник ФИПИ ЕГЭ 2023",
+  "categories": [
+    {
+      "id": "nouns",
+      "title": "Существительные",
+      "words": [
+        {
+          "word": "аэропорты",
+          "stressed_index": 5
+        },
+        {
+          "word": "банты",
+          "stressed_index": 1
+        },
+        {
+          "word": "бороду",
+          "stressed_index": 1
+        },
+        {
+          "word": "бухгалтеров",
+          "stressed_index": 4
+        },
+        {
+          "word": "вероисповедание",
+          "stressed_index": 9
+        },
+        {
+          "word": "водопровод",
+          "stressed_index": 8
+        },
+        {
+          "word": "газопровод",
+          "stressed_index": 8
+        },
+        {
+          "word": "гражданство",
+          "stressed_index": 5
+        },
+        {
+          "word": "дефис",
+          "stressed_index": 3
+        },
+        {
+          "word": "дешевизна",
+          "stressed_index": 5
+        },
+        {
+          "word": "диспансер",
+          "stressed_index": 7
+        },
+        {
+          "word": "договорённость",
+          "stressed_index": 7
+        },
+        {
+          "word": "документ",
+          "stressed_index": 5
+        },
+        {
+          "word": "досуг",
+          "stressed_index": 3
+        },
+        {
+          "word": "еретик",
+          "stressed_index": 4
+        },
+        {
+          "word": "жалюзи",
+          "stressed_index": 5
+        },
+        {
+          "word": "значимость",
+          "stressed_index": 2
+        },
+        {
+          "word": "иксы",
+          "stressed_index": 0
+        },
+        {
+          "word": "каталог",
+          "stressed_index": 5
+        },
+        {
+          "word": "квартал",
+          "stressed_index": 5
+        },
+        {
+          "word": "километр",
+          "stressed_index": 5
+        },
+        {
+          "word": "конусов",
+          "stressed_index": 1
+        },
+        {
+          "word": "корысть",
+          "stressed_index": 3
+        },
+        {
+          "word": "краны",
+          "stressed_index": 2
+        },
+        {
+          "word": "кремень",
+          "stressed_index": 4
+        },
+        {
+          "word": "кремня",
+          "stressed_index": 5
+        },
+        {
+          "word": "лекторов",
+          "stressed_index": 1
+        },
+        {
+          "word": "локтей",
+          "stressed_index": 4
+        },
+        {
+          "word": "локтя",
+          "stressed_index": 1
+        },
+        {
+          "word": "лыжня",
+          "stressed_index": 4
+        },
+        {
+          "word": "местностей",
+          "stressed_index": 1
+        },
+        {
+          "word": "намерение",
+          "stressed_index": 3
+        },
+        {
+          "word": "нарост",
+          "stressed_index": 3
+        },
+        {
+          "word": "недруг",
+          "stressed_index": 1
+        },
+        {
+          "word": "недуг",
+          "stressed_index": 3
+        },
+        {
+          "word": "некролог",
+          "stressed_index": 6
+        },
+        {
+          "word": "ненависть",
+          "stressed_index": 1
+        },
+        {
+          "word": "нефтепровод",
+          "stressed_index": 9
+        },
+        {
+          "word": "новостей",
+          "stressed_index": 6
+        },
+        {
+          "word": "ногтей",
+          "stressed_index": 4
+        },
+        {
+          "word": "ногтя",
+          "stressed_index": 1
+        },
+        {
+          "word": "отзыв",
+          "stressed_index": 0
+        },
+        {
+          "word": "отзыв",
+          "stressed_index": 3
+        },
+        {
+          "word": "отрочество",
+          "stressed_index": 0
+        },
+        {
+          "word": "партер",
+          "stressed_index": 4
+        },
+        {
+          "word": "портфель",
+          "stressed_index": 5
+        },
+        {
+          "word": "поручни",
+          "stressed_index": 1
+        },
+        {
+          "word": "приданое",
+          "stressed_index": 4
+        },
+        {
+          "word": "призыв",
+          "stressed_index": 4
+        },
+        {
+          "word": "свёкла",
+          "stressed_index": 2
+        },
+        {
+          "word": "сироты",
+          "stressed_index": 3
+        },
+        {
+          "word": "созыв",
+          "stressed_index": 3
+        },
+        {
+          "word": "сосредоточение",
+          "stressed_index": 8
+        },
+        {
+          "word": "средства",
+          "stressed_index": 2
+        },
+        {
+          "word": "статуя",
+          "stressed_index": 2
+        },
+        {
+          "word": "столяр",
+          "stressed_index": 4
+        },
+        {
+          "word": "таможня",
+          "stressed_index": 3
+        },
+        {
+          "word": "торты",
+          "stressed_index": 1
+        },
+        {
+          "word": "туфля",
+          "stressed_index": 1
+        },
+        {
+          "word": "цемент",
+          "stressed_index": 3
+        },
+        {
+          "word": "центнер",
+          "stressed_index": 1
+        },
+        {
+          "word": "цепочка",
+          "stressed_index": 3
+        },
+        {
+          "word": "шарфы",
+          "stressed_index": 1
+        },
+        {
+          "word": "шофёр",
+          "stressed_index": 3
+        },
+        {
+          "word": "эксперт",
+          "stressed_index": 4
+        }
+      ]
+    },
+    {
+      "id": "adjectives",
+      "title": "Прилагательные",
+      "words": [
+        {
+          "word": "верна",
+          "stressed_index": 4
+        },
+        {
+          "word": "значимый",
+          "stressed_index": 2
+        },
+        {
+          "word": "красивее",
+          "stressed_index": 4
+        },
+        {
+          "word": "красивейший",
+          "stressed_index": 4
+        },
+        {
+          "word": "кухонный",
+          "stressed_index": 1
+        },
+        {
+          "word": "ловка",
+          "stressed_index": 4
+        },
+        {
+          "word": "мозаичный",
+          "stressed_index": 4
+        },
+        {
+          "word": "оптовый",
+          "stressed_index": 3
+        },
+        {
+          "word": "прозорлива",
+          "stressed_index": 7
+        },
+        {
+          "word": "прозорливый",
+          "stressed_index": 7
+        },
+        {
+          "word": "сливовый",
+          "stressed_index": 2
+        }
+      ]
+    },
+    {
+      "id": "verbs",
+      "title": "Глаголы",
+      "words": [
+        {
+          "word": "брала",
+          "stressed_index": 4
+        },
+        {
+          "word": "бралась",
+          "stressed_index": 4
+        },
+        {
+          "word": "взяла",
+          "stressed_index": 4
+        },
+        {
+          "word": "взялась",
+          "stressed_index": 4
+        },
+        {
+          "word": "влилась",
+          "stressed_index": 4
+        },
+        {
+          "word": "ворвалась",
+          "stressed_index": 6
+        },
+        {
+          "word": "восприняла",
+          "stressed_index": 9
+        },
+        {
+          "word": "воспринять",
+          "stressed_index": 7
+        },
+        {
+          "word": "воссоздала",
+          "stressed_index": 9
+        },
+        {
+          "word": "вручит",
+          "stressed_index": 4
+        },
+        {
+          "word": "гнала",
+          "stressed_index": 4
+        },
+        {
+          "word": "гналась",
+          "stressed_index": 4
+        },
+        {
+          "word": "добрала",
+          "stressed_index": 6
+        },
+        {
+          "word": "добралась",
+          "stressed_index": 6
+        },
+        {
+          "word": "дождалась",
+          "stressed_index": 6
+        },
+        {
+          "word": "дозвонится",
+          "stressed_index": 6
+        },
+        {
+          "word": "дозировать",
+          "stressed_index": 3
+        },
+        {
+          "word": "ждала",
+          "stressed_index": 4
+        },
+        {
+          "word": "жилось",
+          "stressed_index": 3
+        },
+        {
+          "word": "закупорить",
+          "stressed_index": 3
+        },
+        {
+          "word": "занял",
+          "stressed_index": 1
+        },
+        {
+          "word": "заняла",
+          "stressed_index": 5
+        },
+        {
+          "word": "заняли",
+          "stressed_index": 1
+        },
+        {
+          "word": "занять",
+          "stressed_index": 3
+        },
+        {
+          "word": "заперла",
+          "stressed_index": 6
+        },
+        {
+          "word": "запломбировать",
+          "stressed_index": 11
+        },
+        {
+          "word": "защемит",
+          "stressed_index": 5
+        },
+        {
+          "word": "звала",
+          "stressed_index": 4
+        },
+        {
+          "word": "звонит",
+          "stressed_index": 4
+        },
+        {
+          "word": "кашлянуть",
+          "stressed_index": 1
+        },
+        {
+          "word": "клала",
+          "stressed_index": 2
+        },
+        {
+          "word": "клеить",
+          "stressed_index": 2
+        },
+        {
+          "word": "кралась",
+          "stressed_index": 2
+        },
+        {
+          "word": "кровоточить",
+          "stressed_index": 8
+        },
+        {
+          "word": "лгала",
+          "stressed_index": 4
+        },
+        {
+          "word": "лила",
+          "stressed_index": 3
+        },
+        {
+          "word": "лилась",
+          "stressed_index": 3
+        },
+        {
+          "word": "наврала",
+          "stressed_index": 6
+        },
+        {
+          "word": "наделит",
+          "stressed_index": 5
+        },
+        {
+          "word": "надорвалась",
+          "stressed_index": 8
+        },
+        {
+          "word": "назвалась",
+          "stressed_index": 6
+        },
+        {
+          "word": "накренится",
+          "stressed_index": 6
+        },
+        {
+          "word": "налила",
+          "stressed_index": 5
+        },
+        {
+          "word": "нарвала",
+          "stressed_index": 6
+        },
+        {
+          "word": "начал",
+          "stressed_index": 1
+        },
+        {
+          "word": "начала",
+          "stressed_index": 5
+        },
+        {
+          "word": "начали",
+          "stressed_index": 1
+        },
+        {
+          "word": "начать",
+          "stressed_index": 3
+        },
+        {
+          "word": "обзвонит",
+          "stressed_index": 6
+        },
+        {
+          "word": "облегчит",
+          "stressed_index": 6
+        },
+        {
+          "word": "облегчить",
+          "stressed_index": 6
+        },
+        {
+          "word": "облилась",
+          "stressed_index": 5
+        },
+        {
+          "word": "обнялась",
+          "stressed_index": 5
+        },
+        {
+          "word": "обогнала",
+          "stressed_index": 7
+        },
+        {
+          "word": "ободрала",
+          "stressed_index": 7
+        },
+        {
+          "word": "ободрит",
+          "stressed_index": 5
+        },
+        {
+          "word": "ободрится",
+          "stressed_index": 5
+        },
+        {
+          "word": "ободрить",
+          "stressed_index": 5
+        },
+        {
+          "word": "ободриться",
+          "stressed_index": 5
+        },
+        {
+          "word": "обострить",
+          "stressed_index": 6
+        },
+        {
+          "word": "одолжит",
+          "stressed_index": 5
+        },
+        {
+          "word": "одолжить",
+          "stressed_index": 5
+        },
+        {
+          "word": "озлобить",
+          "stressed_index": 3
+        },
+        {
+          "word": "оклеить",
+          "stressed_index": 3
+        },
+        {
+          "word": "окружит",
+          "stressed_index": 5
+        },
+        {
+          "word": "опошлить",
+          "stressed_index": 2
+        },
+        {
+          "word": "осведомится",
+          "stressed_index": 3
+        },
+        {
+          "word": "осведомиться",
+          "stressed_index": 3
+        },
+        {
+          "word": "отбыла",
+          "stressed_index": 5
+        },
+        {
+          "word": "отдала",
+          "stressed_index": 5
+        },
+        {
+          "word": "откупорить",
+          "stressed_index": 3
+        },
+        {
+          "word": "отозвала",
+          "stressed_index": 7
+        },
+        {
+          "word": "отозвалась",
+          "stressed_index": 7
+        },
+        {
+          "word": "перезвонит",
+          "stressed_index": 8
+        },
+        {
+          "word": "перелила",
+          "stressed_index": 7
+        },
+        {
+          "word": "плодоносить",
+          "stressed_index": 8
+        },
+        {
+          "word": "пломбировать",
+          "stressed_index": 9
+        },
+        {
+          "word": "повторит",
+          "stressed_index": 6
+        },
+        {
+          "word": "позвала",
+          "stressed_index": 6
+        },
+        {
+          "word": "позвонит",
+          "stressed_index": 6
+        },
+        {
+          "word": "полила",
+          "stressed_index": 5
+        },
+        {
+          "word": "положил",
+          "stressed_index": 5
+        },
+        {
+          "word": "положить",
+          "stressed_index": 5
+        },
+        {
+          "word": "поняла",
+          "stressed_index": 5
+        },
+        {
+          "word": "понять",
+          "stressed_index": 3
+        },
+        {
+          "word": "послала",
+          "stressed_index": 4
+        },
+        {
+          "word": "прибыл",
+          "stressed_index": 2
+        },
+        {
+          "word": "прибыла",
+          "stressed_index": 6
+        },
+        {
+          "word": "прибыли",
+          "stressed_index": 2
+        },
+        {
+          "word": "прибыть",
+          "stressed_index": 4
+        },
+        {
+          "word": "принял",
+          "stressed_index": 2
+        },
+        {
+          "word": "приняла",
+          "stressed_index": 6
+        },
+        {
+          "word": "приняли",
+          "stressed_index": 2
+        },
+        {
+          "word": "принять",
+          "stressed_index": 4
+        },
+        {
+          "word": "рвала",
+          "stressed_index": 4
+        },
+        {
+          "word": "сверлит",
+          "stressed_index": 5
+        },
+        {
+          "word": "сняла",
+          "stressed_index": 4
+        },
+        {
+          "word": "соврала",
+          "stressed_index": 6
+        },
+        {
+          "word": "создала",
+          "stressed_index": 6
+        },
+        {
+          "word": "сорвала",
+          "stressed_index": 6
+        },
+        {
+          "word": "сорит",
+          "stressed_index": 3
+        },
+        {
+          "word": "убрала",
+          "stressed_index": 5
+        },
+        {
+          "word": "углубить",
+          "stressed_index": 5
+        },
+        {
+          "word": "укрепит",
+          "stressed_index": 5
+        },
+        {
+          "word": "черпать",
+          "stressed_index": 1
+        },
+        {
+          "word": "щемит",
+          "stressed_index": 3
+        },
+        {
+          "word": "щёлкать",
+          "stressed_index": 1
+        }
+      ]
+    },
+    {
+      "id": "participles",
+      "title": "Причастия",
+      "words": [
+        {
+          "word": "довезённый",
+          "stressed_index": 5
+        },
+        {
+          "word": "загнутый",
+          "stressed_index": 1
+        },
+        {
+          "word": "занята",
+          "stressed_index": 5
+        },
+        {
+          "word": "занятый",
+          "stressed_index": 1
+        },
+        {
+          "word": "запертый",
+          "stressed_index": 1
+        },
+        {
+          "word": "заселена",
+          "stressed_index": 7
+        },
+        {
+          "word": "заселённый",
+          "stressed_index": 5
+        },
+        {
+          "word": "кормящий",
+          "stressed_index": 4
+        },
+        {
+          "word": "кровоточащий",
+          "stressed_index": 8
+        },
+        {
+          "word": "наживший",
+          "stressed_index": 3
+        },
+        {
+          "word": "наливший",
+          "stressed_index": 3
+        },
+        {
+          "word": "нанявшийся",
+          "stressed_index": 3
+        },
+        {
+          "word": "начавший",
+          "stressed_index": 3
+        },
+        {
+          "word": "начатый",
+          "stressed_index": 1
+        },
+        {
+          "word": "низведённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "облегчённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "ободрённый",
+          "stressed_index": 5
+        },
+        {
+          "word": "обострённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "отключённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "повторённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "поделённый",
+          "stressed_index": 5
+        },
+        {
+          "word": "понявший",
+          "stressed_index": 3
+        },
+        {
+          "word": "принята",
+          "stressed_index": 6
+        },
+        {
+          "word": "принятый",
+          "stressed_index": 2
+        },
+        {
+          "word": "приручённый",
+          "stressed_index": 6
+        },
+        {
+          "word": "проживший",
+          "stressed_index": 4
+        },
+        {
+          "word": "снята",
+          "stressed_index": 4
+        },
+        {
+          "word": "согнутый",
+          "stressed_index": 1
+        },
+        {
+          "word": "углублённый",
+          "stressed_index": 6
+        }
+      ]
+    },
+    {
+      "id": "gerunds",
+      "title": "Деепричастия",
+      "words": [
+        {
+          "word": "закупорив",
+          "stressed_index": 3
+        },
+        {
+          "word": "начав",
+          "stressed_index": 3
+        },
+        {
+          "word": "начавшись",
+          "stressed_index": 3
+        },
+        {
+          "word": "отдав",
+          "stressed_index": 3
+        },
+        {
+          "word": "подняв",
+          "stressed_index": 4
+        },
+        {
+          "word": "поняв",
+          "stressed_index": 3
+        },
+        {
+          "word": "прибыв",
+          "stressed_index": 4
+        },
+        {
+          "word": "создав",
+          "stressed_index": 4
+        }
+      ]
+    },
+    {
+      "id": "adverbs",
+      "title": "Наречия",
+      "words": [
+        {
+          "word": "вовремя",
+          "stressed_index": 1
+        },
+        {
+          "word": "доверху",
+          "stressed_index": 1
+        },
+        {
+          "word": "донельзя",
+          "stressed_index": 3
+        },
+        {
+          "word": "донизу",
+          "stressed_index": 1
+        },
+        {
+          "word": "досуха",
+          "stressed_index": 1
+        },
+        {
+          "word": "засветло",
+          "stressed_index": 1
+        },
+        {
+          "word": "затемно",
+          "stressed_index": 1
+        },
+        {
+          "word": "красивее",
+          "stressed_index": 4
+        },
+        {
+          "word": "надолго",
+          "stressed_index": 3
+        },
+        {
+          "word": "ненадолго",
+          "stressed_index": 5
+        }
+      ]
+    }
+  ]
+}

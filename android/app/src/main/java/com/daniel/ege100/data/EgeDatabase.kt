@@ -4,21 +4,25 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * Stage 2: полноценное подключение `corpus.db` через Room.createFromAsset.
+ * Stage 3: Room с 5 @Entity (Subject, ProblemType, ProblemSubtype, Problem, Solution).
  *
  * Asset лежит в `app/src/main/assets/corpus.db` (192 MB, gitignored). Room
  * при первом запуске копирует его в `databases/corpus.db` и инициализирует
- * `room_master_table` с identity-хешем нашей @Database. На последующих
- * запусках открывается мгновенно.
+ * `room_master_table` с identity-хешем нашей @Database.
+ *
+ * Версия бампается с 1 → 2 ради добавления SolutionEntity. На свежей установке
+ * Room берёт asset как есть (таблица solutions уже там, integrity_check ok).
+ * На устройстве, где уже стоит Stage 2 (v=1), запускается MIGRATION_1_2 —
+ * она пустая, потому что schema добавлена только на стороне Room (Entity),
+ * физическая таблица solutions уже существует в pre-packaged DB. После
+ * migration Room валидирует схему и обновляет identity_hash в room_master_table.
  *
  * Все @Entity объявлены так, чтобы точно соответствовать DDL из build_db.py
- * (см. Entities.kt и CLAUDE.md §«Схема БД»). При расхождении Room выбросит
- * IllegalStateException при open — это ожидаемое поведение.
- *
- * `exportSchema = false` сознательно — мы не управляем версионированием
- * через Room-миграции, БД пересобирается build_db.py отдельно.
+ * (см. Entities.kt и CLAUDE.md §«Схема БД» + Convention #12).
  */
 @Database(
     entities = [
@@ -26,8 +30,9 @@ import androidx.room.RoomDatabase
         ProblemTypeEntity::class,
         ProblemSubtypeEntity::class,
         ProblemEntity::class,
+        SolutionEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class EgeDatabase : RoomDatabase() {
@@ -36,6 +41,15 @@ abstract class EgeDatabase : RoomDatabase() {
 
     companion object {
         private const val DB_NAME = "corpus.db"
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Stage 2 → Stage 3: добавили SolutionEntity. Физическая таблица
+                // `solutions` уже присутствует в pre-packaged corpus.db (build_db.py
+                // создаёт её с самого начала), поэтому никаких ALTER не нужно.
+                // Room после migration сам обновит identity_hash в room_master_table.
+            }
+        }
 
         @Volatile
         private var INSTANCE: EgeDatabase? = null
@@ -53,6 +67,7 @@ abstract class EgeDatabase : RoomDatabase() {
                 DB_NAME,
             )
                 .createFromAsset(DB_NAME)
+                .addMigrations(MIGRATION_1_2)
                 .build()
         }
     }

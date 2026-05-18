@@ -4,14 +4,13 @@ import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,8 +30,12 @@ import com.daniel.ege100.data.ProblemEntity
 import com.daniel.ege100.data.ProblemSubtypeEntity
 import com.daniel.ege100.data.ProblemTypeEntity
 import com.daniel.ege100.ui.common.AppleCard
-import com.daniel.ege100.ui.common.ContentInsets
-import com.daniel.ege100.ui.common.ScreenTopBar
+import com.daniel.ege100.ui.common.LargeTitleBar
+import com.daniel.ege100.ui.common.SecondaryButton
+import com.daniel.ege100.ui.theme.Bg
+import com.daniel.ege100.ui.theme.Label
+import com.daniel.ege100.ui.theme.LabelSecondary
+import com.daniel.ege100.ui.theme.LabelTertiary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -102,15 +105,10 @@ class ProblemListViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-/**
- * Снимает HTML-теги и возвращает первые 100 символов условия — достаточно,
- * чтобы человек узнал задачу. Полноценный рендер (формулы, иллюстрации) —
- * в Stage 3 на экране задачи.
- */
 private val TAG_REGEX = Regex("<[^>]*>")
 private val WS_REGEX = Regex("\\s+")
 
-private fun preview(html: String, limit: Int = 100): String {
+private fun preview(html: String, limit: Int = 120): String {
     val cleaned = html.replace(TAG_REGEX, " ").replace("&nbsp;", " ").replace(WS_REGEX, " ").trim()
     return if (cleaned.length <= limit) cleaned else cleaned.take(limit).trimEnd() + "…"
 }
@@ -127,15 +125,20 @@ fun ProblemListScreen(
     LaunchedEffect(typeId, subtypeId) { vm.init(typeId, subtypeId) }
     val st by vm.state.collectAsState()
 
-    val title = when {
-        st.subtype != null -> st.subtype!!.title
-        st.type != null -> "№${st.type!!.number}  ·  все задачи"
-        else -> "Задачи"
-    }
+    val title = st.subtype?.title ?: st.type?.let { "№${it.number}" } ?: "Задачи"
+    val subtitle = if (st.subtype != null) st.type?.let { "№${it.number}  ·  ${it.title}" }
+                    else if (st.type != null) "Все задачи типа"
+                    else null
 
     Scaffold(
-        topBar = { ScreenTopBar(title = title, onBack = onBack) },
-        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            LargeTitleBar(
+                title = title,
+                subtitle = subtitle,
+                onBack = onBack,
+            )
+        },
+        containerColor = Bg,
     ) { inner ->
         Box(
             modifier = Modifier
@@ -146,12 +149,12 @@ fun ProblemListScreen(
             if (st.loading && st.problems.isEmpty()) {
                 Text(
                     text = "Загрузка задач…",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LabelSecondary,
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
                 LazyColumn(
-                    contentPadding = ContentInsets,
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
@@ -159,40 +162,31 @@ fun ProblemListScreen(
                         Text(
                             text = "Показано ${st.problems.size} из ${st.total}",
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                            color = LabelTertiary,
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp),
                         )
                     }
                     items(st.problems, key = { it.id }) { p ->
-                        AppleCard(onClick = { onProblemClick(p.id) }) {
-                            Text(
-                                text = "sdamgia_id: ${p.sdamgiaId}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        AppleCard(onClick = { onProblemClick(p.id) }, paddingDp = 16) {
                             Text(
                                 text = preview(p.statementHtml),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Normal,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(top = 6.dp),
+                                color = Label,
+                                lineHeight = 21.sp,
                             )
                         }
                     }
                     if (st.canLoadMore) {
                         item("loadmore") {
-                            Button(
+                            Spacer(Modifier.height(4.dp))
+                            SecondaryButton(
+                                text = if (st.loading) "Загрузка…" else "Загрузить ещё",
                                 onClick = { vm.loadMore() },
                                 enabled = !st.loading,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                            ) {
-                                Text(if (st.loading) "Загрузка…" else "Загрузить ещё")
-                            }
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Spacer(Modifier.height(20.dp))
                         }
                     }
                 }

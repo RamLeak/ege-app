@@ -60,7 +60,28 @@ android {
     // но явно фиксируем — на больших sqlite-файлах сжатие ломает createFromAsset на
     // некоторых устройствах + увеличивает время первого старта.
     androidResources {
-        noCompress += listOf("db")
+        // Stage 3 fix: corpus.db (192 MB) — содержит HTML текст и JSON paths,
+        // отлично сжимается AAPT (~60% ratio). Раньше стоял `noCompress += "db"`
+        // как страховка от старых багов SQLiteOpenHelper на сжатом asset, но
+        // Room 2.4+ использует AssetManager.open() → InputStream, разжимает
+        // прозрачно. Снимаем noCompress — экономит ~100 MB на APK.
+        //
+        // Также: AAPT2 по умолчанию ignoreAssetsPattern содержит "_*", и у нас
+        // вся библиотека SVG-формул лежит в `parser/assets/_formulas/...` —
+        // переопределяем pattern без `_*` и `<dir>_*`.
+        ignoreAssetsPattern =
+            "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+
+    // Stage 3 fix: подключаем parser/assets/ как второй asset-source.
+    // Там лежат 52 697 SVG-формул (_formulas/XX/HASH.svg, ~352 MB) и 3 128
+    // иллюстраций ({sdamgia_id}/img_N.svg). Они нужны HtmlRenderer'у для
+    // отображения формул и чертежей. Не копируем в src/main/assets — один
+    // источник истины (parser/build_db.py пишет туда + corpus.db ссылается).
+    sourceSets {
+        getByName("main") {
+            assets.srcDirs("src/main/assets", "../../parser/assets")
+        }
     }
 }
 
@@ -86,6 +107,10 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
+    implementation(libs.jsoup)
+    implementation(libs.androidsvg)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.ui.text.google.fonts)
 
     // Ktor — пустое подключение под Фазу 4 (AI). В Stage 1 не используется.
     implementation(libs.ktor.client.core)

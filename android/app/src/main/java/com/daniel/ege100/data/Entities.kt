@@ -110,6 +110,27 @@ data class ProblemEntity(
 )
 
 /**
+ * Stage 3: авторское решение задачи.
+ * DDL: problem_id PK FK→problems(id), solution_html NOT NULL, explanation_text nullable.
+ * `explanation_text` пока пуст в БД (зарезервировано под plain-text для AI).
+ */
+@Entity(
+    tableName = "solutions",
+    foreignKeys = [
+        ForeignKey(
+            entity = ProblemEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["problem_id"],
+        ),
+    ],
+)
+data class SolutionEntity(
+    @PrimaryKey @ColumnInfo(name = "problem_id") val problemId: Long,
+    @ColumnInfo(name = "solution_html") val solutionHtml: String,
+    @ColumnInfo(name = "explanation_text") val explanationText: String?,
+)
+
+/**
  * Composite-результат: тип + количество задач в нём (для экрана списка типов).
  * Не маппится в таблицу, используется только в Dao.
  */
