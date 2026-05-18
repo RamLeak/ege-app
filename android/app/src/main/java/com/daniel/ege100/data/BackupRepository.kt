@@ -36,15 +36,18 @@ data class BackupSnapshot(
     val favorites: List<Long>,
     val accentErrors: List<String>,
     val wordBlankErrors: Map<Int, List<String>>,
-    // Phase 3 Stage B: добавлены stats и streak. Старые бэкапы (1.0) без них
-    // парсятся OK благодаря default-значениям + ignoreUnknownKeys.
+    // Phase 3 Stage B: добавлены stats и streak (v1.1).
     val userStats: UserStatsSnapshot = UserStatsSnapshot(),
     val streak: StreakState = StreakState(),
+    // Phase 3 Stage C: добавлен error_log и attempt_log (v1.2).
+    // Старые бэкапы парсятся OK благодаря default-значениям + ignoreUnknownKeys.
+    val errorLog: List<ErrorLogRecord> = emptyList(),
+    val attemptLog: List<AttemptLogRecord> = emptyList(),
 ) {
     companion object {
-        const val CURRENT_VERSION = "1.1"
+        const val CURRENT_VERSION = "1.2"
         /** Версии, которые мы можем восстановить (forward-compat). */
-        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1")
+        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2")
         fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
 }
@@ -63,6 +66,9 @@ object BackupRepository {
 
     suspend fun exportBackup(context: Context, appVersion: String = "0.1.0"): String =
         withContext(Dispatchers.IO) {
+            val userDb = UserDataDatabase.get(context)
+            val errorLog = userDb.errorLogDao().getAllForExport().map(ErrorLogRecord::fromEntity)
+            val attemptLog = userDb.attemptLogDao().getAllForExport().map(AttemptLogRecord::fromEntity)
             val snapshot = BackupSnapshot(
                 version = BackupSnapshot.CURRENT_VERSION,
                 exportedAt = Instant.now().toString(),
@@ -76,6 +82,8 @@ object BackupRepository {
                     .mapValues { it.value.sorted().toList() },
                 userStats = UserStatsStore.snapshot(context),
                 streak = StreakStore.snapshot(context),
+                errorLog = errorLog,
+                attemptLog = attemptLog,
             )
             json.encodeToString(BackupSnapshot.serializer(), snapshot)
         }
@@ -112,6 +120,15 @@ object BackupRepository {
                 )
                 UserStatsStore.restore(context, snapshot.userStats)
                 StreakStore.restore(context, snapshot.streak)
+                // Phase 3 Stage C: восстановление error_log и attempt_log.
+                // deleteAll сначала — чтобы не дублировать (autoGenerate id).
+                val userDb = UserDataDatabase.get(context)
+                val errorDao = userDb.errorLogDao()
+                val attemptDao = userDb.attemptLogDao()
+                errorDao.deleteAll()
+                attemptDao.deleteAll()
+                snapshot.errorLog.forEach { errorDao.insert(it.toEntity()) }
+                snapshot.attemptLog.forEach { attemptDao.insert(it.toEntity()) }
                 ImportResult.Success(snapshot.exportedAt)
             } catch (e: Throwable) {
                 ImportResult.Error(e.message ?: "Неизвестная ошибка")
@@ -119,9 +136,10 @@ object BackupRepository {
         }
 
     /**
-     * Phase 3 Stage A part Д6 + Stage B расширение — сброс прогресса.
+     * Phase 3 Stage A part Д6 + Stage B + Stage C расширение — сброс прогресса.
      *
-     * Удаляет: тренажёры, избранное, ошибки, статистику попыток, streak.
+     * Удаляет: тренажёры, избранное, словарные ошибки, статистику попыток,
+     * streak, error_log, attempt_log.
      * Сохраняет: профиль, настройки.
      */
     suspend fun resetProgress(context: Context) = withContext(Dispatchers.IO) {
@@ -131,5 +149,8 @@ object BackupRepository {
         WordBlankErrorsStore.clearAll(context)
         UserStatsStore.clearAll(context)
         StreakStore.clearAll(context)
+        val userDb = UserDataDatabase.get(context)
+        userDb.errorLogDao().deleteAll()
+        userDb.attemptLogDao().deleteAll()
     }
 }

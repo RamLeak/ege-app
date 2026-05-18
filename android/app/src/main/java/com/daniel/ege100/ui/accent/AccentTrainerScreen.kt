@@ -57,9 +57,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.data.AccentErrorsStore
 import com.daniel.ege100.data.AccentWord
 import com.daniel.ege100.data.AccentWordsRepository
+import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TrainerProgress
 import com.daniel.ege100.data.TrainerProgressStore
+import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.LargeTitleBar
@@ -263,6 +265,7 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     // Phase 3 part В + Г: тренажёр №4 ударений → subject="rus",
                     // typeNumber=4, subtypeId=null (нет подвидов у тренажёра).
+                    // Phase 3 Stage C: + запись в attempt_log с source=accent_trainer.
                     viewModelScope.launch {
                         UserStatsStore.recordAttempt(
                             context = getApplication(),
@@ -272,6 +275,18 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                             isCorrect = isRight,
                         )
                         StreakStore.onProblemSolved(getApplication())
+                        UserDataDatabase.get(getApplication()).attemptLogDao().insert(
+                            AttemptLogEntity(
+                                problemId = null,
+                                subject = "rus",
+                                typeNumber = 4,
+                                subtypeId = null,
+                                isCorrect = isRight,
+                                durationMs = 0L,
+                                timestamp = System.currentTimeMillis(),
+                                source = "accent_trainer",
+                            ),
+                        )
                     }
                     SyllableTapState.Verdict(
                         selectedSyllable = syllableIdx,

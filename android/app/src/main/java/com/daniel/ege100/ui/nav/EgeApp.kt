@@ -56,6 +56,7 @@ import androidx.navigation.toRoute
 import com.daniel.ege100.data.BackupRepository
 import com.daniel.ege100.data.BackupShare
 import com.daniel.ege100.data.BackupSnapshot
+import com.daniel.ege100.data.CsvExporter
 import com.daniel.ege100.data.ImportResult
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
 import com.daniel.ege100.ui.accent.AccentTrainerScreen
@@ -65,8 +66,10 @@ import com.daniel.ege100.ui.catalog.ProblemListScreen
 import com.daniel.ege100.ui.catalog.SubtypesScreen
 import com.daniel.ege100.ui.catalog.TypesScreen
 import com.daniel.ege100.ui.home.HomeScreen
+import com.daniel.ege100.ui.journal.ErrorsListScreen
 import com.daniel.ege100.ui.journal.FavoritesScreen
 import com.daniel.ege100.ui.journal.JournalScreen
+import com.daniel.ege100.ui.journal.StatsScreen
 import com.daniel.ege100.ui.modifiers.edgeSwipeBack
 import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
 import com.daniel.ege100.ui.profile.ProfileScreen
@@ -172,6 +175,13 @@ fun EgeApp() {
         importLauncher.launch("application/json")
     }
 
+    fun triggerCsvExport() {
+        scope.launch {
+            val intent = CsvExporter.exportAttempts(context)
+            context.startActivity(intent)
+        }
+    }
+
     val tabs = listOf(
         TabSpec(HomeStubRoute, "Главная", "🏠"),
         TabSpec(CatalogRoute, "Решать", "📚"),
@@ -232,6 +242,31 @@ fun EgeApp() {
                 JournalScreen(
                     contentPadding = padding,
                     onFavoritesClick = { navController.navigate(FavoritesRoute) },
+                    onErrorsClick = { navController.navigate(ErrorsListRoute) },
+                    onStatsClick = { navController.navigate(StatsRoute) },
+                    onCsvExportClick = ::triggerCsvExport,
+                )
+            }
+            composable<ErrorsListRoute> {
+                ErrorsListScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onRetry = { pid, tId, sId ->
+                        navController.navigate(
+                            ProblemDetailRoute(
+                                problemId = pid,
+                                typeId = tId,
+                                subtypeId = sId,
+                                fromErrors = true,
+                            ),
+                        )
+                    },
+                )
+            }
+            composable<StatsRoute> {
+                StatsScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable<FavoritesRoute> {
@@ -326,6 +361,7 @@ fun EgeApp() {
                     subtypeId = args.subtypeId,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
+                    fromErrors = args.fromErrors,
                 )
             }
             composable<AccentCategoriesRoute> {
@@ -508,7 +544,9 @@ private fun NavDestination.matchesRoot(root: Any): Boolean {
             r.startsWith("com.daniel.ege100.ui.nav.WordBlankTrainerRoute")
     }
     if (root is JournalStubRoute) {
-        return r.startsWith("com.daniel.ege100.ui.nav.FavoritesRoute")
+        return r.startsWith("com.daniel.ege100.ui.nav.FavoritesRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.ErrorsListRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.StatsRoute")
     }
     if (root is ProfileRoute) {
         return r.startsWith("com.daniel.ege100.ui.nav.SettingsRoute")

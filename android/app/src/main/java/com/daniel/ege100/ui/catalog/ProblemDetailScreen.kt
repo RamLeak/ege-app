@@ -51,8 +51,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.EgeDatabase
+import com.daniel.ege100.data.ErrorLogEntity
 import com.daniel.ege100.data.FavoritesStore
 import com.daniel.ege100.data.ProblemEntity
 import com.daniel.ege100.data.ProblemSubtypeEntity
@@ -62,6 +64,7 @@ import com.daniel.ege100.data.RulesRepository
 import com.daniel.ege100.data.SolutionEntity
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.SubjectEntity
+import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.IosTextField
@@ -111,26 +114,36 @@ data class ProblemUiState(
     val checkResult: CheckResult = CheckResult.Idle,
     val isSolutionExpanded: Boolean = false,
     val rule: RuleEntry? = null,
+    /** Phase 3 Stage C — был открыт из «Ошибки → Перерешать». */
+    val fromErrors: Boolean = false,
+    /** Phase 3 Stage C — timestamp когда задача стала видимой пользователю (для durationMs). */
+    val openedAtMs: Long = 0L,
 )
 
 class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
     private val dao: CatalogDao = EgeDatabase.get(app).catalogDao()
+    private val userDb = UserDataDatabase.get(app)
+    private val errorLogDao = userDb.errorLogDao()
+    private val attemptLogDao = userDb.attemptLogDao()
     private val _state = MutableStateFlow(ProblemUiState())
     val state: StateFlow<ProblemUiState> = _state.asStateFlow()
 
     private var initialProblemId: Long = -1
     private var typeId: Long = -1
     private var subtypeId: Long? = null
+    private var fromErrors: Boolean = false
 
-    fun start(problemId: Long, typeId: Long, subtypeId: Long?) {
+    fun start(problemId: Long, typeId: Long, subtypeId: Long?, fromErrors: Boolean = false) {
         if (this.initialProblemId == problemId &&
             this.typeId == typeId &&
             this.subtypeId == subtypeId &&
+            this.fromErrors == fromErrors &&
             _state.value.problem != null
         ) return
         this.initialProblemId = problemId
         this.typeId = typeId
         this.subtypeId = subtypeId
+        this.fromErrors = fromErrors
         loadProblem(problemId)
     }
 
@@ -166,12 +179,14 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
                 subject = subject,
                 position = position,
                 total = total,
-                hasPrev = prevId != null,
-                hasNext = nextId != null,
+                hasPrev = prevId != null && !fromErrors,
+                hasNext = nextId != null && !fromErrors,
                 userAnswer = "",
                 checkResult = CheckResult.Idle,
                 isSolutionExpanded = false,
                 rule = rule,
+                fromErrors = fromErrors,
+                openedAtMs = System.currentTimeMillis(),
             )
         }
     }
@@ -205,6 +220,8 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
         val type = cur.type ?: return
         val problem = cur.problem ?: return
         val key = if (subject.slug == "mathb") "math" else subject.slug
+        val now = System.currentTimeMillis()
+        val durationMs = if (cur.openedAtMs > 0L) (now - cur.openedAtMs).coerceAtLeast(0L) else 0L
         viewModelScope.launch {
             UserStatsStore.recordAttempt(
                 context = getApplication(),
@@ -214,6 +231,37 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
                 isCorrect = isCorrect,
             )
             StreakStore.onProblemSolved(getApplication())
+            // Phase 3 Stage C — пишем в attempt_log (всегда) и error_log (при ошибке).
+            attemptLogDao.insert(
+                AttemptLogEntity(
+                    problemId = problem.id,
+                    subject = key,
+                    typeNumber = type.number,
+                    subtypeId = problem.subtypeId,
+                    isCorrect = isCorrect,
+                    durationMs = durationMs,
+                    timestamp = now,
+                    source = if (cur.fromErrors) "errors_retry" else "problem",
+                ),
+            )
+            if (!isCorrect) {
+                val expected = problem.answer.orEmpty()
+                if (expected.isNotBlank()) {
+                    errorLogDao.insert(
+                        ErrorLogEntity(
+                            problemId = problem.id,
+                            userAnswer = cur.userAnswer.trim(),
+                            correctAnswer = expected,
+                            timestamp = now,
+                            isResolved = false,
+                        ),
+                    )
+                }
+            } else if (cur.fromErrors) {
+                // Phase 3 Stage C — при правильном ответе в режиме «Перерешать»
+                // помечаем все непререшённые записи этой задачи как resolved.
+                errorLogDao.markAllResolvedFor(problem.id)
+            }
         }
     }
 
@@ -267,9 +315,12 @@ fun ProblemDetailScreen(
     subtypeId: Long?,
     onBack: () -> Unit,
     contentPadding: PaddingValues,
+    fromErrors: Boolean = false,
     vm: ProblemDetailViewModel = viewModel(),
 ) {
-    LaunchedEffect(problemId, typeId, subtypeId) { vm.start(problemId, typeId, subtypeId) }
+    LaunchedEffect(problemId, typeId, subtypeId, fromErrors) {
+        vm.start(problemId, typeId, subtypeId, fromErrors)
+    }
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
     var showRule by remember { mutableStateOf(false) }

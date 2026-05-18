@@ -34,6 +34,8 @@ data class ProblemDetailRoute(
     val problemId: Long,
     val typeId: Long,
     val subtypeId: Long? = null,
+    /** Phase 3 Stage C — открыто из «Ошибки → Перерешать». */
+    val fromErrors: Boolean = false,
 )
 
 @Serializable
@@ -79,6 +81,18 @@ object ProfileRoute
  */
 @Serializable
 object SettingsRoute
+
+/**
+ * Phase 3 Stage C: журнал ошибок (заходим из Журнала → «📝 Ошибки»).
+ */
+@Serializable
+object ErrorsListRoute
+
+/**
+ * Phase 3 Stage C: детальная статистика (заходим из Журнала → «📊 Статистика»).
+ */
+@Serializable
+object StatsRoute
 
 /**
  * Phase 3 Stage B: быстрый тренажёр из радара. Список problemIds кодируется

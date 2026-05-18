@@ -56,9 +56,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TrainerProgress
 import com.daniel.ege100.data.TrainerProgressStore
+import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.data.WordBlank
 import com.daniel.ege100.data.WordBlankErrorsStore
@@ -234,6 +236,7 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Phase 3 part В + Г: тренажёр №9-12 русского → subject="rus",
         // typeNumber = текущий тип (9/10/11/12). subtypeId=null.
+        // Phase 3 Stage C: + запись в attempt_log с source=wordblank_trainer.
         viewModelScope.launch {
             UserStatsStore.recordAttempt(
                 context = getApplication(),
@@ -243,6 +246,18 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 isCorrect = isRight,
             )
             StreakStore.onProblemSolved(getApplication())
+            UserDataDatabase.get(getApplication()).attemptLogDao().insert(
+                AttemptLogEntity(
+                    problemId = null,
+                    subject = "rus",
+                    typeNumber = cur.typeNumber,
+                    subtypeId = null,
+                    isCorrect = isRight,
+                    durationMs = 0L,
+                    timestamp = System.currentTimeMillis(),
+                    source = "wordblank_trainer",
+                ),
+            )
         }
         _state.value = cur.copy(
             state = BlankInputState.Verdict(
