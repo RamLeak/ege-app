@@ -36,9 +36,16 @@ data class BackupSnapshot(
     val favorites: List<Long>,
     val accentErrors: List<String>,
     val wordBlankErrors: Map<Int, List<String>>,
+    // Phase 3 Stage B: добавлены stats и streak. Старые бэкапы (1.0) без них
+    // парсятся OK благодаря default-значениям + ignoreUnknownKeys.
+    val userStats: UserStatsSnapshot = UserStatsSnapshot(),
+    val streak: StreakState = StreakState(),
 ) {
     companion object {
-        const val CURRENT_VERSION = "1.0"
+        const val CURRENT_VERSION = "1.1"
+        /** Версии, которые мы можем восстановить (forward-compat). */
+        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1")
+        fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
 }
 
@@ -67,6 +74,8 @@ object BackupRepository {
                 accentErrors = AccentErrorsStore.snapshot(context).sorted().toList(),
                 wordBlankErrors = WordBlankErrorsStore.getAll(context)
                     .mapValues { it.value.sorted().toList() },
+                userStats = UserStatsStore.snapshot(context),
+                streak = StreakStore.snapshot(context),
             )
             json.encodeToString(BackupSnapshot.serializer(), snapshot)
         }
@@ -78,7 +87,7 @@ object BackupRepository {
     suspend fun parseBackup(content: String): Result<BackupSnapshot> = withContext(Dispatchers.IO) {
         runCatching {
             val parsed = json.decodeFromString(BackupSnapshot.serializer(), content)
-            require(parsed.version == BackupSnapshot.CURRENT_VERSION) {
+            require(BackupSnapshot.isSupported(parsed.version)) {
                 "Неподдерживаемая версия: ${parsed.version}"
             }
             parsed
@@ -101,6 +110,8 @@ object BackupRepository {
                     context,
                     snapshot.wordBlankErrors.mapValues { it.value.toSet() },
                 )
+                UserStatsStore.restore(context, snapshot.userStats)
+                StreakStore.restore(context, snapshot.streak)
                 ImportResult.Success(snapshot.exportedAt)
             } catch (e: Throwable) {
                 ImportResult.Error(e.message ?: "Неизвестная ошибка")
@@ -108,14 +119,17 @@ object BackupRepository {
         }
 
     /**
-     * Phase 3 Stage A part Д6 — сброс прогресса.
+     * Phase 3 Stage A part Д6 + Stage B расширение — сброс прогресса.
      *
-     * Удаляет: тренажёры, избранное, ошибки. Сохраняет: профиль, настройки.
+     * Удаляет: тренажёры, избранное, ошибки, статистику попыток, streak.
+     * Сохраняет: профиль, настройки.
      */
     suspend fun resetProgress(context: Context) = withContext(Dispatchers.IO) {
         TrainerProgressStore.clearAll(context)
         FavoritesStore.clearAll(context)
         AccentErrorsStore.clearAll(context)
         WordBlankErrorsStore.clearAll(context)
+        UserStatsStore.clearAll(context)
+        StreakStore.clearAll(context)
     }
 }

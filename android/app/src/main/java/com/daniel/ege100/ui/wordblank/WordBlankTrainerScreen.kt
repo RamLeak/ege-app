@@ -56,8 +56,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TrainerProgress
 import com.daniel.ege100.data.TrainerProgressStore
+import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.data.WordBlank
 import com.daniel.ege100.data.WordBlankErrorsStore
 import com.daniel.ege100.data.WordBlanksRepository
@@ -229,6 +231,18 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                     word.masked,
                 )
             }
+        }
+        // Phase 3 part В + Г: тренажёр №9-12 русского → subject="rus",
+        // typeNumber = текущий тип (9/10/11/12). subtypeId=null.
+        viewModelScope.launch {
+            UserStatsStore.recordAttempt(
+                context = getApplication(),
+                subject = "rus",
+                typeNumber = cur.typeNumber,
+                subtypeId = null,
+                isCorrect = isRight,
+            )
+            StreakStore.onProblemSolved(getApplication())
         }
         _state.value = cur.copy(
             state = BlankInputState.Verdict(

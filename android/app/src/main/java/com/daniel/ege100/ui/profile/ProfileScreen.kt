@@ -34,6 +34,7 @@ import com.daniel.ege100.data.UserProfileStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleListRow
 import com.daniel.ege100.ui.common.LargeTitleBar
+import com.daniel.ege100.ui.common.daysWord
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.LabelSecondary
@@ -264,13 +265,3 @@ private fun HeaderCard(profile: UserProfile) {
     }
 }
 
-private fun daysWord(n: Int): String {
-    val n100 = n % 100
-    val n10 = n % 10
-    return when {
-        n100 in 11..14 -> "дней"
-        n10 == 1 -> "день"
-        n10 in 2..4 -> "дня"
-        else -> "дней"
-    }
-}

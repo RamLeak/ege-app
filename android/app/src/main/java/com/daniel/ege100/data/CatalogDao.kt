@@ -161,4 +161,32 @@ interface CatalogDao {
         """
     )
     suspend fun getProblemsByIds(ids: List<Long>): List<ProblemEntity>
+
+    /** Phase 3 Stage B — поиск subject по slug ('mathb' / 'rus'). */
+    @Query("SELECT * FROM subjects WHERE slug = :slug LIMIT 1")
+    suspend fun getSubjectBySlug(slug: String): SubjectEntity?
+
+    /** Phase 3 Stage B — все подвиды subject'а с информацией о типе (для радара). */
+    @Query(
+        """
+        SELECT st.id, st.type_id, st.kes_code, st.title,
+               t.subject_id, t.number AS type_number
+        FROM problem_subtypes st
+        JOIN problem_types t ON st.type_id = t.id
+        WHERE t.subject_id = :subjectId AND t.is_supplementary = 0
+        ORDER BY t.number, st.title
+        """
+    )
+    suspend fun getSubtypesBySubject(subjectId: Long): List<SubtypeWithType>
+
+    /** Phase 3 Stage B — N случайных задач из подвида (для быстрого тренажёра). */
+    @Query(
+        """
+        SELECT * FROM problems
+        WHERE subtype_id = :subtypeId
+        ORDER BY RANDOM()
+        LIMIT :limit
+        """
+    )
+    suspend fun getRandomProblemsInSubtype(subtypeId: Long, limit: Int): List<ProblemEntity>
 }

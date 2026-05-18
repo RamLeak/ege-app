@@ -158,3 +158,16 @@ data class SubjectWithCount(
     @ColumnInfo(name = "type_count") val typeCount: Int,
     @ColumnInfo(name = "problem_count") val problemCount: Int,
 )
+
+/**
+ * Phase 3 Stage B — подвид + его тип (для радара слабых мест).
+ * Используется в SubtypeStatsRepository.
+ */
+data class SubtypeWithType(
+    @ColumnInfo(name = "id") val id: Long,
+    @ColumnInfo(name = "type_id") val typeId: Long,
+    @ColumnInfo(name = "kes_code") val kesCode: String?,
+    @ColumnInfo(name = "title") val title: String,
+    @ColumnInfo(name = "subject_id") val subjectId: Long,
+    @ColumnInfo(name = "type_number") val typeNumber: Int,
+)

@@ -60,11 +60,11 @@ import com.daniel.ege100.data.ImportResult
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
 import com.daniel.ege100.ui.accent.AccentTrainerScreen
 import com.daniel.ege100.ui.catalog.CatalogScreen
-import com.daniel.ege100.ui.catalog.HomeStubScreen
 import com.daniel.ege100.ui.catalog.ProblemDetailScreen
 import com.daniel.ege100.ui.catalog.ProblemListScreen
 import com.daniel.ege100.ui.catalog.SubtypesScreen
 import com.daniel.ege100.ui.catalog.TypesScreen
+import com.daniel.ege100.ui.home.HomeScreen
 import com.daniel.ege100.ui.journal.FavoritesScreen
 import com.daniel.ege100.ui.journal.JournalScreen
 import com.daniel.ege100.ui.modifiers.edgeSwipeBack
@@ -72,6 +72,7 @@ import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
 import com.daniel.ege100.ui.profile.ProfileScreen
 import com.daniel.ege100.ui.profile.ResetProgressBottomSheet
 import com.daniel.ege100.ui.profile.SettingsScreen
+import com.daniel.ege100.ui.quick.QuickTrainerScreen
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.LabelTertiary
 import com.daniel.ege100.ui.theme.SeparatorHairline
@@ -214,9 +215,17 @@ fun EgeApp() {
             popExitTransition = { if (isTabSwitch()) tabFadeExit() else backExit() },
         ) {
             composable<HomeStubRoute> {
-                HomeStubScreen(
+                HomeScreen(
                     contentPadding = padding,
                     onProfileClick = { navController.navigate(ProfileRoute) },
+                    onSubtypeClick = { sId, tId ->
+                        navController.navigate(
+                            ProblemListRoute(typeId = tId, subtypeId = sId),
+                        )
+                    },
+                    onQuickTrainerStart = { ids ->
+                        navController.navigate(QuickTrainerRoute.of(ids))
+                    },
                 )
             }
             composable<JournalStubRoute> {
@@ -344,6 +353,15 @@ fun EgeApp() {
                     defaultOrder = args.defaultOrder,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
+                )
+            }
+            composable<QuickTrainerRoute> { entry ->
+                val args = entry.toRoute<QuickTrainerRoute>()
+                QuickTrainerScreen(
+                    problemIds = args.problemIds,
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onFinish = { navController.popBackStack() },
                 )
             }
         }

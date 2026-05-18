@@ -79,3 +79,20 @@ object ProfileRoute
  */
 @Serializable
 object SettingsRoute
+
+/**
+ * Phase 3 Stage B: быстрый тренажёр из радара. Список problemIds кодируется
+ * как строка с запятой-разделителем — Navigation Compose 2.8 не поддерживает
+ * @Serializable List<Long> в URL напрямую.
+ */
+@Serializable
+data class QuickTrainerRoute(
+    val problemIdsCsv: String,
+) {
+    val problemIds: List<Long>
+        get() = problemIdsCsv.split(',').mapNotNull { it.toLongOrNull() }
+
+    companion object {
+        fun of(ids: List<Long>) = QuickTrainerRoute(ids.joinToString(","))
+    }
+}

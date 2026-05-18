@@ -60,7 +60,9 @@ import com.daniel.ege100.data.ProblemTypeEntity
 import com.daniel.ege100.data.RuleEntry
 import com.daniel.ege100.data.RulesRepository
 import com.daniel.ege100.data.SolutionEntity
+import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.SubjectEntity
+import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.IosTextField
 import com.daniel.ege100.ui.common.LargeTitleBar
@@ -188,9 +190,31 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = cur.copy(checkResult = CheckResult.SkippedEmpty, isSolutionExpanded = true)
             return
         }
+        // Phase 3 part В + Г: записываем попытку **только** при первом нажатии
+        // «Проверить» (когда checkResult ещё Idle). Повторные клики не идут в
+        // статистику — повторные ответы — это та же задача.
+        val isFirstCheck = cur.checkResult is CheckResult.Idle
         val correct = matchesAnswer(typed, expected, cur.problem.answerFormat)
         _state.value = if (correct) cur.copy(checkResult = CheckResult.Correct)
                        else cur.copy(checkResult = CheckResult.Wrong(expected), isSolutionExpanded = true)
+        if (isFirstCheck) recordAttempt(cur, correct)
+    }
+
+    private fun recordAttempt(cur: ProblemUiState, isCorrect: Boolean) {
+        val subject = cur.subject ?: return
+        val type = cur.type ?: return
+        val problem = cur.problem ?: return
+        val key = if (subject.slug == "mathb") "math" else subject.slug
+        viewModelScope.launch {
+            UserStatsStore.recordAttempt(
+                context = getApplication(),
+                subject = key,
+                typeNumber = type.number,
+                subtypeId = problem.subtypeId,
+                isCorrect = isCorrect,
+            )
+            StreakStore.onProblemSolved(getApplication())
+        }
     }
 
     fun toggleSolution() {

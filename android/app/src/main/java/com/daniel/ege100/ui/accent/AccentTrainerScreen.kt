@@ -57,8 +57,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.data.AccentErrorsStore
 import com.daniel.ege100.data.AccentWord
 import com.daniel.ege100.data.AccentWordsRepository
+import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TrainerProgress
 import com.daniel.ege100.data.TrainerProgressStore
+import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.ResumeBottomSheet
@@ -258,6 +260,18 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                         viewModelScope.launch {
                             AccentErrorsStore.recordError(getApplication(), word.word)
                         }
+                    }
+                    // Phase 3 part В + Г: тренажёр №4 ударений → subject="rus",
+                    // typeNumber=4, subtypeId=null (нет подвидов у тренажёра).
+                    viewModelScope.launch {
+                        UserStatsStore.recordAttempt(
+                            context = getApplication(),
+                            subject = "rus",
+                            typeNumber = 4,
+                            subtypeId = null,
+                            isCorrect = isRight,
+                        )
+                        StreakStore.onProblemSolved(getApplication())
                     }
                     SyllableTapState.Verdict(
                         selectedSyllable = syllableIdx,
