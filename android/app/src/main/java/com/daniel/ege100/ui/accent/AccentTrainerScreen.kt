@@ -57,7 +57,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.data.AccentErrorsStore
 import com.daniel.ege100.data.AccentWord
 import com.daniel.ege100.data.AccentWordsRepository
+import com.daniel.ege100.data.TrainerProgress
+import com.daniel.ege100.data.TrainerProgressStore
 import com.daniel.ege100.ui.common.LargeTitleBar
+import com.daniel.ege100.ui.common.ResumeBottomSheet
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.BgElevated2
 import com.daniel.ege100.ui.theme.Label
@@ -104,6 +107,8 @@ data class AccentTrainerUi(
     val orderedIndices: List<Int> = emptyList(),
     val position: Int = 0,
     val tap: SyllableTapState = SyllableTapState.None,
+    /** Если != null — показать ResumeBottomSheet с этой позицией. */
+    val pendingResume: TrainerProgress? = null,
 ) {
     val total: Int get() = orderedIndices.size
     val currentWord: AccentWord?
@@ -125,12 +130,21 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<AccentTrainerUi> = _state.asStateFlow()
 
     private var categoryId: String? = null
+    private var defaultOrder: String = "alphabetical"
     private var initialized = false
+
+    /** Stage 5 part А: trainerId для TrainerProgressStore. */
+    private fun trainerId(): String = when {
+        categoryId != null -> "accent_${categoryId}"
+        defaultOrder == "random" -> "accent_all_random"
+        else -> "accent_all_alphabetical"
+    }
 
     fun start(categoryId: String?, defaultOrder: String) {
         if (initialized && this.categoryId == categoryId) return
         initialized = true
         this.categoryId = categoryId
+        this.defaultOrder = defaultOrder
         viewModelScope.launch {
             val ctx = getApplication<Application>()
             val title = AccentWordsRepository.categoryTitle(ctx, categoryId)
@@ -139,6 +153,13 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
             val sorted = words.indices.sortedBy { words[it].word }
             val indices = if (order == Order.Random) words.indices.shuffled() else sorted
             val syl = words.indices.associateWith { syllabify(words[it].word) }
+
+            val saved = TrainerProgressStore.get(ctx, trainerId())
+            val savedValid = saved != null &&
+                saved.total == indices.size &&
+                saved.position in 1 until indices.size &&
+                saved.indices.size == indices.size
+
             _state.value = AccentTrainerUi(
                 loading = false,
                 title = title,
@@ -148,7 +169,58 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 orderedIndices = indices,
                 position = 0,
                 tap = SyllableTapState.None,
+                pendingResume = if (savedValid) saved else null,
             )
+        }
+    }
+
+    /** Принять «Продолжить» из ResumeBottomSheet. */
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        val savedOrder = if (saved.order == "random") Order.Random else Order.Alphabetical
+        _state.value = cur.copy(
+            order = savedOrder,
+            orderedIndices = saved.indices,
+            position = saved.position,
+            tap = SyllableTapState.None,
+            pendingResume = null,
+        )
+    }
+
+    /** Принять «Начать сначала» из ResumeBottomSheet. */
+    fun acceptStartOver() {
+        val cur = _state.value
+        viewModelScope.launch {
+            TrainerProgressStore.clear(getApplication(), trainerId())
+        }
+        _state.value = cur.copy(
+            position = 0,
+            tap = SyllableTapState.None,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.total == 0) return
+        viewModelScope.launch {
+            TrainerProgressStore.save(
+                getApplication(),
+                trainerId(),
+                TrainerProgress(
+                    position = cur.position,
+                    total = cur.total,
+                    order = if (cur.order == Order.Random) "random" else "alphabetical",
+                    indices = cur.orderedIndices,
+                ),
+            )
+        }
+    }
+
+    private fun clearProgress() {
+        viewModelScope.launch {
+            TrainerProgressStore.clear(getApplication(), trainerId())
         }
     }
 
@@ -163,6 +235,7 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
             position = 0,
             tap = SyllableTapState.None,
         )
+        clearProgress()
     }
 
     fun tapSyllable(syllableIdx: Int) {
@@ -201,14 +274,28 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun goNext() {
         val cur = _state.value
-        if (cur.position + 1 >= cur.total) return
-        _state.value = cur.copy(position = cur.position + 1, tap = SyllableTapState.None)
+        if (cur.position + 1 >= cur.total) {
+            // Достигли последнего слова — оставляем position на нём, но
+            // прогресс ЧИСТИМ (следующий заход начнётся с нуля без sheet).
+            clearProgress()
+            return
+        }
+        val newPos = cur.position + 1
+        _state.value = cur.copy(position = newPos, tap = SyllableTapState.None)
+        if (newPos == cur.total - 1) {
+            // Перешли на последнее слово — будущий «верный ответ» → goNext()
+            // → останется на последнем, прогресс сбросим там. А пока сохраняем.
+            persistProgress()
+        } else {
+            persistProgress()
+        }
     }
 
     fun goPrev() {
         val cur = _state.value
         if (cur.position == 0) return
         _state.value = cur.copy(position = cur.position - 1, tap = SyllableTapState.None)
+        persistProgress()
     }
 }
 
@@ -269,6 +356,18 @@ fun AccentTrainerScreen(
                 else -> TrainerBody(st = st, vm = vm)
             }
         }
+    }
+
+    val pending = st.pendingResume
+    if (pending != null) {
+        ResumeBottomSheet(
+            trainerTitle = st.title.ifBlank { "Ударения" },
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
     }
 }
 

@@ -50,11 +50,13 @@ import com.daniel.ege100.ui.accent.AccentTrainerScreen
 import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
 import com.daniel.ege100.ui.catalog.CatalogScreen
 import com.daniel.ege100.ui.catalog.HomeStubScreen
-import com.daniel.ege100.ui.catalog.JournalStubScreen
 import com.daniel.ege100.ui.catalog.ProblemDetailScreen
 import com.daniel.ege100.ui.catalog.ProblemListScreen
 import com.daniel.ege100.ui.catalog.SubtypesScreen
 import com.daniel.ege100.ui.catalog.TypesScreen
+import com.daniel.ege100.ui.journal.FavoritesScreen
+import com.daniel.ege100.ui.journal.JournalScreen
+import com.daniel.ege100.ui.modifiers.edgeSwipeBack
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.LabelTertiary
 import com.daniel.ege100.ui.theme.SeparatorHairline
@@ -143,14 +145,42 @@ fun EgeApp() {
         NavHost(
             navController = navController,
             startDestination = CatalogRoute,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .edgeSwipeBack(
+                    onSwipeBack = {
+                        if (navController.previousBackStackEntry != null) {
+                            navController.popBackStack()
+                        }
+                    },
+                ),
             enterTransition = { if (isTabSwitch()) tabFadeEnter() else forwardEnter() },
             exitTransition = { if (isTabSwitch()) tabFadeExit() else forwardExit() },
             popEnterTransition = { if (isTabSwitch()) tabFadeEnter() else backEnter() },
             popExitTransition = { if (isTabSwitch()) tabFadeExit() else backExit() },
         ) {
             composable<HomeStubRoute> { HomeStubScreen(padding) }
-            composable<JournalStubRoute> { JournalStubScreen(padding) }
+            composable<JournalStubRoute> {
+                JournalScreen(
+                    contentPadding = padding,
+                    onFavoritesClick = { navController.navigate(FavoritesRoute) },
+                )
+            }
+            composable<FavoritesRoute> {
+                FavoritesScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onProblemClick = { pid, tId, sId ->
+                        navController.navigate(
+                            ProblemDetailRoute(
+                                problemId = pid,
+                                typeId = tId,
+                                subtypeId = sId,
+                            ),
+                        )
+                    },
+                )
+            }
 
             composable<CatalogRoute> {
                 CatalogScreen(
@@ -330,13 +360,18 @@ private fun BottomTabItem(
 
 private fun NavDestination.matchesRoot(root: Any): Boolean {
     if (hasRoute(root::class)) return true
-    if (root !is CatalogRoute) return false
     val r = this.route.orEmpty()
-    return r.startsWith("com.daniel.ege100.ui.nav.TypesRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.SubtypesRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.ProblemListRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.ProblemDetailRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.AccentCategoriesRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.AccentTrainerRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.WordBlankTrainerRoute")
+    if (root is CatalogRoute) {
+        return r.startsWith("com.daniel.ege100.ui.nav.TypesRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.SubtypesRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.ProblemListRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.ProblemDetailRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.AccentCategoriesRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.AccentTrainerRoute") ||
+            r.startsWith("com.daniel.ege100.ui.nav.WordBlankTrainerRoute")
+    }
+    if (root is JournalStubRoute) {
+        return r.startsWith("com.daniel.ege100.ui.nav.FavoritesRoute")
+    }
+    return false
 }

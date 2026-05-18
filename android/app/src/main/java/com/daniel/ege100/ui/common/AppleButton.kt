@@ -36,6 +36,7 @@ import com.daniel.ege100.ui.theme.LabelTertiary
 import com.daniel.ege100.ui.theme.SystemBlue
 import com.daniel.ege100.ui.theme.SystemBlueTint
 import com.daniel.ege100.ui.theme.SystemBlueTintWeak
+import com.daniel.ege100.ui.theme.SystemRed
 
 /**
  * Apple-style 3 уровня кнопок (STAGE_3_POLISH §Б6).
@@ -104,6 +105,35 @@ fun SecondaryButton(
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
             color = fg,
+        )
+    }
+}
+
+/**
+ * Stage 5 part А: DangerButton — Primary-аналог с красным фоном.
+ * Для деструктивных подтверждений (сброс прогресса).
+ */
+@Composable
+fun DangerButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    PressableSurface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(16.dp),
+        background = if (enabled) SystemRed else SystemRed.copy(alpha = 0.30f),
+    ) {
+        Text(
+            text = text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Label,
         )
     }
 }

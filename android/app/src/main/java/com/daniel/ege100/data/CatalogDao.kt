@@ -149,4 +149,16 @@ interface CatalogDao {
         """
     )
     suspend fun prevProblemIdInType(currentId: Long, typeId: Long): Long?
+
+    /**
+     * Stage 5 part Д: подгрузка избранных задач по списку id (для FavoritesScreen).
+     */
+    @Query(
+        """
+        SELECT * FROM problems
+        WHERE id IN (:ids)
+        ORDER BY id
+        """
+    )
+    suspend fun getProblemsByIds(ids: List<Long>): List<ProblemEntity>
 }

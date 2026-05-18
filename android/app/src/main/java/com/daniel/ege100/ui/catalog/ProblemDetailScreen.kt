@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,11 +33,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,14 +53,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.EgeDatabase
+import com.daniel.ege100.data.FavoritesStore
 import com.daniel.ege100.data.ProblemEntity
 import com.daniel.ege100.data.ProblemSubtypeEntity
 import com.daniel.ege100.data.ProblemTypeEntity
+import com.daniel.ege100.data.RuleEntry
+import com.daniel.ege100.data.RulesRepository
 import com.daniel.ege100.data.SolutionEntity
+import com.daniel.ege100.data.SubjectEntity
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.IosTextField
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.PrimaryButton
+import com.daniel.ege100.ui.common.RuleBottomSheet
 import com.daniel.ege100.ui.common.SecondaryButton
 import com.daniel.ege100.ui.common.TertiaryButton
 import com.daniel.ege100.ui.html.HtmlRenderer
@@ -88,6 +100,7 @@ data class ProblemUiState(
     val solution: SolutionEntity? = null,
     val type: ProblemTypeEntity? = null,
     val subtype: ProblemSubtypeEntity? = null,
+    val subject: SubjectEntity? = null,
     val position: Int = 0,
     val total: Int = 0,
     val hasPrev: Boolean = false,
@@ -95,6 +108,7 @@ data class ProblemUiState(
     val userAnswer: String = "",
     val checkResult: CheckResult = CheckResult.Idle,
     val isSolutionExpanded: Boolean = false,
+    val rule: RuleEntry? = null,
 )
 
 class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
@@ -128,6 +142,7 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
             val solution = dao.getSolution(problemId)
             val type = dao.getType(typeId)
             val subtype = subtypeId?.let { dao.getSubtype(it) }
+            val subject = dao.getSubject(problem.subjectId)
             val sid = subtypeId
             val position = if (sid != null) dao.positionInSubtype(problemId, sid)
                            else dao.positionInType(problemId, typeId)
@@ -137,12 +152,16 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
                          else dao.nextProblemIdInType(problemId, typeId)
             val prevId = if (sid != null) dao.prevProblemIdInSubtype(problemId, sid)
                          else dao.prevProblemIdInType(problemId, typeId)
+            val rule = if (type != null && subject != null) {
+                RulesRepository.getRule(getApplication(), subject.slug, type.number)
+            } else null
             _state.value = ProblemUiState(
                 loading = false,
                 problem = problem,
                 solution = solution,
                 type = type,
                 subtype = subtype,
+                subject = subject,
                 position = position,
                 total = total,
                 hasPrev = prevId != null,
@@ -150,6 +169,7 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
                 userAnswer = "",
                 checkResult = CheckResult.Idle,
                 isSolutionExpanded = false,
+                rule = rule,
             )
         }
     }
@@ -228,6 +248,14 @@ fun ProblemDetailScreen(
     LaunchedEffect(problemId, typeId, subtypeId) { vm.start(problemId, typeId, subtypeId) }
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
+    var showRule by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val currentPid = st.problem?.id
+    val isFavorite by remember(currentPid) {
+        if (currentPid != null) FavoritesStore.isFavorite(context, currentPid)
+        else kotlinx.coroutines.flow.flowOf(false)
+    }.collectAsState(initial = false)
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     // Haptic при появлении verdict.
     LaunchedEffect(st.checkResult) {
@@ -245,6 +273,19 @@ fun ProblemDetailScreen(
                 subtitle = st.subtype?.title ?: st.type?.title,
                 trailingPosition = if (st.total > 0) "${st.position}/${st.total}" else null,
                 onBack = onBack,
+                rightContent = if (currentPid != null) {
+                    {
+                        FavoriteStar(
+                            isFavorite = isFavorite,
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                coroutineScope.launch {
+                                    FavoritesStore.toggle(context, currentPid)
+                                }
+                            },
+                        )
+                    }
+                } else null,
             )
         },
         containerColor = Bg,
@@ -274,22 +315,66 @@ fun ProblemDetailScreen(
                     color = SystemRed,
                     modifier = Modifier.align(Alignment.Center),
                 )
-                else -> ProblemBody(st = st, vm = vm)
+                else -> ProblemBody(
+                    st = st,
+                    vm = vm,
+                    onRuleClick = { showRule = true },
+                )
             }
         }
+    }
+
+    val rule = st.rule
+    if (showRule && rule != null) {
+        RuleBottomSheet(rule = rule, onDismiss = { showRule = false })
     }
 }
 
 @Composable
-private fun ProblemBody(st: ProblemUiState, vm: ProblemDetailViewModel) {
+private fun ProblemBody(
+    st: ProblemUiState,
+    vm: ProblemDetailViewModel,
+    onRuleClick: () -> Unit,
+) {
     val problem = st.problem ?: return
     val hasAnswer = !problem.answer.isNullOrBlank()
     val keyForReset = problem.id
 
+    // Stage 5 part Е — горизонтальные свайпы между задачами.
+    // Игнорируем жесты, начатые в edge-зоне x<24dp (там работает edgeSwipeBack).
+    val density = LocalDensity.current
+    val edgePx = with(density) { 24.dp.toPx() }
+    val triggerPx = with(density) { 90.dp.toPx() }
+
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(problem.id) {
+                var startX = 0f
+                var totalDrag = 0f
+                var skip = false
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        startX = offset.x
+                        totalDrag = 0f
+                        skip = startX < edgePx
+                    },
+                    onDragEnd = {
+                        if (!skip) {
+                            when {
+                                totalDrag < -triggerPx && st.hasNext -> vm.goNext()
+                                totalDrag > triggerPx && st.hasPrev -> vm.goPrev()
+                            }
+                        }
+                        startX = 0f
+                        totalDrag = 0f
+                        skip = false
+                    },
+                    onHorizontalDrag = { _, dx -> if (!skip) totalDrag += dx },
+                )
+            },
     ) {
         // --- Условие ---
         item("statement_$keyForReset") {
@@ -314,8 +399,8 @@ private fun ProblemBody(st: ProblemUiState, vm: ProblemDetailViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         SecondaryButton(
                             text = "📋 Правило",
-                            onClick = {},
-                            enabled = false,
+                            onClick = onRuleClick,
+                            enabled = st.rule != null,
                             modifier = Modifier.weight(1f),
                         )
                         SecondaryButton(
@@ -342,6 +427,13 @@ private fun ProblemBody(st: ProblemUiState, vm: ProblemDetailViewModel) {
                         text = if (st.isSolutionExpanded) "Скрыть решение" else "Показать решение",
                         onClick = { vm.toggleSolution() },
                     )
+                    if (st.rule != null) {
+                        SecondaryButton(
+                            text = "📋 Правило",
+                            onClick = { onRuleClick() },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }
@@ -497,6 +589,38 @@ private fun MetaRow(problem: ProblemEntity) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Stage 5 part Д: звезда избранного с bounce при смене состояния.
+ */
+@Composable
+private fun FavoriteStar(
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+) {
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isFavorite) 1.0f else 0.92f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "star-scale",
+    )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable { onClick() },
+    ) {
+        Text(
+            text = if (isFavorite) "★" else "☆",
+            fontSize = 26.sp,
+            color = if (isFavorite) com.daniel.ege100.ui.theme.SystemYellow else SystemBlue,
+            modifier = Modifier.scale(scale),
+        )
     }
 }
 

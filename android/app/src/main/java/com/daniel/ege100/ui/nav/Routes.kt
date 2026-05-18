@@ -61,3 +61,9 @@ data class WordBlankTrainerRoute(
     val typeNumber: Int,
     val defaultOrder: String = "alphabetical",
 )
+
+/**
+ * Stage 5: экран избранных задач (в табе Журнал).
+ */
+@Serializable
+object FavoritesRoute

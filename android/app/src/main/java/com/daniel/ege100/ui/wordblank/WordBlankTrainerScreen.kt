@@ -56,12 +56,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.TrainerProgress
+import com.daniel.ege100.data.TrainerProgressStore
 import com.daniel.ege100.data.WordBlank
 import com.daniel.ege100.data.WordBlankErrorsStore
 import com.daniel.ege100.data.WordBlanksRepository
 import com.daniel.ege100.ui.common.IosTextField
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.PrimaryButton
+import com.daniel.ege100.ui.common.ResumeBottomSheet
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.LabelSecondary
@@ -101,6 +104,7 @@ data class WordBlankUi(
     val position: Int = 0,
     val userInput: String = "",
     val state: BlankInputState = BlankInputState.Empty,
+    val pendingResume: TrainerProgress? = null,
 ) {
     val total: Int get() = orderedIndices.size
     val currentWord: WordBlank?
@@ -113,11 +117,14 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
 
     private var initializedFor: Int? = null
 
+    private fun trainerId(): String = "blank_${_state.value.typeNumber}"
+
     fun start(typeNumber: Int, defaultOrder: String) {
         if (initializedFor == typeNumber) return
         initializedFor = typeNumber
         viewModelScope.launch {
-            val type = WordBlanksRepository.loadType(getApplication(), typeNumber)
+            val ctx = getApplication<Application>()
+            val type = WordBlanksRepository.loadType(ctx, typeNumber)
             if (type == null) {
                 _state.value = WordBlankUi(loading = false, typeNumber = typeNumber)
                 return@launch
@@ -125,6 +132,13 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
             val orderEnum = if (defaultOrder == "random") Order.Random else Order.Alphabetical
             val sorted = type.words.indices.sortedBy { type.words[it].full }
             val indices = if (orderEnum == Order.Random) type.words.indices.shuffled() else sorted
+
+            val saved = TrainerProgressStore.get(ctx, "blank_$typeNumber")
+            val savedValid = saved != null &&
+                saved.total == indices.size &&
+                saved.position in 1 until indices.size &&
+                saved.indices.size == indices.size
+
             _state.value = WordBlankUi(
                 loading = false,
                 typeNumber = typeNumber,
@@ -136,7 +150,58 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 position = 0,
                 userInput = "",
                 state = BlankInputState.Empty,
+                pendingResume = if (savedValid) saved else null,
             )
+        }
+    }
+
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        val savedOrder = if (saved.order == "random") Order.Random else Order.Alphabetical
+        _state.value = cur.copy(
+            order = savedOrder,
+            orderedIndices = saved.indices,
+            position = saved.position,
+            userInput = "",
+            state = BlankInputState.Empty,
+            pendingResume = null,
+        )
+    }
+
+    fun acceptStartOver() {
+        val cur = _state.value
+        viewModelScope.launch {
+            TrainerProgressStore.clear(getApplication(), trainerId())
+        }
+        _state.value = cur.copy(
+            position = 0,
+            userInput = "",
+            state = BlankInputState.Empty,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.total == 0) return
+        viewModelScope.launch {
+            TrainerProgressStore.save(
+                getApplication(),
+                trainerId(),
+                TrainerProgress(
+                    position = cur.position,
+                    total = cur.total,
+                    order = if (cur.order == Order.Random) "random" else "alphabetical",
+                    indices = cur.orderedIndices,
+                ),
+            )
+        }
+    }
+
+    private fun clearProgress() {
+        viewModelScope.launch {
+            TrainerProgressStore.clear(getApplication(), trainerId())
         }
     }
 
@@ -175,12 +240,16 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun goNext() {
         val cur = _state.value
-        if (cur.position + 1 >= cur.total) return
+        if (cur.position + 1 >= cur.total) {
+            clearProgress()
+            return
+        }
         _state.value = cur.copy(
             position = cur.position + 1,
             userInput = "",
             state = BlankInputState.Empty,
         )
+        persistProgress()
     }
 
     fun goPrev() {
@@ -191,6 +260,7 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
             userInput = "",
             state = BlankInputState.Empty,
         )
+        persistProgress()
     }
 
     fun toggleOrder() {
@@ -205,6 +275,7 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
             userInput = "",
             state = BlankInputState.Empty,
         )
+        clearProgress()
     }
 }
 
@@ -268,6 +339,18 @@ fun WordBlankTrainerScreen(
                 else -> Body(st = st, vm = vm)
             }
         }
+    }
+
+    val pending = st.pendingResume
+    if (pending != null) {
+        ResumeBottomSheet(
+            trainerTitle = st.title.ifBlank { "Орфография" },
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
     }
 }
 

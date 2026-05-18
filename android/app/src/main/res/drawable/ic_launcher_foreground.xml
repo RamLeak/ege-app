@@ -1,9 +1,27 @@
+<!--
+  Stage 5 part З — иконка приложения.
+
+  Концепт «Геометрия»: белый треугольник с вписанной окружностью на
+  тёмно-синем фоне. Ассоциация: математика, точность, простота.
+  Чёрно-белый монохром — тот же путь, используется системными
+  темами Android 13+ для themed icon.
+
+  ViewBox 108×108. Safe zone Adaptive Icon — круг диаметром ~66dp
+  с центром (54, 54). Все основные элементы внутри.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Белый треугольник (filled). Вершина вверху, основание внизу. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,38 L30,70 L42,70 L42,58 L46,58 L46,70 L50,70 L50,38 Z M54,38 L54,70 L66,70 L66,38 L62,38 L62,66 L58,66 L58,38 Z M70,38 L70,70 L82,70 L82,66 L74,66 L74,56 L80,56 L80,52 L74,52 L74,42 L82,42 L82,38 Z" />
+        android:pathData="M54,30 L26,78 L82,78 Z" />
+
+    <!-- Синяя окружность в центре треугольника (~ инцентр). -->
+    <path
+        android:fillColor="#0A84FF"
+        android:pathData="M40,62 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0 Z" />
 </vector>

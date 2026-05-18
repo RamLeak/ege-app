@@ -44,6 +44,8 @@ android/app/src/main/assets/corpus.db
 android/app/src/main/assets/accent_words.json
 # word_blanks.json — исходник в parser/word_blanks.json; копия в assets/ gitignored.
 android/app/src/main/assets/word_blanks.json
+# rules.json — исходник в parser/rules.json (генерится generate_rules.py); копия в assets/ gitignored.
+android/app/src/main/assets/rules.json
 
 # Secrets
 .env

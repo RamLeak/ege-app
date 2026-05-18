@@ -141,6 +141,9 @@ fun SmallTitleBar(
 /**
  * Stage 3 polish 2 (#8): тап-зона 48×48dp вокруг back-стрелки.
  * Сама иконка 26dp, но clickable Box 48dp — палец легко попадает.
+ *
+ * Stage 5 part Б: высота 56dp + Alignment.BottomCenter + bottom padding 6dp —
+ * визуально опускает иконку ниже, ближе к большому заголовку, как iOS-стрелка.
  */
 @Composable
 private fun BackButton(
@@ -148,9 +151,9 @@ private fun BackButton(
     haptic: HapticFeedback,
 ) {
     Box(
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.BottomCenter,
         modifier = Modifier
-            .size(48.dp)
+            .size(width = 48.dp, height = 56.dp)
             .clip(CircleShape)
             .clickable {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -161,7 +164,9 @@ private fun BackButton(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Назад",
             tint = SystemBlue,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier
+                .size(26.dp)
+                .padding(bottom = 6.dp),
         )
     }
 }

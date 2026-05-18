@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -384,11 +385,11 @@ private fun InlineSvg(
     val context = LocalContext.current
     val density = LocalDensity.current
     val heightPx = with(density) { heightSp.sp.roundToPx() }
-    var image by remember(assetPath, heightPx) { mutableStateOf<RenderedImage?>(null) }
+    val invert = isSystemInDarkTheme()  // Stage 5 part Ж — в светлой теме НЕ инвертируем
+    var image by remember(assetPath, heightPx, invert) { mutableStateOf<RenderedImage?>(null) }
 
-    LaunchedEffect(assetPath, heightPx) {
-        // Inline — это всегда class="tex" по нашей классификации, формула → инвертируем.
-        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = true)
+    LaunchedEffect(assetPath, heightPx, invert) {
+        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = invert)
     }
 
     val bmp = image
@@ -420,10 +421,11 @@ private fun BlockFormula(assetPath: String, alt: String) {
     val naturalHeightDp = natural?.height?.coerceAtLeast(1f) ?: 72f
     val effectiveHeightDp = minOf(naturalHeightDp, formulaMaxDp.toFloat())
     val heightPx = with(density) { effectiveHeightDp.dp.roundToPx() }
+    val invert = isSystemInDarkTheme()
 
-    var image by remember(assetPath, heightPx) { mutableStateOf<RenderedImage?>(null) }
-    LaunchedEffect(assetPath, heightPx) {
-        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = true)
+    var image by remember(assetPath, heightPx, invert) { mutableStateOf<RenderedImage?>(null) }
+    LaunchedEffect(assetPath, heightPx, invert) {
+        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = invert)
     }
 
     val bmp = image
@@ -457,10 +459,11 @@ private fun BlockIllustration(
     val context = LocalContext.current
     val density = LocalDensity.current
     val heightPx = with(density) { maxHeight.roundToPx() }
-    var image by remember(assetPath, heightPx) { mutableStateOf<RenderedImage?>(null) }
+    val invert = isSystemInDarkTheme()
+    var image by remember(assetPath, heightPx, invert) { mutableStateOf<RenderedImage?>(null) }
 
-    LaunchedEffect(assetPath, heightPx) {
-        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = true)
+    LaunchedEffect(assetPath, heightPx, invert) {
+        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = invert)
     }
 
     val bmp = image
