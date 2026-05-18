@@ -259,7 +259,7 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } else if (cur.fromErrors) {
                 // Phase 3 Stage C — при правильном ответе в режиме «Перерешать»
-                // помечаем все непререшённые записи этой задачи как resolved.
+                // помечаем все неперерешённые записи этой задачи как resolved.
                 errorLogDao.markAllResolvedFor(problem.id)
             }
         }

@@ -80,11 +80,21 @@ fun RadarCard(
                 )
             }
             Spacer(Modifier.height(16.dp))
-            when (style) {
-                RadarStyle.LIST -> RadarList(stats, onSubtypeClick)
-                RadarStyle.DONUT -> RadarDonut(stats, onSubtypeClick)
-                RadarStyle.HEATMAP -> RadarHeatmap(stats, onSubtypeClick)
-                RadarStyle.RADAR_CHART -> RadarChart(stats)
+            // Phase 3 Stage C2 правка 3: единая «нет данных» подсказка для
+            // всех 4 стилей. Раньше каждый стиль писал свой текст — пользователь
+            // переключал стиль и думал что радар не сменился. Теперь, пока
+            // ни в одном подвиде нет 15+ попыток, во всех 4 стилях показываем
+            // одинаковый текст с прогрессом к порогу.
+            val coloredCount = stats.count { it.severity != Severity.GRAY }
+            if (coloredCount == 0) {
+                NotEnoughDataHint(stats)
+            } else {
+                when (style) {
+                    RadarStyle.LIST -> RadarList(stats, onSubtypeClick)
+                    RadarStyle.DONUT -> RadarDonut(stats, onSubtypeClick)
+                    RadarStyle.HEATMAP -> RadarHeatmap(stats, onSubtypeClick)
+                    RadarStyle.RADAR_CHART -> RadarChart(stats)
+                }
             }
             Spacer(Modifier.height(20.dp))
             PrimaryButton(
@@ -96,19 +106,58 @@ fun RadarCard(
     }
 }
 
+/**
+ * Phase 3 Stage C2 — единая подсказка при отсутствии «цветных» подвидов
+ * (т.е. ни одного с >=15 попытками). Показывает прогресс к порогу.
+ */
+@Composable
+private fun NotEnoughDataHint(stats: List<SubtypeAccuracy>) {
+    val totalAttempts = stats.sumOf { it.attempts }
+    val touchedSubtypes = stats.count { it.attempts > 0 }
+    val maxInAny = stats.maxOfOrNull { it.attempts } ?: 0
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Радар появится, когда хотя бы в одном подвиде накопится 15+ попыток.",
+            fontSize = 14.sp,
+            color = LabelSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp,
+        )
+        if (totalAttempts > 0) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Сейчас: $totalAttempts попыток в $touchedSubtypes ${
+                    when {
+                        touchedSubtypes % 10 == 1 && touchedSubtypes % 100 != 11 -> "подвиде"
+                        touchedSubtypes % 10 in 2..4 && touchedSubtypes % 100 !in 12..14 -> "подвидах"
+                        else -> "подвидах"
+                    }
+                }. Максимум в одном: $maxInAny / 15.",
+                fontSize = 12.sp,
+                color = LabelTertiary,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // LIST — топ-15 слабых, отсортированных RED → YELLOW → GREEN
 // ---------------------------------------------------------------------------
 
 @Composable
 private fun RadarList(stats: List<SubtypeAccuracy>, onClick: (Long) -> Unit) {
+    // Гарантия от RadarCard: сюда мы попадаем только если есть хотя бы один
+    // цветной (non-GRAY) подвид. EmptyHint не нужен.
     val sorted = stats.filter { it.severity != Severity.GRAY }
         .sortedWith(compareBy({ -it.severity.ordinal }, { it.accuracy }))
         .take(15)
-    if (sorted.isEmpty()) {
-        EmptyHint("Реши минимум 15 задач в каком-нибудь подвиде, чтобы он появился здесь.")
-        return
-    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         sorted.forEach { sub ->
             SubtypeRow(sub = sub, onClick = { onClick(sub.subtypeId) })
@@ -173,10 +222,7 @@ private fun RadarDonut(stats: List<SubtypeAccuracy>, onClick: (Long) -> Unit) {
     val top = stats.filter { it.severity != Severity.GRAY }
         .sortedBy { it.accuracy }
         .take(10)
-    if (top.isEmpty()) {
-        EmptyHint("Реши минимум 15 задач в подвиде, чтобы он попал в радар.")
-        return
-    }
+    // Гарантия от RadarCard: есть хотя бы один цветной → top.isNotEmpty.
     Column {
         Box(
             contentAlignment = Alignment.Center,
@@ -276,11 +322,9 @@ private fun DonutLegendRow(sub: SubtypeAccuracy, onClick: () -> Unit) {
 
 @Composable
 private fun RadarHeatmap(stats: List<SubtypeAccuracy>, onClick: (Long) -> Unit) {
-    val visible = stats.filter { it.attempts > 0 || it.severity != Severity.GRAY }
-    if (visible.isEmpty()) {
-        EmptyHint("Реши хотя бы несколько задач, чтобы появились тепловые клетки.")
-        return
-    }
+    // Гарантия от RadarCard: есть хотя бы один цветной подвид. Показываем
+    // только подвиды с попытками — серые клетки без попыток не информативны.
+    val visible = stats.filter { it.attempts > 0 }
     val cols = 7
     val rows = (visible.size + cols - 1) / cols
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -379,12 +423,9 @@ private fun aggregateThemes(stats: List<SubtypeAccuracy>): List<ThemeAccuracy> {
 
 @Composable
 private fun RadarChart(stats: List<SubtypeAccuracy>) {
+    // Гарантия от RadarCard: есть хотя бы один цветной подвид (>=15 попыток),
+    // т.е. totalAttempts >= 15 — для лепестковой более чем достаточно.
     val themes = aggregateThemes(stats)
-    val totalAttempts = stats.sumOf { it.attempts }
-    if (totalAttempts < 10) {
-        EmptyHint("Реши хотя бы 10 задач для лепестковой диаграммы.")
-        return
-    }
     val n = themes.size
     val ringColor = LabelTertiary.copy(alpha = 0.20f)
     val fillColor = SystemBlue.copy(alpha = 0.25f)
@@ -451,19 +492,3 @@ private fun RadarChart(stats: List<SubtypeAccuracy>) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun EmptyHint(text: String) {
-    Text(
-        text = text,
-        fontSize = 14.sp,
-        color = LabelSecondary,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp, horizontal = 8.dp),
-    )
-}

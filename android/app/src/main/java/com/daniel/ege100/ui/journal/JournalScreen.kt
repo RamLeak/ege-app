@@ -55,7 +55,7 @@ import java.time.ZoneId
  *   JournalSummaryCard сверху (сегодня + точность + всего)
  *   ───────────────────────────
  *   ⭐ Избранные задачи (N)
- *   📝 Ошибки (всего · непререшённые)
+ *   📝 Ошибки (всего · неперерешённые)
  *   📊 Статистика
  *   📤 Экспорт CSV
  */
@@ -151,7 +151,7 @@ fun JournalScreen(
                     AppleListRow(
                         title = "Ошибки",
                         subtitle = if (st.errorsCount == 0) "Пока пусто" else
-                            "${st.errorsCount} всего · ${st.unresolvedErrors} непререшённых",
+                            "${st.errorsCount} всего · ${st.unresolvedErrors} неперерешённых",
                         leadingEmoji = "📝",
                         leadingTint = Color(0x26FF453A),
                         onClick = onErrorsClick,

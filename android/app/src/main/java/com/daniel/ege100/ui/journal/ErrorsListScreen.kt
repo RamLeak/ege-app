@@ -75,7 +75,7 @@ import java.util.Locale
 
 enum class ErrorFilter(val label: String) {
     ALL("Все"),
-    UNRESOLVED("Только непререшённые"),
+    UNRESOLVED("Только неперерешённые"),
     LAST_WEEK("За последнюю неделю"),
     BY_TYPE_MATH("Только математика"),
     BY_TYPE_RUS("Только русский"),
@@ -192,7 +192,7 @@ fun ErrorsListScreen(
         topBar = {
             LargeTitleBar(
                 title = "Ошибки",
-                subtitle = "${st.totalCount} всего · ${st.unresolvedCount} непререшённых",
+                subtitle = "${st.totalCount} всего · ${st.unresolvedCount} неперерешённых",
                 onBack = onBack,
                 rightContent = {
                     FilterChip(
@@ -287,6 +287,10 @@ private fun ErrorCard(
     onMarkResolved: () -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
+    // Phase 3 Stage C2 правка 1: правильный ответ скрыт под тап.
+    // Если задача уже перерешана (isResolved) — пользователь ответ уже знает,
+    // показываем сразу без тапа.
+    var revealCorrect by remember(row.error.id) { mutableStateOf(row.error.isResolved) }
     AppleCard(paddingDp = 16) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -311,9 +315,11 @@ private fun ErrorCard(
                 lineHeight = 21.sp,
             )
             Spacer(Modifier.height(12.dp))
-            AnswerComparison(
+            AnswerBlock(
                 userAnswer = row.error.userAnswer,
                 correctAnswer = row.error.correctAnswer,
+                revealed = revealCorrect,
+                onReveal = { revealCorrect = true },
             )
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -371,25 +377,56 @@ private fun ResolvedBadge() {
     }
 }
 
+/**
+ * Phase 3 Stage C2 правка 1 — правильный ответ скрыт по умолчанию.
+ *
+ * Строка с ответом пользователя видна сразу (красным). Правильный ответ
+ * либо скрыт под маленькой ссылкой «Показать правильный ответ», либо
+ * раскрыт (если пользователь нажал ссылку или задача уже isResolved).
+ *
+ * Это сохраняет смысл кнопки «Перерешать» — пользователь идёт решать,
+ * не зная ответа.
+ */
 @Composable
-private fun AnswerComparison(userAnswer: String, correctAnswer: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Твой: ", fontSize = 13.sp, color = LabelSecondary)
-        Text(
-            text = userAnswer.ifBlank { "—" },
-            fontSize = 14.sp,
-            color = SystemRed,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.width(12.dp))
-        Text("→  ", fontSize = 13.sp, color = LabelTertiary)
-        Text("Верно: ", fontSize = 13.sp, color = LabelSecondary)
-        Text(
-            text = correctAnswer,
-            fontSize = 14.sp,
-            color = SystemGreen,
-            fontWeight = FontWeight.SemiBold,
-        )
+private fun AnswerBlock(
+    userAnswer: String,
+    correctAnswer: String,
+    revealed: Boolean,
+    onReveal: () -> Unit,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Твой: ", fontSize = 13.sp, color = LabelSecondary)
+            Text(
+                text = userAnswer.ifBlank { "—" },
+                fontSize = 14.sp,
+                color = SystemRed,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        if (revealed) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Верно: ", fontSize = 13.sp, color = LabelSecondary)
+                Text(
+                    text = correctAnswer,
+                    fontSize = 14.sp,
+                    color = SystemGreen,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        } else {
+            Text(
+                text = "Показать правильный ответ",
+                fontSize = 13.sp,
+                color = SystemBlue,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { onReveal() }
+                    .padding(vertical = 4.dp, horizontal = 2.dp),
+            )
+        }
     }
 }
 
