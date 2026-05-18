@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 3 Stage A part Д3 — пути для FileProvider.
+  cacheDir используется в BackupShare.buildShareIntent для временных
+  JSON-файлов резервной копии: cacheDir/ege100_backup_YYYY-MM-DD.json.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="backup_cache" path="." />
+</paths>

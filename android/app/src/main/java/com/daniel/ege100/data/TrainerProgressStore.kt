@@ -53,4 +53,40 @@ object TrainerProgressStore {
     suspend fun clear(context: Context, trainerId: String) {
         context.trainerProgressStore.edit { it.remove(keyFor(trainerId)) }
     }
+
+    /** Phase 3 Stage A part Д: снимок всех текущих прогрессов для бэкапа. */
+    suspend fun getAllProgress(context: Context): Map<String, TrainerProgress> {
+        val data = context.trainerProgressStore.data.first()
+        val prefix = "progress_"
+        val result = mutableMapOf<String, TrainerProgress>()
+        for ((key, raw) in data.asMap()) {
+            val name = key.name
+            if (!name.startsWith(prefix) || raw !is String) continue
+            val trainerId = name.removePrefix(prefix)
+            runCatching {
+                json.decodeFromString(TrainerProgress.serializer(), raw)
+            }.getOrNull()?.let { result[trainerId] = it }
+        }
+        return result
+    }
+
+    /** Phase 3 Stage A part Д: восстановление всех прогрессов из бэкапа. */
+    suspend fun restoreAll(context: Context, snapshot: Map<String, TrainerProgress>) {
+        context.trainerProgressStore.edit { prefs ->
+            // Удаляем все progress_* ключи перед записью.
+            val toRemove = prefs.asMap().keys.filter { it.name.startsWith("progress_") }
+            toRemove.forEach { prefs.remove(it) }
+            for ((trainerId, progress) in snapshot) {
+                prefs[keyFor(trainerId)] = json.encodeToString(TrainerProgress.serializer(), progress)
+            }
+        }
+    }
+
+    /** Phase 3 Stage A part Д: сброс всех прогрессов. */
+    suspend fun clearAll(context: Context) {
+        context.trainerProgressStore.edit { prefs ->
+            val toRemove = prefs.asMap().keys.filter { it.name.startsWith("progress_") }
+            toRemove.forEach { prefs.remove(it) }
+        }
+    }
 }

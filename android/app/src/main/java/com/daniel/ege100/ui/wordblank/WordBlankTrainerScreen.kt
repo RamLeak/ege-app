@@ -61,6 +61,7 @@ import com.daniel.ege100.data.TrainerProgressStore
 import com.daniel.ege100.data.WordBlank
 import com.daniel.ege100.data.WordBlankErrorsStore
 import com.daniel.ege100.data.WordBlanksRepository
+import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.IosTextField
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.PrimaryButton
@@ -372,9 +373,8 @@ private fun Body(st: WordBlankUi, vm: WordBlankTrainerViewModel) {
             .fillMaxSize()
             .padding(horizontal = 20.dp),
     ) {
-        ProgressBar(
-            position = st.position,
-            total = st.total,
+        AppleProgressBar(
+            progress = if (st.total > 0) (st.position + 1).toFloat() / st.total else 0f,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp, bottom = 20.dp),
@@ -403,14 +403,18 @@ private fun Body(st: WordBlankUi, vm: WordBlankTrainerViewModel) {
                 targetState = st.position,
                 transitionSpec = {
                     val forward = targetState > initialState
+                    val swipeSpring = spring<androidx.compose.ui.unit.IntOffset>(
+                        dampingRatio = 0.85f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    )
                     if (forward) {
-                        (slideInHorizontally(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)) { it } +
-                            fadeIn(tween(220))) togetherWith
-                            (slideOutHorizontally(tween(220)) { -it / 3 } + fadeOut(tween(220)))
+                        (slideInHorizontally(swipeSpring) { it } +
+                            fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(swipeSpring) { -it / 3 } + fadeOut(tween(280)))
                     } else {
-                        (slideInHorizontally(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)) { -it } +
-                            fadeIn(tween(220))) togetherWith
-                            (slideOutHorizontally(tween(220)) { it / 3 } + fadeOut(tween(220)))
+                        (slideInHorizontally(swipeSpring) { -it } +
+                            fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(swipeSpring) { it / 3 } + fadeOut(tween(280)))
                     }
                 },
                 label = "word-transition",
@@ -580,30 +584,6 @@ private fun SwipeHint(verdict: BlankInputState.Verdict?, isFirst: Boolean, isLas
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun ProgressBar(position: Int, total: Int, modifier: Modifier = Modifier) {
-    val progress = if (total > 0) (position + 1).toFloat() / total else 0f
-    val animated by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
-        label = "progress",
-    )
-    Box(
-        modifier = modifier
-            .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(Color(0x33FFFFFF)),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(animated.coerceIn(0f, 1f))
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SystemBlue),
-        )
-    }
 }
 
 @Composable

@@ -38,4 +38,14 @@ object FavoritesStore {
 
     suspend fun snapshot(context: Context): Set<Long> =
         favoritesFlow(context).first()
+
+    /** Phase 3 Stage A part Д: восстановление из бэкапа. */
+    suspend fun restore(context: Context, ids: Set<Long>) {
+        context.favoritesStore.edit { it[KEY] = ids.map { id -> id.toString() }.toSet() }
+    }
+
+    /** Phase 3 Stage A part Д: сброс. */
+    suspend fun clearAll(context: Context) {
+        context.favoritesStore.edit { it.remove(KEY) }
+    }
 }

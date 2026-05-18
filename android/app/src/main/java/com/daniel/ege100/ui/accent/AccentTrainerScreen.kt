@@ -59,6 +59,7 @@ import com.daniel.ege100.data.AccentWord
 import com.daniel.ege100.data.AccentWordsRepository
 import com.daniel.ege100.data.TrainerProgress
 import com.daniel.ege100.data.TrainerProgressStore
+import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.ResumeBottomSheet
 import com.daniel.ege100.ui.theme.Bg
@@ -389,9 +390,8 @@ private fun TrainerBody(st: AccentTrainerUi, vm: AccentTrainerViewModel) {
             .fillMaxSize()
             .padding(horizontal = 20.dp),
     ) {
-        ProgressBar(
-            position = st.position,
-            total = st.total,
+        AppleProgressBar(
+            progress = if (st.total > 0) (st.position + 1).toFloat() / st.total else 0f,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp, bottom = 28.dp),
@@ -416,18 +416,24 @@ private fun TrainerBody(st: AccentTrainerUi, vm: AccentTrainerViewModel) {
                     )
                 },
         ) {
+            // Phase 3 part А3 — плавнее переход: spring 0.85f + StiffnessMediumLow
+            // + fade 280ms. Меньше bounce, дольше движение — ощущается «как iOS».
             AnimatedContent(
                 targetState = st.position,
                 transitionSpec = {
                     val forward = targetState > initialState
+                    val swipeSpring = spring<androidx.compose.ui.unit.IntOffset>(
+                        dampingRatio = 0.85f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    )
                     if (forward) {
-                        (slideInHorizontally(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)) { it } +
-                            fadeIn(tween(220))) togetherWith
-                            (slideOutHorizontally(tween(220)) { -it / 3 } + fadeOut(tween(220)))
+                        (slideInHorizontally(swipeSpring) { it } +
+                            fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(swipeSpring) { -it / 3 } + fadeOut(tween(280)))
                     } else {
-                        (slideInHorizontally(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)) { -it } +
-                            fadeIn(tween(220))) togetherWith
-                            (slideOutHorizontally(tween(220)) { it / 3 } + fadeOut(tween(220)))
+                        (slideInHorizontally(swipeSpring) { -it } +
+                            fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(swipeSpring) { it / 3 } + fadeOut(tween(280)))
                     }
                 },
                 label = "word-transition",
@@ -707,30 +713,6 @@ private fun SwipeHint(tap: SyllableTapState, isFirstWord: Boolean, isLastWord: B
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun ProgressBar(position: Int, total: Int, modifier: Modifier = Modifier) {
-    val progress = if (total > 0) (position + 1).toFloat() / total else 0f
-    val animated by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
-        label = "progress",
-    )
-    Box(
-        modifier = modifier
-            .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(Color(0x33FFFFFF)),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(animated.coerceIn(0f, 1f))
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(SystemBlue),
-        )
-    }
 }
 
 @Composable

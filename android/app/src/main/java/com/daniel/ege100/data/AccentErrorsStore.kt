@@ -32,4 +32,14 @@ object AccentErrorsStore {
 
     suspend fun snapshot(context: Context): Set<String> =
         errorsFlow(context).first()
+
+    /** Phase 3 Stage A part Д: восстановление из бэкапа. */
+    suspend fun restore(context: Context, words: Set<String>) {
+        context.accentDataStore.edit { it[KEY] = words }
+    }
+
+    /** Phase 3 Stage A part Д: сброс. */
+    suspend fun clearAll(context: Context) {
+        context.accentDataStore.edit { it.remove(KEY) }
+    }
 }

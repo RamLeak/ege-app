@@ -1,0 +1,501 @@
+package com.daniel.ege100.ui.profile
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.daniel.ege100.data.AppSettings
+import com.daniel.ege100.data.AppSettingsStore
+import com.daniel.ege100.data.RadarStyle
+import com.daniel.ege100.data.ThemeMode
+import com.daniel.ege100.ui.common.AppleCard
+import com.daniel.ege100.ui.common.AppleListRow
+import com.daniel.ege100.ui.common.DangerButton
+import com.daniel.ege100.ui.common.LargeTitleBar
+import com.daniel.ege100.ui.common.PrimaryButton
+import com.daniel.ege100.ui.common.SecondaryButton
+import com.daniel.ege100.ui.theme.Bg
+import com.daniel.ege100.ui.theme.BgElevated
+import com.daniel.ege100.ui.theme.Label
+import com.daniel.ege100.ui.theme.LabelSecondary
+import com.daniel.ege100.ui.theme.LabelTertiary
+import com.daniel.ege100.ui.theme.SystemBlue
+import com.daniel.ege100.ui.theme.SystemBlueTint
+import com.daniel.ege100.ui.theme.SystemRed
+import com.daniel.ege100.ui.theme.SystemRedTint
+import kotlinx.coroutines.launch
+
+@Composable
+fun SettingsScreen(
+    contentPadding: PaddingValues,
+    onBack: () -> Unit,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onResetClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    val settingsFlow = remember(context) { AppSettingsStore.settingsFlow(context) }
+    val settings by settingsFlow.collectAsState(initial = AppSettings())
+    val scope = rememberCoroutineScope()
+    var showThemeSheet by remember { mutableStateOf(false) }
+    var showRadarSheet by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            LargeTitleBar(title = "Настройки", subtitle = "Тема, уведомления, данные", onBack = onBack)
+        },
+        containerColor = Bg,
+    ) { inner ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(contentPadding),
+        ) {
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                item("appearance_title") { SectionTitle("Внешний вид") }
+                item("appearance") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppleListRow(
+                            title = "Тема",
+                            subtitle = themeLabel(settings.themeMode),
+                            leadingEmoji = "🎨",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showThemeSheet = true },
+                        )
+                        AppleListRow(
+                            title = "Радар",
+                            subtitle = radarLabel(settings.radarStyle),
+                            leadingEmoji = "📊",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showRadarSheet = true },
+                        )
+                    }
+                }
+                item("notify_title") { SectionTitle("Уведомления") }
+                item("notify") {
+                    AppleCard(paddingDp = 4) {
+                        Column {
+                            SwitchRow(
+                                emoji = "🔔",
+                                title = "Пробники",
+                                subtitle = "Stage P3-D",
+                                checked = settings.notifyMockExams,
+                                onChange = { v ->
+                                    scope.launch { AppSettingsStore.setNotifyMockExams(context, v) }
+                                },
+                            )
+                            SwitchRow(
+                                emoji = "🔥",
+                                title = "Streak",
+                                subtitle = "Stage P3-D",
+                                checked = settings.notifyStreak,
+                                onChange = { v ->
+                                    scope.launch { AppSettingsStore.setNotifyStreak(context, v) }
+                                },
+                            )
+                            SwitchRow(
+                                emoji = "📚",
+                                title = "Напоминания",
+                                subtitle = "Stage P3-D",
+                                checked = settings.notifyReminders,
+                                onChange = { v ->
+                                    scope.launch { AppSettingsStore.setNotifyReminders(context, v) }
+                                },
+                            )
+                        }
+                    }
+                }
+                item("data_title") { SectionTitle("Данные") }
+                item("data") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppleListRow(
+                            title = "Экспорт прогресса",
+                            subtitle = "В Telegram, Drive или файл",
+                            leadingEmoji = "📤",
+                            leadingTint = SystemBlueTint,
+                            onClick = onExportClick,
+                        )
+                        AppleListRow(
+                            title = "Импорт прогресса",
+                            subtitle = "Из файла резервной копии",
+                            leadingEmoji = "📥",
+                            leadingTint = SystemBlueTint,
+                            onClick = onImportClick,
+                        )
+                        AppleListRow(
+                            title = "Сброс прогресса",
+                            subtitle = "Удалить тренажёры и избранное",
+                            leadingEmoji = "🗑️",
+                            leadingTint = SystemRedTint,
+                            onClick = onResetClick,
+                        )
+                    }
+                }
+                item("footer_pad") { Spacer(Modifier.height(24.dp)) }
+            }
+        }
+    }
+
+    if (showThemeSheet) {
+        ThemeBottomSheet(
+            current = settings.themeMode,
+            onSelect = { newMode ->
+                scope.launch { AppSettingsStore.setThemeMode(context, newMode) }
+                showThemeSheet = false
+            },
+            onDismiss = { showThemeSheet = false },
+        )
+    }
+    if (showRadarSheet) {
+        RadarBottomSheet(
+            current = settings.radarStyle,
+            onSelect = { newStyle ->
+                scope.launch { AppSettingsStore.setRadarStyle(context, newStyle) }
+                showRadarSheet = false
+            },
+            onDismiss = { showRadarSheet = false },
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        color = LabelTertiary,
+        modifier = Modifier.padding(start = 4.dp),
+    )
+}
+
+@Composable
+private fun SwitchRow(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(SystemBlueTint),
+        ) {
+            Text(emoji, fontSize = 22.sp)
+        }
+        Spacer(Modifier.size(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Label)
+            Text(subtitle, fontSize = 13.sp, color = LabelSecondary, modifier = Modifier.padding(top = 2.dp))
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = SystemBlue,
+                checkedThumbColor = Color.White,
+            ),
+        )
+    }
+}
+
+private fun themeLabel(mode: ThemeMode): String = when (mode) {
+    ThemeMode.AUTO -> "Авто (по системе)"
+    ThemeMode.DARK -> "Тёмная"
+    ThemeMode.LIGHT -> "Светлая"
+}
+
+private fun radarLabel(style: RadarStyle): String = when (style) {
+    RadarStyle.LIST -> "Список с прогресс-барами"
+    RadarStyle.DONUT -> "Круговая диаграмма"
+    RadarStyle.HEATMAP -> "Тепловая карта"
+    RadarStyle.RADAR_CHART -> "Лепестковая диаграмма"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeBottomSheet(
+    current: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = BgElevated,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+        ) {
+            Text(
+                text = "Тема",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Label,
+            )
+            Spacer(Modifier.height(16.dp))
+            ThemeMode.values().forEach { mode ->
+                RadioRow(
+                    title = themeLabel(mode),
+                    selected = mode == current,
+                    onClick = { onSelect(mode) },
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RadarBottomSheet(
+    current: RadarStyle,
+    onSelect: (RadarStyle) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = BgElevated,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+        ) {
+            Text(
+                text = "Внешний вид радара",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Label,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Появится на главном экране в Stage P3-B",
+                fontSize = 14.sp,
+                color = LabelSecondary,
+            )
+            Spacer(Modifier.height(16.dp))
+            RadarStyle.values().forEach { style ->
+                RadioRow(
+                    title = radarLabel(style),
+                    selected = style == current,
+                    onClick = { onSelect(style) },
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun RadioRow(title: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(vertical = 14.dp, horizontal = 4.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(if (selected) SystemBlue else Color.Transparent)
+                .border(
+                    width = 1.5.dp,
+                    color = if (selected) Color.Transparent else LabelTertiary,
+                    shape = CircleShape,
+                ),
+        ) {
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color.White),
+                )
+            }
+        }
+        Spacer(Modifier.size(14.dp))
+        Text(
+            text = title,
+            fontSize = 17.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = Label,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Text("✓", color = SystemBlue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/**
+ * Phase 3 Stage A part Д — bottom sheet подтверждения сброса прогресса.
+ * Используется отдельно из ProgressResetFlow (см. EgeApp.kt).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ResetProgressBottomSheet(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = BgElevated,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+        ) {
+            Text(
+                text = "⚠️ Сбросить весь прогресс?",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Label,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Будет удалено:\n• Прогресс всех тренажёров\n• Избранные задачи\n• История ошибок",
+                fontSize = 15.sp,
+                color = LabelSecondary,
+                lineHeight = 22.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Профиль и настройки сохранятся.",
+                fontSize = 14.sp,
+                color = LabelTertiary,
+            )
+            Spacer(Modifier.height(24.dp))
+            DangerButton(
+                text = "Да, сбросить",
+                onClick = onConfirm,
+            )
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Отмена",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/**
+ * Bottom sheet подтверждения импорта — «заменить текущий прогресс».
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ImportConfirmBottomSheet(
+    backupDate: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = BgElevated,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+        ) {
+            Text(
+                text = "Заменить прогресс?",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Label,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Файл от $backupDate. Текущий прогресс будет потерян.",
+                fontSize = 15.sp,
+                color = LabelSecondary,
+                lineHeight = 22.sp,
+            )
+            Spacer(Modifier.height(24.dp))
+            PrimaryButton(
+                text = "Заменить",
+                onClick = onConfirm,
+            )
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Отмена",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}

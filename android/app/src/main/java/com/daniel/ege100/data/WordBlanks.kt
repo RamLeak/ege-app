@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -85,6 +86,39 @@ object WordBlankErrorsStore {
             val key = keyFor(typeNumber)
             val cur = prefs[key] ?: emptySet()
             prefs[key] = cur + masked
+        }
+    }
+
+    /** Phase 3 Stage A part Д: снимок всех ошибок (по типам). */
+    suspend fun getAll(context: Context): Map<Int, Set<String>> {
+        val data = context.wordBlankStore.data.first()
+        val result = mutableMapOf<Int, Set<String>>()
+        for ((key, raw) in data.asMap()) {
+            if (!key.name.startsWith("wrong_words_t")) continue
+            val n = key.name.removePrefix("wrong_words_t").toIntOrNull() ?: continue
+            @Suppress("UNCHECKED_CAST")
+            val set = raw as? Set<String> ?: continue
+            result[n] = set
+        }
+        return result
+    }
+
+    /** Phase 3 Stage A part Д: восстановление из бэкапа. */
+    suspend fun restore(context: Context, snapshot: Map<Int, Set<String>>) {
+        context.wordBlankStore.edit { prefs ->
+            val toRemove = prefs.asMap().keys.filter { it.name.startsWith("wrong_words_t") }
+            toRemove.forEach { prefs.remove(it) }
+            for ((typeNum, set) in snapshot) {
+                prefs[keyFor(typeNum)] = set
+            }
+        }
+    }
+
+    /** Phase 3 Stage A part Д: сброс. */
+    suspend fun clearAll(context: Context) {
+        context.wordBlankStore.edit { prefs ->
+            val toRemove = prefs.asMap().keys.filter { it.name.startsWith("wrong_words_t") }
+            toRemove.forEach { prefs.remove(it) }
         }
     }
 }

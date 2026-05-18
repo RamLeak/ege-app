@@ -3,23 +3,34 @@ package com.daniel.ege100.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
  * iOS-style палитра (DESIGN_SPEC.md §2).
  *
- * Stage 5 part Ж: палитра стала **динамической** — цвета зависят от системной
- * темы (`isSystemInDarkTheme()`). Это даёт автоматическое переключение
+ * Stage 5 part Ж: палитра стала динамической — цвета зависят от системной
+ * темы (`isSystemInDarkTheme()`). Это давало автоматическое переключение
  * тёмной/светлой темы без перестройки UI-компонентов.
  *
- * Все cвета объявлены как top-level **composable read-only** свойства. Это
- * единственный способ дать «обычное» имя `Bg` синтаксически, но возвращать
- * разное значение в зависимости от темы. Все call-сайты — внутри @Composable
- * функций, поэтому работает прозрачно.
- *
- * Если кто-то попытается прочитать цвет вне composable — компилятор ругнётся,
- * это ожидаемо: значение в принципе зависит от системы.
+ * Phase 3 Stage A part Г: добавляем ручной режим (ThemeMode AUTO/DARK/LIGHT).
+ * EgeTheme устанавливает `LocalDarkOverride`, и все getters читают сначала
+ * этот override, потом fallback на `isSystemInDarkTheme()`. Это позволяет
+ * пользователю принудительно зафиксировать тёмную/светлую тему независимо
+ * от системной — и UI перекрашивается мгновенно.
  */
+
+/**
+ * Override от EgeTheme. null = «следовать системе», true = тёмная, false = светлая.
+ */
+val LocalDarkOverride = staticCompositionLocalOf<Boolean?> { null }
+
+/**
+ * Текущая активная тема. Читается из override, fallback — система.
+ */
+@Composable
+@ReadOnlyComposable
+private fun isDark(): Boolean = LocalDarkOverride.current ?: isSystemInDarkTheme()
 
 // ----------- Тёмная палитра -----------
 private val DarkBg = Color(0xFF000000)
@@ -62,68 +73,69 @@ private val LightSystemRedTint = Color(0x26FF3B30)
 // ----------- Динамические свойства -----------
 val Bg: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkBg else LightBg
+    get() = if (isDark()) DarkBg else LightBg
 
 val BgElevated: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkBgElevated else LightBgElevated
+    get() = if (isDark()) DarkBgElevated else LightBgElevated
 
 val BgElevated2: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkBgElevated2 else LightBgElevated2
+    get() = if (isDark()) DarkBgElevated2 else LightBgElevated2
 
 val Separator: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSeparator else LightSeparator
+    get() = if (isDark()) DarkSeparator else LightSeparator
 
 val SeparatorHairline: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSeparatorHairline else LightSeparatorHairline
+    get() = if (isDark()) DarkSeparatorHairline else LightSeparatorHairline
 
 val Label: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkLabel else LightLabel
+    get() = if (isDark()) DarkLabel else LightLabel
 
 val LabelSecondary: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkLabelSecondary else LightLabelSecondary
+    get() = if (isDark()) DarkLabelSecondary else LightLabelSecondary
 
 val LabelTertiary: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkLabelTertiary else LightLabelTertiary
+    get() = if (isDark()) DarkLabelTertiary else LightLabelTertiary
 
 val SystemBlue: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemBlue else LightSystemBlue
+    get() = if (isDark()) DarkSystemBlue else LightSystemBlue
 
 val SystemGreen: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemGreen else LightSystemGreen
+    get() = if (isDark()) DarkSystemGreen else LightSystemGreen
 
 val SystemRed: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemRed else LightSystemRed
+    get() = if (isDark()) DarkSystemRed else LightSystemRed
 
 val SystemOrange: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemOrange else LightSystemOrange
+    get() = if (isDark()) DarkSystemOrange else LightSystemOrange
 
 val SystemYellow: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemYellow else LightSystemYellow
+    get() = if (isDark()) DarkSystemYellow else LightSystemYellow
 
 val SystemBlueTint: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemBlueTint else LightSystemBlueTint
+    get() = if (isDark()) DarkSystemBlueTint else LightSystemBlueTint
 
 val SystemBlueTintWeak: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemBlueTintWeak else LightSystemBlueTintWeak
+    get() = if (isDark()) DarkSystemBlueTintWeak else LightSystemBlueTintWeak
 
 val SystemGreenTint: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemGreenTint else LightSystemGreenTint
+    get() = if (isDark()) DarkSystemGreenTint else LightSystemGreenTint
 
 val SystemRedTint: Color
     @Composable @ReadOnlyComposable
-    get() = if (isSystemInDarkTheme()) DarkSystemRedTint else LightSystemRedTint
+    get() = if (isDark()) DarkSystemRedTint else LightSystemRedTint
+

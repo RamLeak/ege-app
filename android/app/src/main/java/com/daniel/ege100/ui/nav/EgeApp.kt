@@ -1,5 +1,8 @@
 package com.daniel.ege100.ui.nav
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -26,12 +29,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,9 +53,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.daniel.ege100.data.BackupRepository
+import com.daniel.ege100.data.BackupShare
+import com.daniel.ege100.data.BackupSnapshot
+import com.daniel.ege100.data.ImportResult
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
 import com.daniel.ege100.ui.accent.AccentTrainerScreen
-import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
 import com.daniel.ege100.ui.catalog.CatalogScreen
 import com.daniel.ege100.ui.catalog.HomeStubScreen
 import com.daniel.ege100.ui.catalog.ProblemDetailScreen
@@ -57,10 +68,16 @@ import com.daniel.ege100.ui.catalog.TypesScreen
 import com.daniel.ege100.ui.journal.FavoritesScreen
 import com.daniel.ege100.ui.journal.JournalScreen
 import com.daniel.ege100.ui.modifiers.edgeSwipeBack
+import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
+import com.daniel.ege100.ui.profile.ProfileScreen
+import com.daniel.ege100.ui.profile.ResetProgressBottomSheet
+import com.daniel.ege100.ui.profile.SettingsScreen
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.LabelTertiary
 import com.daniel.ege100.ui.theme.SeparatorHairline
 import com.daniel.ege100.ui.theme.SystemBlue
+import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
+import kotlinx.coroutines.launch
 
 private data class TabSpec(
     val route: Any,
@@ -97,10 +114,6 @@ private fun backExit(): ExitTransition =
 private fun tabFadeEnter(): EnterTransition = fadeIn(tween(200))
 private fun tabFadeExit(): ExitTransition = fadeOut(tween(200))
 
-/**
- * Проверка: переход касается tab-роута (HomeStub / Catalog / JournalStub)?
- * При переключении табов используем fade, иначе обычный slide.
- */
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boolean {
     val from = initialState.destination.route.orEmpty()
     val to = targetState.destination.route.orEmpty()
@@ -110,18 +123,59 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boo
 private fun String.isTabRoot(): Boolean =
     endsWith("HomeStubRoute") ||
         endsWith("CatalogRoute") ||
-        endsWith("JournalStubRoute")
+        endsWith("JournalStubRoute") ||
+        endsWith("ProfileRoute")
 
 @Composable
 fun EgeApp() {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentDest: NavDestination? = backStack?.destination
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Phase 3 Stage A part Д — share/import handlers поднимаем сюда, на
+    // уровень Scaffold, чтобы Profile и Settings экраны могли вызвать одно
+    // и то же действие через onExport / onImport callback'и.
+    var pendingImport: BackupSnapshot? by remember { mutableStateOf(null) }
+    var importErrorMessage: String? by remember { mutableStateOf(null) }
+    var showReset by remember { mutableStateOf(false) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val content = BackupShare.readUriContent(context, uri).getOrNull()
+            if (content == null) {
+                Toast.makeText(context, "Не удалось прочитать файл", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val parsed = BackupRepository.parseBackup(content)
+            parsed.fold(
+                onSuccess = { pendingImport = it },
+                onFailure = { importErrorMessage = it.message ?: "Файл повреждён" },
+            )
+        }
+    }
+
+    fun triggerExport() {
+        scope.launch {
+            val json = BackupRepository.exportBackup(context)
+            val intent = BackupShare.buildShareIntent(context, json)
+            context.startActivity(intent)
+        }
+    }
+
+    fun triggerImport() {
+        importLauncher.launch("application/json")
+    }
 
     val tabs = listOf(
         TabSpec(HomeStubRoute, "Главная", "🏠"),
         TabSpec(CatalogRoute, "Решать", "📚"),
         TabSpec(JournalStubRoute, "Журнал", "📊"),
+        TabSpec(ProfileRoute, "Профиль", "👤"),
     )
 
     Scaffold(
@@ -159,7 +213,12 @@ fun EgeApp() {
             popEnterTransition = { if (isTabSwitch()) tabFadeEnter() else backEnter() },
             popExitTransition = { if (isTabSwitch()) tabFadeExit() else backExit() },
         ) {
-            composable<HomeStubRoute> { HomeStubScreen(padding) }
+            composable<HomeStubRoute> {
+                HomeStubScreen(
+                    contentPadding = padding,
+                    onProfileClick = { navController.navigate(ProfileRoute) },
+                )
+            }
             composable<JournalStubRoute> {
                 JournalScreen(
                     contentPadding = padding,
@@ -179,6 +238,23 @@ fun EgeApp() {
                             ),
                         )
                     },
+                )
+            }
+            composable<ProfileRoute> {
+                ProfileScreen(
+                    contentPadding = padding,
+                    onSettingsClick = { navController.navigate(SettingsRoute) },
+                    onExportClick = ::triggerExport,
+                    onImportClick = ::triggerImport,
+                )
+            }
+            composable<SettingsRoute> {
+                SettingsScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onExportClick = ::triggerExport,
+                    onImportClick = ::triggerImport,
+                    onResetClick = { showReset = true },
                 )
             }
 
@@ -272,6 +348,49 @@ fun EgeApp() {
             }
         }
     }
+
+    // Import confirmation bottom sheet.
+    val pi = pendingImport
+    if (pi != null) {
+        ImportConfirmBottomSheet(
+            backupDate = pi.exportedAt.take(10),
+            onConfirm = {
+                scope.launch {
+                    val result = BackupRepository.applyBackup(context, pi)
+                    pendingImport = null
+                    val msg = when (result) {
+                        is ImportResult.Success -> "Прогресс восстановлен ✓"
+                        is ImportResult.Error -> "Ошибка: ${result.message}"
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { pendingImport = null },
+        )
+    }
+
+    // Import error toast (one-shot).
+    val err = importErrorMessage
+    LaunchedEffect(err) {
+        if (err != null) {
+            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+            importErrorMessage = null
+        }
+    }
+
+    // Reset confirmation bottom sheet.
+    if (showReset) {
+        ResetProgressBottomSheet(
+            onConfirm = {
+                scope.launch {
+                    BackupRepository.resetProgress(context)
+                    showReset = false
+                    Toast.makeText(context, "Прогресс сброшен ✓", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { showReset = false },
+        )
+    }
 }
 
 @Composable
@@ -293,7 +412,7 @@ private fun BottomTabBar(
                 .fillMaxWidth()
                 .background(Bg)
                 .height(84.dp)
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp),
         ) {
             tabs.forEach { tab ->
                 val selected = currentDest?.matchesRoot(tab.route) == true
@@ -319,7 +438,6 @@ private fun BottomTabItem(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    // Bounce при активации: selected → лёгкое увеличение с spring.
     val scaleTarget = when {
         pressed -> 0.92f
         selected -> 1.05f
@@ -347,7 +465,8 @@ private fun BottomTabItem(
                 onClick()
             },
     ) {
-        Text(text = icon, fontSize = 26.sp, color = color)
+        // 4 таба — иконки 24sp (раньше 26sp), label 11sp.
+        Text(text = icon, fontSize = 24.sp, color = color)
         Text(
             text = label,
             fontSize = 11.sp,
@@ -372,6 +491,9 @@ private fun NavDestination.matchesRoot(root: Any): Boolean {
     }
     if (root is JournalStubRoute) {
         return r.startsWith("com.daniel.ege100.ui.nav.FavoritesRoute")
+    }
+    if (root is ProfileRoute) {
+        return r.startsWith("com.daniel.ege100.ui.nav.SettingsRoute")
     }
     return false
 }

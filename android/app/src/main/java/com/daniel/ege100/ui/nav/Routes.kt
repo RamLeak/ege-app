@@ -67,3 +67,15 @@ data class WordBlankTrainerRoute(
  */
 @Serializable
 object FavoritesRoute
+
+/**
+ * Phase 3 Stage A: 4-й таб «Профиль».
+ */
+@Serializable
+object ProfileRoute
+
+/**
+ * Phase 3 Stage A: экран настроек (заходим из Профиля).
+ */
+@Serializable
+object SettingsRoute
