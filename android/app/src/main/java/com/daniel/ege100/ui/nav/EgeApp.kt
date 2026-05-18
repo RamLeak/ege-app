@@ -47,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
 import com.daniel.ege100.ui.accent.AccentTrainerScreen
+import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
 import com.daniel.ege100.ui.catalog.CatalogScreen
 import com.daniel.ege100.ui.catalog.HomeStubScreen
 import com.daniel.ege100.ui.catalog.JournalStubScreen
@@ -179,6 +180,9 @@ fun EgeApp() {
                         navController.navigate(ProblemListRoute(typeId = tId, subtypeId = sId))
                     },
                     onAccentTrainerClick = { navController.navigate(AccentCategoriesRoute) },
+                    onWordBlankTrainerClick = { typeNumber ->
+                        navController.navigate(WordBlankTrainerRoute(typeNumber))
+                    },
                 )
             }
             composable<ProblemListRoute> { entry ->
@@ -222,6 +226,15 @@ fun EgeApp() {
                 val args = entry.toRoute<AccentTrainerRoute>()
                 AccentTrainerScreen(
                     categoryId = args.categoryId,
+                    defaultOrder = args.defaultOrder,
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<WordBlankTrainerRoute> { entry ->
+                val args = entry.toRoute<WordBlankTrainerRoute>()
+                WordBlankTrainerScreen(
+                    typeNumber = args.typeNumber,
                     defaultOrder = args.defaultOrder,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
@@ -324,5 +337,6 @@ private fun NavDestination.matchesRoot(root: Any): Boolean {
         r.startsWith("com.daniel.ege100.ui.nav.ProblemListRoute") ||
         r.startsWith("com.daniel.ege100.ui.nav.ProblemDetailRoute") ||
         r.startsWith("com.daniel.ege100.ui.nav.AccentCategoriesRoute") ||
-        r.startsWith("com.daniel.ege100.ui.nav.AccentTrainerRoute")
+        r.startsWith("com.daniel.ege100.ui.nav.AccentTrainerRoute") ||
+        r.startsWith("com.daniel.ege100.ui.nav.WordBlankTrainerRoute")
 }

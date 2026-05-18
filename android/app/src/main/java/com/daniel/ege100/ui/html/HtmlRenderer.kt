@@ -322,14 +322,26 @@ private suspend fun loadImageFromAsset(
 }
 
 /**
- * Быстро читает viewBox/width-height из первых 1024 байт SVG для оценки
- * пропорций inline-формулы. Используется ДО полного рендера, чтобы выбрать
- * правильную ширину placeholder'а.
+ * Естественный размер SVG в SVG-юнитах (~pt для sdamgia формул).
+ * Для нашего рендера 1pt ≈ 1dp визуально (формула высоты 30pt должна
+ * примерно соответствовать 30dp на экране).
  */
+private data class SvgSize(val width: Float, val height: Float) {
+    val aspect: Float get() = if (height > 0f) width / height else 1f
+}
+
 private val VIEWBOX_REGEX = Regex("viewBox\\s*=\\s*['\"]\\s*[\\-\\d.]+\\s+[\\-\\d.]+\\s+([\\d.]+)\\s+([\\d.]+)")
 private val WIDTH_HEIGHT_REGEX = Regex("width\\s*=\\s*['\"]([\\d.]+)[^'\"]*['\"][^>]*height\\s*=\\s*['\"]([\\d.]+)")
 
-private suspend fun readSvgAspect(context: Context, assetPath: String): Float? =
+/**
+ * Читает первые ~1KB SVG, извлекает естественный размер из viewBox или
+ * width/height. Используется в InlineFlow (правильная ширина placeholder)
+ * и в BlockSvg (cap-высота для маленьких формул).
+ *
+ * Возвращает null если SVG нет или размер невалиден — caller использует
+ * fallback по alt-эвристикам.
+ */
+private suspend fun readSvgSize(context: Context, assetPath: String): SvgSize? =
     withContext(Dispatchers.IO) {
         val cleaned = assetPath.trim().removePrefix("./").removePrefix("/")
         if (!cleaned.endsWith(".svg", ignoreCase = true)) return@withContext null
@@ -339,17 +351,15 @@ private suspend fun readSvgAspect(context: Context, assetPath: String): Float? =
                 val n = stream.read(buf)
                 if (n <= 0) return@withContext null
                 val head = String(buf, 0, n)
-                val m1 = VIEWBOX_REGEX.find(head)
-                if (m1 != null) {
-                    val w = m1.groupValues[1].toFloatOrNull() ?: return@withContext null
-                    val h = m1.groupValues[2].toFloatOrNull() ?: return@withContext null
-                    if (h > 0f) return@withContext w / h
+                VIEWBOX_REGEX.find(head)?.let {
+                    val w = it.groupValues[1].toFloatOrNull()
+                    val h = it.groupValues[2].toFloatOrNull()
+                    if (w != null && h != null && w > 0f && h > 0f) return@withContext SvgSize(w, h)
                 }
-                val m2 = WIDTH_HEIGHT_REGEX.find(head)
-                if (m2 != null) {
-                    val w = m2.groupValues[1].toFloatOrNull() ?: return@withContext null
-                    val h = m2.groupValues[2].toFloatOrNull() ?: return@withContext null
-                    if (h > 0f) return@withContext w / h
+                WIDTH_HEIGHT_REGEX.find(head)?.let {
+                    val w = it.groupValues[1].toFloatOrNull()
+                    val h = it.groupValues[2].toFloatOrNull()
+                    if (w != null && h != null && w > 0f && h > 0f) return@withContext SvgSize(w, h)
                 }
                 null
             }
@@ -357,6 +367,10 @@ private suspend fun readSvgAspect(context: Context, assetPath: String): Float? =
             null
         }
     }
+
+/** Содержится ли asset в библиотеке формул (всё кроме чертежей). */
+private fun isFormulaPath(assetPath: String): Boolean =
+    assetPath.startsWith("_formulas/") || assetPath.contains("/_formulas/")
 
 // ----------------------- Compose-обёртки -----------------------
 
@@ -391,7 +405,51 @@ private fun InlineSvg(
 }
 
 @Composable
-private fun BlockSvg(
+private fun BlockFormula(assetPath: String, alt: String) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
+    // 1. Читаем естественный размер SVG.
+    var natural by remember(assetPath) { mutableStateOf<SvgSize?>(null) }
+    LaunchedEffect(assetPath) { natural = readSvgSize(context, assetPath) }
+
+    // 2. Высота cap = min(naturalHeight, 120dp). Если viewBox недоступен —
+    //    fallback 72dp (вместо 360dp — для отсутствующего viewBox формулы
+    //    с большой вероятностью простые).
+    val formulaMaxDp = 120
+    val naturalHeightDp = natural?.height?.coerceAtLeast(1f) ?: 72f
+    val effectiveHeightDp = minOf(naturalHeightDp, formulaMaxDp.toFloat())
+    val heightPx = with(density) { effectiveHeightDp.dp.roundToPx() }
+
+    var image by remember(assetPath, heightPx) { mutableStateOf<RenderedImage?>(null) }
+    LaunchedEffect(assetPath, heightPx) {
+        image = loadImageFromAsset(context, assetPath, heightPx, invertColors = true)
+    }
+
+    val bmp = image
+    if (bmp != null) {
+        // Wrap-content: формула рисуется в её естественной ширине, не
+        // растягивается до полной ширины экрана. Если ширина больше экрана —
+        // Compose ужмёт через ContentScale.Fit (редкость для нормальных формул).
+        Image(
+            bitmap = bmp.bitmap.asImageBitmap(),
+            contentDescription = alt.ifBlank { "формула" },
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .heightIn(max = effectiveHeightDp.dp)
+                .padding(vertical = 4.dp),
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .heightIn(min = 36.dp, max = effectiveHeightDp.dp)
+                .padding(vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun BlockIllustration(
     assetPath: String,
     alt: String,
     maxHeight: Dp,
@@ -459,7 +517,15 @@ fun HtmlRenderer(
                     )
                 }
                 block.blockImages.forEach { img ->
-                    BlockSvg(assetPath = img.src, alt = img.alt, maxHeight = blockMaxHeight)
+                    if (isFormulaPath(img.src)) {
+                        BlockFormula(assetPath = img.src, alt = img.alt)
+                    } else {
+                        BlockIllustration(
+                            assetPath = img.src,
+                            alt = img.alt,
+                            maxHeight = blockMaxHeight,
+                        )
+                    }
                 }
             }
         }
@@ -482,8 +548,8 @@ private fun InlineFlow(
     LaunchedEffect(flow) {
         inlineSegs.forEach { seg ->
             if (!aspects.containsKey(seg.placeholderId)) {
-                val a = readSvgAspect(context, seg.src)
-                if (a != null) aspects[seg.placeholderId] = a
+                val sz = readSvgSize(context, seg.src)
+                if (sz != null) aspects[seg.placeholderId] = sz.aspect
             }
         }
     }

@@ -21,6 +21,8 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -359,6 +361,25 @@ private fun TrainerBody(st: AccentTrainerUi, vm: AccentTrainerViewModel) {
 
 // ---------------------- Syllables ----------------------
 
+/**
+ * Адаптивный размер шрифта по числу слогов (правка А2). До 4 слогов —
+ * крупный, 5 слогов чуть меньше, 6+ — компактный. Дополнительно FlowRow
+ * переносит на новую строку если всё-таки не помещается (например
+ * «вероисповедание» с 8 слогами на узком экране).
+ */
+private fun syllableFontSizeSp(syllableCount: Int): Int = when {
+    syllableCount <= 4 -> 32
+    syllableCount == 5 -> 28
+    else -> 24
+}
+
+private fun syllableCellHeightDp(syllableCount: Int): Int = when {
+    syllableCount <= 4 -> 72
+    syllableCount == 5 -> 64
+    else -> 56
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SyllableRow(
     word: AccentWord,
@@ -366,10 +387,14 @@ private fun SyllableRow(
     tap: SyllableTapState,
     onSyllableTap: (Int) -> Unit,
 ) {
-    Row(
+    val fontSize = syllableFontSizeSp(syllables.size)
+    val cellHeight = syllableCellHeightDp(syllables.size)
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
     ) {
         syllables.forEachIndexed { idx, syl ->
             SyllableCell(
@@ -378,6 +403,8 @@ private fun SyllableRow(
                 syllableIndex = idx,
                 stressedIndex = word.stressed_index,
                 tap = tap,
+                fontSizeSp = fontSize,
+                heightDp = cellHeight,
                 onTap = { onSyllableTap(idx) },
             )
         }
@@ -405,6 +432,8 @@ private fun SyllableCell(
     syllableIndex: Int,
     stressedIndex: Int,
     tap: SyllableTapState,
+    fontSizeSp: Int,
+    heightDp: Int,
     onTap: () -> Unit,
 ) {
     val visual = syllableVisualFor(syllableIndex, tap)
@@ -430,29 +459,33 @@ private fun SyllableCell(
     val enabled = anyVowel && tap !is SyllableTapState.Verdict
     val showAccentOnCorrect = visual == SyllableVisual.Correct &&
         stressedIndex in syllable.startInWord..syllable.endInWord
+    // Внутренний горизонтальный padding пропорциональный шрифту — для крупных
+    // слогов оставляем 14dp, для компактных уменьшаем.
+    val innerPaddingDp = if (fontSizeSp >= 32) 14 else if (fontSizeSp >= 28) 12 else 10
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .height(72.dp)
-            .widthIn(min = 56.dp)
+            .height(heightDp.dp)
+            .widthIn(min = 48.dp)
             .scale(scale)
             .clip(RoundedCornerShape(16.dp))
             .background(bg)
             .border(1.5.dp, border, RoundedCornerShape(16.dp))
             .clickable(enabled = enabled) { onTap() }
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = innerPaddingDp.dp),
     ) {
         if (showAccentOnCorrect) {
             SyllableWithAccent(
                 text = syllable.text,
                 accentLocalIndex = stressedIndex - syllable.startInWord,
                 fontColor = fg,
+                fontSizeSp = fontSizeSp,
             )
         } else {
             Text(
                 text = syllable.text,
-                fontSize = 32.sp,
+                fontSize = fontSizeSp.sp,
                 fontWeight = if (visual != SyllableVisual.Idle) FontWeight.Bold else FontWeight.SemiBold,
                 color = fg.copy(alpha = if (anyVowel) 1f else 0.5f),
             )
@@ -465,18 +498,25 @@ private fun SyllableWithAccent(
     text: String,
     accentLocalIndex: Int,
     fontColor: Color,
+    fontSizeSp: Int,
 ) {
+    val accentSpacerHeightDp = (fontSizeSp * 0.7f).toInt()
     Row(verticalAlignment = Alignment.CenterVertically) {
         text.forEachIndexed { i, ch ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (i == accentLocalIndex) {
-                    Text("´", color = fontColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "´",
+                        color = fontColor,
+                        fontSize = (fontSizeSp - 10).coerceAtLeast(14).sp,
+                        fontWeight = FontWeight.Bold,
+                    )
                 } else {
-                    Spacer(Modifier.height(22.dp))
+                    Spacer(Modifier.height(accentSpacerHeightDp.dp))
                 }
                 Text(
                     text = ch.toString(),
-                    fontSize = 32.sp,
+                    fontSize = fontSizeSp.sp,
                     fontWeight = if (i == accentLocalIndex) FontWeight.Bold else FontWeight.SemiBold,
                     color = fontColor,
                 )

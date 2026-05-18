@@ -34,6 +34,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+private fun wordBlankTrainerTitle(typeNumber: Int): String = when (typeNumber) {
+    9 -> "Тренажёр: Корни"
+    10 -> "Тренажёр: Приставки"
+    11 -> "Тренажёр: Суффиксы"
+    12 -> "Тренажёр: Окончания и причастия"
+    else -> "Тренажёр орфографии"
+}
+
+private fun wordBlankTrainerIcon(typeNumber: Int): String = when (typeNumber) {
+    9 -> "🌱"
+    10 -> "🧱"
+    11 -> "🎀"
+    12 -> "🌀"
+    else -> "✏️"
+}
+
+private fun wordBlankTrainerTint(typeNumber: Int): Color = when (typeNumber) {
+    9 -> Color(0x1F30D158)
+    10 -> Color(0x1FFF9F0A)
+    11 -> Color(0x1FBF5AF2)
+    12 -> Color(0x1F0A84FF)
+    else -> Color(0x1F0A84FF)
+}
+
 data class SubtypesState(
     val type: ProblemTypeEntity? = null,
     val subject: SubjectEntity? = null,
@@ -69,6 +93,7 @@ fun SubtypesScreen(
     onTrainerClick: (typeId: Long) -> Unit,
     onSubtypeClick: (subtypeId: Long, typeId: Long) -> Unit,
     onAccentTrainerClick: () -> Unit,
+    onWordBlankTrainerClick: (typeNumber: Int) -> Unit,
     contentPadding: PaddingValues,
     vm: SubtypesViewModel = viewModel(),
 ) {
@@ -101,8 +126,10 @@ fun SubtypesScreen(
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
-                val isAccentTrainerHost =
-                    st.subject?.slug == "rus" && st.type?.number == 4
+                val isRus = st.subject?.slug == "rus"
+                val typeNumber = st.type?.number ?: 0
+                val isAccentTrainerHost = isRus && typeNumber == 4
+                val wordBlankType: Int? = if (isRus && typeNumber in listOf(9, 10, 11, 12)) typeNumber else null
 
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -117,6 +144,17 @@ fun SubtypesScreen(
                                 leadingEmoji = "🔤",
                                 leadingTint = Color(0x1F0A84FF),
                                 onClick = onAccentTrainerClick,
+                            )
+                        }
+                    }
+                    if (wordBlankType != null) {
+                        item("word_blank_trainer") {
+                            AppleListRow(
+                                title = wordBlankTrainerTitle(wordBlankType),
+                                subtitle = "Ввод буквы · тренажёр",
+                                leadingEmoji = wordBlankTrainerIcon(wordBlankType),
+                                leadingTint = wordBlankTrainerTint(wordBlankType),
+                                onClick = { onWordBlankTrainerClick(wordBlankType) },
                             )
                         }
                     }

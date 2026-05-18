@@ -52,3 +52,12 @@ data class AccentTrainerRoute(
     val categoryId: String? = null,
     val defaultOrder: String = "alphabetical",
 )
+
+/**
+ * Stage 4: тренажёр слов с пропусками (типы 9-12 русского).
+ */
+@Serializable
+data class WordBlankTrainerRoute(
+    val typeNumber: Int,
+    val defaultOrder: String = "alphabetical",
+)
