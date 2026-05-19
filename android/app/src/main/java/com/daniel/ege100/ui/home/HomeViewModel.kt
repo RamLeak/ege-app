@@ -6,14 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.daniel.ege100.data.AppSettings
 import com.daniel.ege100.data.AppSettingsStore
 import com.daniel.ege100.data.EgeDatabase
+import com.daniel.ege100.data.GuardsState
+import com.daniel.ege100.data.MockExamSchedule
 import com.daniel.ege100.data.PredictorResult
 import com.daniel.ege100.data.Quote
 import com.daniel.ege100.data.QuotesRepository
+import com.daniel.ege100.data.SafetyGuardsChecker
+import com.daniel.ege100.data.SafetyGuardsStore
 import com.daniel.ege100.data.ScorePredictor
 import com.daniel.ege100.data.StreakState
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.SubtypeAccuracy
 import com.daniel.ege100.data.SubtypeStatsRepository
+import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserProfile
 import com.daniel.ege100.data.UserProfileStore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,10 +49,12 @@ data class HomeUiState(
     val stats: List<SubtypeAccuracy> = emptyList(),
     val daysUntilNextMock: Int = 28,
     val hasWeakMix: Boolean = false,
+    val guards: GuardsState = GuardsState(),
 )
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = EgeDatabase.get(app).catalogDao()
+    private val attemptDao = UserDataDatabase.get(app).attemptLogDao()
     private val _state = MutableStateFlow(HomeUiState())
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
@@ -57,27 +64,43 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 UserProfileStore.profileFlow(app),
                 StreakStore.stateFlow(app),
                 AppSettingsStore.settingsFlow(app),
-            ) { profile, streak, settings ->
-                Triple(profile, streak, settings)
-            }.collect { (profile, streak, settings) ->
+                SafetyGuardsStore.stateFlow(app),
+            ) { profile, streak, settings, guards ->
+                HomeReactivePart(profile, streak, settings, guards)
+            }.collect { part ->
                 _state.value = _state.value.copy(
-                    profile = profile,
-                    streak = streak,
-                    settings = settings,
+                    profile = part.profile,
+                    streak = part.streak,
+                    settings = part.settings,
+                    guards = part.guards,
                 )
             }
         }
 
-        // Streak-валидация при старте.
+        // Streak-валидация + SafetyGuards проверки при старте.
         viewModelScope.launch {
             StreakStore.checkValidity(getApplication())
+            SafetyGuardsChecker.checkWeekly(getApplication(), attemptDao)
+            SafetyGuardsChecker.checkEightWeek(getApplication(), attemptDao)
         }
+    }
+
+    private data class HomeReactivePart(
+        val profile: UserProfile,
+        val streak: StreakState,
+        val settings: AppSettings,
+        val guards: GuardsState,
+    )
+
+    fun dismissEightWeekGuard() {
+        viewModelScope.launch { SafetyGuardsStore.dismissEightWeek(getApplication()) }
     }
 
     /** Зовётся из HomeScreen.LaunchedEffect(Unit) — при первом show и при возвратах. */
     fun refresh() {
         viewModelScope.launch {
             val ctx = getApplication<Application>()
+            val profile = UserProfileStore.snapshot(ctx)
 
             val quote = QuotesRepository.getTodayQuote(ctx)
             val math = ScorePredictor.predictMath(ctx)
@@ -85,7 +108,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             val mathStats = SubtypeStatsRepository.getStatsForSubject(ctx, dao, "mathb", "math")
             val rusStats = SubtypeStatsRepository.getStatsForSubject(ctx, dao, "rus", "rus")
             val combined = mathStats + rusStats
-            val daysUntilMock = daysUntilNextMock()
+            // Phase 3 Stage FINAL — реальный расчёт через MockExamSchedule.
+            val daysUntilMock = MockExamSchedule.getDaysUntilNext(ctx, profile.examDateParsed) ?: 0
 
             _state.value = _state.value.copy(
                 loading = false,

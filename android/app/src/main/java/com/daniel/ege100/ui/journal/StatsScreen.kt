@@ -135,7 +135,10 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
             val wordBlankErrors = WordBlankErrorsStore.getAll(ctx).values.sumOf { it.size }
             val wordsLearned = accentErrors + wordBlankErrors  // proxy — слов через которые прошли
             val favs = FavoritesStore.snapshot(ctx).size
-            val typesCovered = (mathStats + rusStats).count { it.attempts > 0 }
+            // Phase 3 Stage FINAL part Д (Convention #37): «освоено» = 15+ попыток И accuracy >= 70%.
+            // Раньше было `count { it.attempts > 0 }` — это давало ложную мотивацию
+            // («Освоено: 1 из 46» после 1 решённой задачи).
+            val typesCovered = (mathStats + rusStats).count { it.attempts >= 15 && it.accuracy >= 0.70f }
 
             _state.value = StatsUi(
                 loading = false,
@@ -456,6 +459,8 @@ private fun TypeAccuracyTableCard(types: List<TypeWithTitle>, emptyText: String)
 @Composable
 private fun TypeAccuracyRow(tw: TypeWithTitle) {
     val acc = tw.accuracy.accuracy
+    // Phase 3 Stage FINAL part Д: ✓ метка для освоенных типов.
+    val mastered = tw.accuracy.attempts >= 15 && acc >= 0.70f
     val color = when {
         acc >= 0.8f -> SystemGreen
         acc >= 0.6f -> SystemBlue
@@ -477,6 +482,15 @@ private fun TypeAccuracyRow(tw: TypeWithTitle) {
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
+            if (mastered) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "✓",
+                    fontSize = 14.sp,
+                    color = SystemGreen,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "${(acc * 100).toInt()}%",
@@ -517,31 +531,42 @@ private fun AchievementsRow(
                 emoji = "🔥",
                 title = "Максимальный streak",
                 value = "$maxStreak ${daysWord(maxStreak)}",
+                accent = maxStreak > 0,
             )
             ThinDivider()
             AchievementRow(
                 emoji = "💪",
                 title = "Освоено типов",
                 value = "$typesCovered из $totalTypes",
+                hint = "15+ решений · точность 70%+",
+                accent = typesCovered > 0,
             )
             ThinDivider()
             AchievementRow(
                 emoji = "📚",
                 title = "Слов в тренажёрах",
                 value = "$wordsLearned",
+                accent = wordsLearned > 0,
             )
             ThinDivider()
             AchievementRow(
                 emoji = "⭐",
                 title = "Избранных задач",
                 value = "$favoritesCount",
+                accent = favoritesCount > 0,
             )
         }
     }
 }
 
 @Composable
-private fun AchievementRow(emoji: String, title: String, value: String) {
+private fun AchievementRow(
+    emoji: String,
+    title: String,
+    value: String,
+    hint: String? = null,
+    accent: Boolean = true,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -558,17 +583,27 @@ private fun AchievementRow(emoji: String, title: String, value: String) {
             Text(text = emoji, fontSize = 22.sp)
         }
         Spacer(Modifier.width(14.dp))
-        Text(
-            text = title,
-            fontSize = 15.sp,
-            color = Label,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                color = Label,
+            )
+            if (hint != null) {
+                Text(
+                    text = hint,
+                    fontSize = 11.sp,
+                    color = LabelTertiary,
+                )
+            }
+        }
+        // Phase 3 Stage FINAL part Е: серый цвет когда значение «нулевое»
+        // (Convention #37 для typesCovered=0 + единый паттерн для всех).
         Text(
             text = value,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            color = SystemBlue,
+            color = if (accent) SystemBlue else LabelSecondary,
         )
     }
 }

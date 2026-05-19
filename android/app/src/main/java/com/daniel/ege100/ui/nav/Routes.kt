@@ -83,6 +83,25 @@ object ProfileRoute
 object SettingsRoute
 
 /**
+ * Phase 3 Stage FINAL: календарь пробников (заходим с главного по тапу
+ * на MockExamPreviewCard).
+ */
+@Serializable
+object MockExamCalendarRoute
+
+/**
+ * Phase 3 Stage FINAL: детали конкретного пробника (предстоящий или прошлый).
+ */
+@Serializable
+data class MockExamDetailRoute(val planIndex: Int)
+
+/**
+ * Phase 3 Stage FINAL: прохождение пробника.
+ */
+@Serializable
+data class MockExamRunnerRoute(val planIndex: Int)
+
+/**
  * Phase 3 Stage C: журнал ошибок (заходим из Журнала → «📝 Ошибки»).
  */
 @Serializable

@@ -111,6 +111,7 @@ dependencies {
     implementation(libs.androidsvg)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.ui.text.google.fonts)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Ktor — пустое подключение под Фазу 4 (AI). В Stage 1 не используется.
     implementation(libs.ktor.client.core)

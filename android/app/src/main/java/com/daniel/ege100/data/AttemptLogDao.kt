@@ -31,6 +31,10 @@ interface AttemptLogDao {
     @Query("SELECT COUNT(*) FROM attempt_log WHERE is_correct = 1 AND timestamp >= :sinceMs")
     suspend fun getCorrectCountSince(sinceMs: Long): Int
 
+    /** Phase 3 Stage FINAL — для SafetyGuards (#5 50/week, #6 300/8weeks). */
+    @Query("SELECT COUNT(*) FROM attempt_log WHERE timestamp >= :startMs AND timestamp < :endMs")
+    suspend fun getCountBetween(startMs: Long, endMs: Long): Int
+
     @Query("SELECT AVG(duration_ms) FROM attempt_log WHERE duration_ms > 0")
     suspend fun getAverageDurationMs(): Double?
 

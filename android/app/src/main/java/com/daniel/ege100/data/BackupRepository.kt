@@ -40,14 +40,18 @@ data class BackupSnapshot(
     val userStats: UserStatsSnapshot = UserStatsSnapshot(),
     val streak: StreakState = StreakState(),
     // Phase 3 Stage C: добавлен error_log и attempt_log (v1.2).
-    // Старые бэкапы парсятся OK благодаря default-значениям + ignoreUnknownKeys.
     val errorLog: List<ErrorLogRecord> = emptyList(),
     val attemptLog: List<AttemptLogRecord> = emptyList(),
+    // Phase 3 Stage FINAL: mock_exam_results + install_date + guards (v1.3).
+    // Старые бэкапы парсятся OK благодаря default-значениям + ignoreUnknownKeys.
+    val mockExamResults: List<MockExamResultRecord> = emptyList(),
+    val installDate: String? = null,
+    val guardsState: GuardsState = GuardsState(),
 ) {
     companion object {
-        const val CURRENT_VERSION = "1.2"
+        const val CURRENT_VERSION = "1.3"
         /** Версии, которые мы можем восстановить (forward-compat). */
-        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2")
+        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2", "1.3")
         fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
 }
@@ -69,6 +73,9 @@ object BackupRepository {
             val userDb = UserDataDatabase.get(context)
             val errorLog = userDb.errorLogDao().getAllForExport().map(ErrorLogRecord::fromEntity)
             val attemptLog = userDb.attemptLogDao().getAllForExport().map(AttemptLogRecord::fromEntity)
+            val mockResults = userDb.mockExamResultDao().getAll().map(MockExamResultRecord::fromEntity)
+            val installDate = MockExamSchedule.peekInstallDate(context)?.toString()
+            val guards = SafetyGuardsStore.snapshot(context)
             val snapshot = BackupSnapshot(
                 version = BackupSnapshot.CURRENT_VERSION,
                 exportedAt = Instant.now().toString(),
@@ -84,6 +91,9 @@ object BackupRepository {
                 streak = StreakStore.snapshot(context),
                 errorLog = errorLog,
                 attemptLog = attemptLog,
+                mockExamResults = mockResults,
+                installDate = installDate,
+                guardsState = guards,
             )
             json.encodeToString(BackupSnapshot.serializer(), snapshot)
         }
@@ -125,10 +135,18 @@ object BackupRepository {
                 val userDb = UserDataDatabase.get(context)
                 val errorDao = userDb.errorLogDao()
                 val attemptDao = userDb.attemptLogDao()
+                val mockDao = userDb.mockExamResultDao()
                 errorDao.deleteAll()
                 attemptDao.deleteAll()
+                mockDao.deleteAll()
                 snapshot.errorLog.forEach { errorDao.insert(it.toEntity()) }
                 snapshot.attemptLog.forEach { attemptDao.insert(it.toEntity()) }
+                snapshot.mockExamResults.forEach { mockDao.insert(it.toEntity()) }
+                // Phase 3 Stage FINAL: install_date + guards.
+                snapshot.installDate
+                    ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+                    ?.let { MockExamSchedule.restoreInstallDate(context, it) }
+                SafetyGuardsStore.restore(context, snapshot.guardsState)
                 ImportResult.Success(snapshot.exportedAt)
             } catch (e: Throwable) {
                 ImportResult.Error(e.message ?: "Неизвестная ошибка")
@@ -136,11 +154,12 @@ object BackupRepository {
         }
 
     /**
-     * Phase 3 Stage A part Д6 + Stage B + Stage C расширение — сброс прогресса.
+     * Phase 3 Stage A part Д6 + Stage B + Stage C + Stage FINAL — сброс прогресса.
      *
      * Удаляет: тренажёры, избранное, словарные ошибки, статистику попыток,
-     * streak, error_log, attempt_log.
-     * Сохраняет: профиль, настройки.
+     * streak, error_log, attempt_log, mock_exam_results, guards.
+     * Сохраняет: профиль, настройки, **install_date** (это техническая дата,
+     * не пользовательская — расписание пробников считается от неё).
      */
     suspend fun resetProgress(context: Context) = withContext(Dispatchers.IO) {
         TrainerProgressStore.clearAll(context)
@@ -149,8 +168,10 @@ object BackupRepository {
         WordBlankErrorsStore.clearAll(context)
         UserStatsStore.clearAll(context)
         StreakStore.clearAll(context)
+        SafetyGuardsStore.clearAll(context)
         val userDb = UserDataDatabase.get(context)
         userDb.errorLogDao().deleteAll()
         userDb.attemptLogDao().deleteAll()
+        userDb.mockExamResultDao().deleteAll()
     }
 }

@@ -1,24 +1,47 @@
 package com.daniel.ege100
 
 import android.app.Application
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.daniel.ege100.notifications.DailyReminderWorker
+import com.daniel.ege100.notifications.MockExamReminderWorker
+import com.daniel.ege100.notifications.NotificationHelper
+import com.daniel.ege100.notifications.StreakReminderWorker
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
 
 /**
- * Глобальный Coil ImageLoader с поддержкой SVG.
+ * Глобальный Coil ImageLoader с поддержкой SVG + регистрация WorkManager-
+ * воркеров для напоминаний (Phase 3 Stage FINAL part Б, Convention #34).
  *
- * `coil-svg` подключён в Stage 1, но `SvgDecoder.Factory()` нужно явно
- * зарегистрировать в ImageLoader'е приложения — Coil использует ленивую
- * инициализацию глобального лоадера, без этого SVG не декодируется.
+ * Coil:
+ *   `coil-svg` подключён в Stage 1, но `SvgDecoder.Factory()` нужно явно
+ *   зарегистрировать в ImageLoader'е приложения — Coil использует ленивую
+ *   инициализацию глобального лоадера, без этого SVG не декодируется.
+ *   Кеши: в памяти 25% от runtime maxMemory (формул много, лёгкие), на
+ *   диске 100 MB в `cacheDir/svg_cache`.
  *
- * Кеши: в памяти 25% от runtime maxMemory (формул много, лёгкие), на диске
- * 100 MB в `cacheDir/svg_cache` — этого хватает на навигацию по нескольким
- * сотням задач без повторного декодирования.
+ * Workers:
+ *   3 periodic workers (StreakReminder 20:00, DailyReminder 9:00,
+ *   MockExamReminder 9:00). `ExistingPeriodicWorkPolicy.KEEP` —
+ *   при следующих запусках приложения мы не пере-запускаем уже
+ *   запланированные jobs (WorkManager хранит расписание сам).
  */
 class EgeApplication : Application(), ImageLoaderFactory {
+
+    override fun onCreate() {
+        super.onCreate()
+        NotificationHelper.ensureChannel(this)
+        scheduleReminderWorkers()
+    }
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
@@ -37,5 +60,41 @@ class EgeApplication : Application(), ImageLoaderFactory {
                     .build()
             }
             .build()
+    }
+
+    private fun scheduleReminderWorkers() {
+        val wm = WorkManager.getInstance(this)
+        wm.enqueueUniquePeriodicWork(
+            "streak_reminder",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<StreakReminderWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(delayUntil(20, 0), TimeUnit.MILLISECONDS)
+                .build(),
+        )
+        wm.enqueueUniquePeriodicWork(
+            "daily_reminder",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<DailyReminderWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(delayUntil(9, 0), TimeUnit.MILLISECONDS)
+                .build(),
+        )
+        wm.enqueueUniquePeriodicWork(
+            "mock_exam_reminder",
+            ExistingPeriodicWorkPolicy.KEEP,
+            PeriodicWorkRequestBuilder<MockExamReminderWorker>(1, TimeUnit.DAYS)
+                .setInitialDelay(delayUntil(9, 0), TimeUnit.MILLISECONDS)
+                .build(),
+        )
+    }
+
+    /** Миллисекунд до следующего наступления локального времени `hour:minute`. */
+    private fun delayUntil(hour: Int, minute: Int): Long {
+        val zone = ZoneId.systemDefault()
+        val now = LocalDateTime.now(zone)
+        var target = now.toLocalDate().atTime(LocalTime.of(hour, minute))
+        if (!target.isAfter(now)) target = target.plusDays(1)
+        val nowMs = now.atZone(zone).toInstant().toEpochMilli()
+        val targetMs = target.atZone(zone).toInstant().toEpochMilli()
+        return (targetMs - nowMs).coerceAtLeast(0L)
     }
 }

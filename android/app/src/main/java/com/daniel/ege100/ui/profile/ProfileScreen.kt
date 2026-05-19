@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,12 +30,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.daniel.ege100.data.MockExamSchedule
+import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserProfile
 import com.daniel.ege100.data.UserProfileStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleListRow
 import com.daniel.ege100.ui.common.LargeTitleBar
 import com.daniel.ege100.ui.common.daysWord
+import com.daniel.ege100.ui.common.problemsWord
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.LabelSecondary
@@ -69,6 +73,17 @@ fun ProfileScreen(
     val profile by profileFlow.collectAsState(initial = UserProfile())
     val scope = rememberCoroutineScope()
     var editing: EditField? by remember { mutableStateOf(null) }
+
+    // Phase 3 Stage FINAL part Е — секция «Прогресс подготовки».
+    var totalSolved by remember { mutableStateOf(0) }
+    var completedMocks by remember { mutableStateOf(0) }
+    var totalMocks by remember { mutableStateOf(0) }
+    LaunchedEffect(profile.examDate) {
+        val userDb = UserDataDatabase.get(context)
+        totalSolved = userDb.attemptLogDao().getTotalCount()
+        completedMocks = userDb.mockExamResultDao().getCompletedCount()
+        totalMocks = MockExamSchedule.getSchedule(context, profile.examDateParsed).size
+    }
 
     Scaffold(
         topBar = { LargeTitleBar(title = "Профиль", subtitle = "Твои данные и настройки") },
@@ -118,6 +133,15 @@ fun ProfileScreen(
                             onClick = { editing = EditField.ExamDate },
                         )
                     }
+                }
+                item("progress_title") { SectionTitle("Прогресс подготовки") }
+                item("progress_card") {
+                    PreparationProgressCard(
+                        totalSolved = totalSolved,
+                        daysUntilExam = profile.daysUntilExam(),
+                        completedMocks = completedMocks,
+                        totalMocks = totalMocks,
+                    )
                 }
                 item("prep_title") { SectionTitle("Подготовка") }
                 item("prep") {
@@ -204,6 +228,75 @@ fun ProfileScreen(
         )
         null -> Unit
     }
+}
+
+/**
+ * Phase 3 Stage FINAL part Е — секция «Прогресс подготовки» в Профиле.
+ * Три ключевых метрики: решено всего, дней до ЕГЭ, пройдено пробников.
+ */
+@Composable
+private fun PreparationProgressCard(
+    totalSolved: Int,
+    daysUntilExam: Int,
+    completedMocks: Int,
+    totalMocks: Int,
+) {
+    AppleCard(paddingDp = 18) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ProgressMetric(
+                emoji = "📚",
+                label = "Решено всего",
+                value = "$totalSolved ${problemsWord(totalSolved)}",
+            )
+            DividerLine()
+            ProgressMetric(
+                emoji = "📅",
+                label = "До ЕГЭ",
+                value = "$daysUntilExam ${daysWord(daysUntilExam)}",
+            )
+            DividerLine()
+            ProgressMetric(
+                emoji = "🎯",
+                label = "Пройдено пробников",
+                value = "$completedMocks из $totalMocks",
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressMetric(emoji: String, label: String, value: String) {
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+    ) {
+        Text(text = emoji, fontSize = 22.sp)
+        Spacer(Modifier.size(12.dp))
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            color = LabelSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Label,
+        )
+    }
+}
+
+@Composable
+private fun DividerLine() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(com.daniel.ege100.ui.theme.Separator),
+    )
 }
 
 @Composable

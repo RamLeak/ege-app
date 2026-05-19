@@ -8,6 +8,8 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.serialization.Serializable
 
 /**
@@ -125,17 +127,52 @@ data class AttemptLogRecord(
 }
 
 @Database(
-    entities = [ErrorLogEntity::class, AttemptLogEntity::class],
-    version = 1,
+    entities = [
+        ErrorLogEntity::class,
+        AttemptLogEntity::class,
+        MockExamResultEntity::class,
+    ],
+    version = 2,
     exportSchema = true,
 )
 abstract class UserDataDatabase : RoomDatabase() {
     abstract fun errorLogDao(): ErrorLogDao
     abstract fun attemptLogDao(): AttemptLogDao
+    abstract fun mockExamResultDao(): MockExamResultDao
 
     companion object {
         @Volatile
         private var INSTANCE: UserDataDatabase? = null
+
+        /**
+         * Phase 3 Stage FINAL: миграция 1→2 добавляет таблицу mock_exam_results.
+         * DDL должен **точно** совпадать с тем, что Room сгенерирует для
+         * `@Entity(MockExamResultEntity)` — иначе room схема-валидация
+         * выкинет IllegalStateException на старте.
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `mock_exam_results` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `plan_index` INTEGER NOT NULL,
+                        `scheduled_date` TEXT NOT NULL,
+                        `completed_date` INTEGER NOT NULL,
+                        `math_correct` INTEGER NOT NULL,
+                        `math_total` INTEGER NOT NULL,
+                        `rus_correct` INTEGER NOT NULL,
+                        `rus_total` INTEGER NOT NULL,
+                        `math_score` INTEGER NOT NULL,
+                        `rus_score` INTEGER NOT NULL,
+                        `duration_ms` INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_plan_index` ON `mock_exam_results` (`plan_index`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_completed_date` ON `mock_exam_results` (`completed_date`)")
+            }
+        }
 
         fun get(context: Context): UserDataDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -143,7 +180,10 @@ abstract class UserDataDatabase : RoomDatabase() {
                     context.applicationContext,
                     UserDataDatabase::class.java,
                     "user_data.db",
-                ).build().also { INSTANCE = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

@@ -40,6 +40,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onSubtypeClick: (subtypeId: Long, typeId: Long) -> Unit,
     onQuickTrainerStart: (problemIds: List<Long>) -> Unit,
+    onMockExamCalendar: () -> Unit,
     vm: HomeViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
@@ -72,6 +73,13 @@ fun HomeScreen(
                         onAvatarClick = onProfileClick,
                     )
                 }
+                // Phase 3 Stage FINAL part В — Safety Rule #5 карточка сразу
+                // под шапкой если за прошлую неделю было меньше 50 задач.
+                if (st.guards.weeklyGuardActive) {
+                    item("weekly_guard") {
+                        WeeklyGuardCard(weekTotal = st.guards.weeklyAttemptsLastWeek)
+                    }
+                }
                 if (st.loading) {
                     item("loading") {
                         Text(
@@ -81,6 +89,13 @@ fun HomeScreen(
                         )
                     }
                 } else {
+                    val totalAttempts = (st.mathResult?.rawScore ?: 0) +
+                        (st.rusResult?.rawScore ?: 0) +
+                        st.stats.sumOf { it.attempts }
+                    if (totalAttempts == 0 && st.stats.all { it.attempts == 0 }) {
+                        // Phase 3 Stage FINAL part Е — welcome для новых.
+                        item("welcome") { WelcomeCard() }
+                    }
                     st.quote?.let { q ->
                         item("quote") { QuoteCard(q) }
                     }
@@ -113,14 +128,20 @@ fun HomeScreen(
                     item("mock") {
                         MockExamPreviewCard(
                             daysUntilNext = st.daysUntilNextMock,
-                            onClick = {
-                                // P3-D — пока без действия. Можно открыть toast но это лишнее.
-                            },
+                            onClick = onMockExamCalendar,
                         )
                     }
                 }
                 item("footer_pad") { Spacer(Modifier.height(24.dp)) }
             }
         }
+    }
+
+    // Phase 3 Stage FINAL part В — Safety Rule #6 8-week checkpoint модалка.
+    if (st.guards.eightWeekGuardActive) {
+        EightWeekCheckpointDialog(
+            periodTotal = st.guards.eightWeekAttemptsLastPeriod,
+            onConfirm = { vm.dismissEightWeekGuard() },
+        )
     }
 }

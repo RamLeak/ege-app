@@ -70,6 +70,9 @@ import com.daniel.ege100.ui.journal.ErrorsListScreen
 import com.daniel.ege100.ui.journal.FavoritesScreen
 import com.daniel.ege100.ui.journal.JournalScreen
 import com.daniel.ege100.ui.journal.StatsScreen
+import com.daniel.ege100.ui.mock.MockExamCalendarScreen
+import com.daniel.ege100.ui.mock.MockExamDetailScreen
+import com.daniel.ege100.ui.mock.MockExamRunnerScreen
 import com.daniel.ege100.ui.modifiers.edgeSwipeBack
 import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
 import com.daniel.ege100.ui.profile.ProfileScreen
@@ -236,6 +239,7 @@ fun EgeApp() {
                     onQuickTrainerStart = { ids ->
                         navController.navigate(QuickTrainerRoute.of(ids))
                     },
+                    onMockExamCalendar = { navController.navigate(MockExamCalendarRoute) },
                 )
             }
             composable<JournalStubRoute> {
@@ -398,6 +402,39 @@ fun EgeApp() {
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
                     onFinish = { navController.popBackStack() },
+                )
+            }
+            composable<MockExamCalendarRoute> {
+                MockExamCalendarScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onPlanClick = { idx ->
+                        navController.navigate(MockExamDetailRoute(idx))
+                    },
+                )
+            }
+            composable<MockExamDetailRoute> { entry ->
+                val args = entry.toRoute<MockExamDetailRoute>()
+                MockExamDetailScreen(
+                    planIndex = args.planIndex,
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onStart = {
+                        navController.navigate(MockExamRunnerRoute(args.planIndex))
+                    },
+                )
+            }
+            composable<MockExamRunnerRoute> { entry ->
+                val args = entry.toRoute<MockExamRunnerRoute>()
+                MockExamRunnerScreen(
+                    planIndex = args.planIndex,
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onFinish = {
+                        // После завершения — popBackStack() возвращает на Detail
+                        // (которая перезагрузит result через LaunchedEffect).
+                        navController.popBackStack()
+                    },
                 )
             }
         }
