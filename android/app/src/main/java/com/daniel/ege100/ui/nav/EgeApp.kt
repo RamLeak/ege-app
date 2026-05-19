@@ -95,11 +95,15 @@ private data class TabSpec(
 )
 
 // ---- Анимации перехода ----
-// Spring smooth (no bounce) для slide-стек навигации iOS-style. Параллакс-
-// эффект: уходящий экран сдвигается на 1/3 ширины, а не на полную.
+// Spring slide-стек навигации iOS-style. Параллакс-эффект: уходящий экран
+// сдвигается на 1/3 ширины, а не на полную.
+//
+// Phase 4 Stage P4-C part Г1 (Convention #51) — `dampingRatio = 0.85f`
+// вместо `NoBouncy` (=1.0). Лёгкая пружина даёт ощущение «попружинило и
+// встало» — это и есть iOS-look. NoBouncy выглядел как линейный slide.
 
 private val NAV_SPRING = spring<androidx.compose.ui.unit.IntOffset>(
-    dampingRatio = Spring.DampingRatioNoBouncy,
+    dampingRatio = 0.85f,
     stiffness = Spring.StiffnessMediumLow,
 )
 
@@ -394,6 +398,7 @@ fun EgeApp() {
                     defaultOrder = args.defaultOrder,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
+                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
                 )
             }
             composable<WordBlankTrainerRoute> { entry ->
@@ -403,6 +408,7 @@ fun EgeApp() {
                     defaultOrder = args.defaultOrder,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
+                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
                 )
             }
             composable<QuickTrainerRoute> { entry ->

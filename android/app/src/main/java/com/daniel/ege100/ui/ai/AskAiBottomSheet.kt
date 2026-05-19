@@ -43,6 +43,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.ai.AiProviderRegistry
 import com.daniel.ege100.ai.AiResponse
+import com.daniel.ege100.ai.LatexCleaner
 import com.daniel.ege100.data.AiResponseCacheEntity
 import com.daniel.ege100.data.AiSettingsStore
 import com.daniel.ege100.data.SecureKeyStore
@@ -184,16 +185,21 @@ class AskAiViewModel(app: Application) : AndroidViewModel(app) {
             when (val resp = provider.ask(question, context, modelId, apiKey)) {
                 is AiResponse.Success -> {
                     AiSettingsStore.incrementTodayUsage(ctx)
+                    // Phase 4 Stage P4-C part Б (Convention #49):
+                    // Очищаем LaTeX ДО кеширования — в кеш сохраняется
+                    // готовый-к-рендеру текст, повторный запрос не платит
+                    // ни за токены, ни за повторную чистку.
+                    val cleaned = LatexCleaner.clean(resp.text)
                     cacheDao.put(
                         AiResponseCacheEntity(
                             cacheKey = cacheKey,
-                            response = resp.text,
+                            response = cleaned,
                             cachedAt = System.currentTimeMillis(),
                         ),
                     )
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        response = resp.text,
+                        response = cleaned,
                         error = null,
                     )
                 }
@@ -217,6 +223,14 @@ private fun sha256(input: String): String {
     return bytes.joinToString("") { "%02x".format(it) }
 }
 
+/**
+ * Phase 4 Stage P4-C part Д (Convention #53) — кастомные quick questions
+ * для AI в тренажёрах. Каждый чип = пара (label, full-question).
+ * Если null — используем дефолтный набор для задач (Объясни/Где ошибка/
+ * Формула/Похожий).
+ */
+data class QuickQuestion(val label: String, val question: String)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AskAiBottomSheet(
@@ -224,6 +238,7 @@ fun AskAiBottomSheet(
     userAnswerForHint: String?,
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit,
+    customQuickQuestions: List<QuickQuestion>? = null,
     vm: AskAiViewModel = viewModel(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -274,17 +289,22 @@ fun AskAiBottomSheet(
             // Быстрые вопросы
             Text("Быстрые вопросы:", fontSize = 12.sp, color = LabelSecondary, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(8.dp))
+            val errorHint = if (!userAnswerForHint.isNullOrBlank()) {
+                "Я ответил «$userAnswerForHint». Почему это неверно?"
+            } else "Покажи где у меня могла быть ошибка."
+            val quickQuestions = customQuickQuestions ?: listOf(
+                QuickQuestion("Объясни решение", "Объясни решение этой задачи по шагам."),
+                QuickQuestion("Где ошибка?", errorHint),
+                QuickQuestion("Какая формула?", "Какая формула используется в этой задаче? Объясни как ей пользоваться."),
+                QuickQuestion("Похожий пример", "Приведи похожий пример и реши его, чтобы я понял подход."),
+            )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                QuickQuestionChip("Объясни решение") { question = "Объясни решение этой задачи по шагам." }
-                val errorHint = if (!userAnswerForHint.isNullOrBlank()) {
-                    "Я ответил «$userAnswerForHint». Почему это неверно?"
-                } else "Покажи где у меня могла быть ошибка."
-                QuickQuestionChip("Где ошибка?") { question = errorHint }
-                QuickQuestionChip("Какая формула?") { question = "Какая формула используется в этой задаче? Объясни как ей пользоваться." }
-                QuickQuestionChip("Похожий пример") { question = "Приведи похожий пример и реши его, чтобы я понял подход." }
+                quickQuestions.forEach { q ->
+                    QuickQuestionChip(q.label) { question = q.question }
+                }
             }
             Spacer(Modifier.height(16.dp))
 

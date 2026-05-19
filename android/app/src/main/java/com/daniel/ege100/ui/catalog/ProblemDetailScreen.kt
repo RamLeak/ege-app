@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AnswerChecker
 import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.EgeDatabase
@@ -209,7 +210,7 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
         // «Проверить» (когда checkResult ещё Idle). Повторные клики не идут в
         // статистику — повторные ответы — это та же задача.
         val isFirstCheck = cur.checkResult is CheckResult.Idle
-        val correct = matchesAnswer(typed, expected, cur.problem.answerFormat)
+        val correct = AnswerChecker.isCorrect(typed, expected, cur.problem.answerFormat)
         _state.value = if (correct) cur.copy(checkResult = CheckResult.Correct)
                        else cur.copy(checkResult = CheckResult.Wrong(expected), isSolutionExpanded = true)
         if (isFirstCheck) recordAttempt(cur, correct)
@@ -290,21 +291,11 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-// ---------------------- нормализация и сравнение ----------------------
-
-private fun normalize(answer: String): String =
-    answer.trim().lowercase().replace(',', '.').replace(Regex("\\s+"), " ")
-
-private fun matchesAnswer(typed: String, expected: String, format: String?): Boolean {
-    val nt = normalize(typed)
-    val ne = normalize(expected)
-    if (nt.isEmpty()) return false
-    return when (format) {
-        "alternatives" -> ne.split(' ').any { it == nt }
-        "multipart" -> nt.split(' ').toSet() == ne.split(' ').toSet()
-        else -> nt == ne
-    }
-}
+// ---------------------- сравнение ответов ----------------------
+// Phase 4 Stage P4-C part А — Convention #48: единая логика в AnswerChecker.
+// Старая локальная matchesAnswer/normalize удалена, теперь идёт через
+// data.AnswerChecker.isCorrect() — корректно дробит alternatives по `|`,
+// поддерживает перестановку чисел, обрабатывает multipart как set.
 
 // ---------------------- UI ----------------------
 
@@ -509,15 +500,44 @@ private fun ProblemBody(
         // --- Поле ввода + кнопка проверки ---
         if (hasAnswer) {
             item("input_$keyForReset") {
+                val hasMultiple = AnswerChecker.hasMultipleVariants(
+                    problem.answer,
+                    problem.answerFormat,
+                )
+                val isCorrect = st.checkResult is CheckResult.Correct
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     IosTextField(
                         value = st.userAnswer,
                         onValueChange = vm::setAnswer,
                         placeholder = "Твой ответ",
                     )
+                    // Phase 4 Stage P4-C part А5 — подсказка для multi-answer.
+                    if (hasMultiple) {
+                        Text(
+                            text = "💡 Можно ввести любой из правильных вариантов",
+                            fontSize = 12.sp,
+                            color = LabelSecondary,
+                            modifier = Modifier.padding(top = (-8).dp),
+                        )
+                    }
+                    // Phase 4 Stage P4-C part Г2 (Convention #52) — при CORRECT
+                    // кнопка «Проверить» заменяется на «Далее →» в той же
+                    // позиции. Палец не двигается. При WRONG / Idle —
+                    // остаётся «Проверить» (повторный клик допустим).
                     PrimaryButton(
-                        text = if (st.userAnswer.isBlank()) "Показать решение" else "Проверить",
-                        onClick = { vm.check() },
+                        text = when {
+                            isCorrect && st.hasNext -> "Далее →"
+                            isCorrect -> "Готово"
+                            st.userAnswer.isBlank() -> "Показать решение"
+                            else -> "Проверить"
+                        },
+                        onClick = {
+                            if (isCorrect) {
+                                if (st.hasNext) vm.goNext()
+                            } else {
+                                vm.check()
+                            }
+                        },
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         SecondaryButton(

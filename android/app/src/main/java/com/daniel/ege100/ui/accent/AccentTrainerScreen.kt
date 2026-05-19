@@ -38,6 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -274,6 +277,10 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                             subtypeId = null,
                             isCorrect = isRight,
                         )
+                        // Phase 4 Stage P4-C part Е1 (Convention #54).
+                        if (isRight) {
+                            UserStatsStore.incrementTrainerWordsLearned(getApplication())
+                        }
                         StreakStore.onProblemSolved(getApplication())
                         UserDataDatabase.get(getApplication()).attemptLogDao().insert(
                             AttemptLogEntity(
@@ -337,11 +344,13 @@ fun AccentTrainerScreen(
     defaultOrder: String,
     onBack: () -> Unit,
     contentPadding: PaddingValues,
+    onOpenAiSettings: () -> Unit = {},
     vm: AccentTrainerViewModel = viewModel(),
 ) {
     LaunchedEffect(categoryId, defaultOrder) { vm.start(categoryId, defaultOrder) }
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
+    var showAi by remember { mutableStateOf(false) }
 
     LaunchedEffect(st.tap, st.position) {
         val v = st.tap
@@ -383,7 +392,7 @@ fun AccentTrainerScreen(
             when {
                 st.loading -> CenteredText("Загрузка…")
                 st.currentWord == null -> CenteredText("Слова не найдены")
-                else -> TrainerBody(st = st, vm = vm)
+                else -> TrainerBody(st = st, vm = vm, onAiClick = { showAi = true })
             }
         }
     }
@@ -399,6 +408,54 @@ fun AccentTrainerScreen(
             onDismiss = { vm.acceptStartOver() },
         )
     }
+
+    // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре ударений.
+    if (showAi) {
+        val word = st.currentWord
+        val verdict = st.tap as? SyllableTapState.Verdict
+        if (word != null && verdict != null) {
+            val syllables = st.currentSyllables
+            val correctSyllable = syllables.getOrNull(verdict.correctSyllable)?.text.orEmpty()
+            val selectedSyllable = syllables.getOrNull(verdict.selectedSyllable)?.text.orEmpty()
+            val highlighted = highlightedWord(word.word, word.stressed_index)
+            val context = buildString {
+                append("Слово: ${word.word}. ")
+                append("Правильное ударение на слог «$correctSyllable» (${highlighted}). ")
+                if (!verdict.isRight) {
+                    append("Пользователь ошибочно поставил ударение на слог «$selectedSyllable».")
+                } else {
+                    append("Пользователь ответил правильно.")
+                }
+            }
+            com.daniel.ege100.ui.ai.AskAiBottomSheet(
+                problemContext = context,
+                userAnswerForHint = if (!verdict.isRight) selectedSyllable else null,
+                onDismiss = { showAi = false },
+                onOpenSettings = {
+                    showAi = false
+                    onOpenAiSettings()
+                },
+                customQuickQuestions = listOf(
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Почему этот слог?",
+                        "Почему ударение в слове «${word.word}» падает именно на слог «$correctSyllable»?",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Какое правило?",
+                        "Какое правило русского языка отвечает за ударение в слове «${word.word}»?",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Похожие слова",
+                        "Приведи 3-5 похожих слов с таким же типом ударения, чтобы запомнить шаблон.",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Запомнить",
+                        "Подскажи мнемоническое правило или образ, чтобы запомнить ударение в слове «${word.word}».",
+                    ),
+                ),
+            )
+        }
+    }
 }
 
 @Composable
@@ -409,7 +466,11 @@ private fun CenteredText(s: String) {
 }
 
 @Composable
-private fun TrainerBody(st: AccentTrainerUi, vm: AccentTrainerViewModel) {
+private fun TrainerBody(
+    st: AccentTrainerUi,
+    vm: AccentTrainerViewModel,
+    onAiClick: () -> Unit = {},
+) {
     val word = st.currentWord ?: return
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 80.dp.toPx() }
@@ -482,6 +543,17 @@ private fun TrainerBody(st: AccentTrainerUi, vm: AccentTrainerViewModel) {
                     Verdict(st.tap, word, st.currentSyllables)
                 }
             }
+        }
+
+        // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
+        if (st.tap is SyllableTapState.Verdict) {
+            com.daniel.ege100.ui.common.SecondaryButton(
+                text = "🤖 Спросить ИИ",
+                onClick = onAiClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+            )
         }
 
         SwipeHint(

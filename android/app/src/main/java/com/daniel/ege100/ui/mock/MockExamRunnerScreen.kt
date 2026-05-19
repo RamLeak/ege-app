@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AnswerChecker
 import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.EgeDatabase
@@ -213,7 +214,8 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
             advanceWithResult(isCorrect = false, expected = expected, current = current)
             return
         }
-        val isCorrect = matches(typed, expected, current.problem.answerFormat)
+        // Phase 4 Stage P4-C part А — Convention #48: единая логика.
+        val isCorrect = AnswerChecker.isCorrect(typed, expected, current.problem.answerFormat)
         advanceWithResult(isCorrect = isCorrect, expected = expected, current = current)
     }
 
@@ -289,16 +291,6 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun matches(typed: String, expected: String, format: String?): Boolean {
-        val nt = typed.lowercase().replace(',', '.').replace(Regex("\\s+"), " ").trim()
-        val ne = expected.lowercase().replace(',', '.').replace(Regex("\\s+"), " ").trim()
-        if (nt.isEmpty()) return false
-        return when (format) {
-            "alternatives" -> ne.split(' ').any { it == nt }
-            "multipart" -> nt.split(' ').toSet() == ne.split(' ').toSet()
-            else -> nt == ne
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

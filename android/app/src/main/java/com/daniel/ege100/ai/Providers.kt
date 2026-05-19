@@ -123,7 +123,7 @@ class OpenRouterProvider(private val httpClient: OkHttpClient) : AiProvider {
             .header("Content-Type", "application/json")
             .post(body.toString().toRequestBody(JSON_MEDIA))
             .build()
-        runRequest(httpClient, request) { json ->
+        runRequest(httpClient, request, providerLabel = "OpenRouter") { json ->
             val content = json.getJSONArray("choices")
                 .getJSONObject(0)
                 .getJSONObject("message")
@@ -213,7 +213,7 @@ class GeminiProvider(private val httpClient: OkHttpClient) : AiProvider {
             .header("Content-Type", "application/json")
             .post(body.toString().toRequestBody(JSON_MEDIA))
             .build()
-        runRequest(httpClient, request) { json ->
+        runRequest(httpClient, request, providerLabel = "Google Gemini") { json ->
             val content = json.getJSONArray("candidates")
                 .getJSONObject(0)
                 .getJSONObject("content")
@@ -288,7 +288,7 @@ class AnthropicProvider(private val httpClient: OkHttpClient) : AiProvider {
             .header("content-type", "application/json")
             .post(body.toString().toRequestBody(JSON_MEDIA))
             .build()
-        runRequest(httpClient, request) { json ->
+        runRequest(httpClient, request, providerLabel = "Anthropic Claude") { json ->
             val content = json.getJSONArray("content").getJSONObject(0).getString("text")
             val tokens = json.optJSONObject("usage")?.let {
                 it.optInt("input_tokens") + it.optInt("output_tokens")
@@ -302,9 +302,23 @@ class AnthropicProvider(private val httpClient: OkHttpClient) : AiProvider {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Phase 4 Stage P4-C part Е2 (Convention #54) — error handling улучшения.
+ *
+ * Раньше при 502 от Gemini пользователь видел сырую HTML-страницу ошибки
+ * в попытке распарсить её JSON'ом → JSONException → «Не удалось разобрать
+ * ответ» (бесполезно). Теперь:
+ *  - 5xx коды → человеческое сообщение «временно недоступен, попробуй
+ *    другой провайдер», `isRateLimit = false` (не показываем «открыть
+ *    Настройки», это не connectivity-проблема пользователя).
+ *  - JSONException в 200..299 → отдельное сообщение «неожиданный ответ
+ *    от сервера», без HTML-снiппета.
+ *  - Прочие 4xx → краткий текст без HTML, обрезаем до 200 chars.
+ */
 private inline fun runRequest(
     httpClient: OkHttpClient,
     request: Request,
+    providerLabel: String = "AI-провайдер",
     parseSuccess: (JSONObject) -> AiResponse,
 ): AiResponse {
     return try {
@@ -316,15 +330,25 @@ private inline fun runRequest(
                     isAuthError = false,
                 )
                 429 -> AiResponse.Error("Превышен лимит запросов. Подожди.", isRateLimit = true)
+                in 500..599 -> AiResponse.Error(
+                    "$providerLabel временно недоступен (ошибка ${response.code}). " +
+                        "Попробуй через пару минут или переключись на другой провайдер в Настройках.",
+                )
                 in 200..299 -> {
                     val body = response.body?.string().orEmpty()
-                    runCatching { parseSuccess(JSONObject(body)) }.getOrElse { e ->
+                    try {
+                        parseSuccess(JSONObject(body))
+                    } catch (_: org.json.JSONException) {
+                        AiResponse.Error(
+                            "Неожиданный ответ от сервера $providerLabel. Попробуй позже.",
+                        )
+                    } catch (e: Throwable) {
                         AiResponse.Error("Не удалось разобрать ответ: ${e.message}")
                     }
                 }
                 else -> {
-                    val snippet = response.body?.string()?.take(200).orEmpty()
-                    AiResponse.Error("Ошибка ${response.code}: $snippet")
+                    // 4xx прочие — отдаём только код, не HTML.
+                    AiResponse.Error("Ошибка ${response.code} от $providerLabel")
                 }
             }
         }

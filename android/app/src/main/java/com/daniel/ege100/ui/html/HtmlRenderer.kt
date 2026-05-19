@@ -414,12 +414,17 @@ private fun BlockFormula(assetPath: String, alt: String) {
     var natural by remember(assetPath) { mutableStateOf<SvgSize?>(null) }
     LaunchedEffect(assetPath) { natural = readSvgSize(context, assetPath) }
 
-    // 2. Высота cap = min(naturalHeight, 120dp). Если viewBox недоступен —
-    //    fallback 72dp (вместо 360dp — для отсутствующего viewBox формулы
-    //    с большой вероятностью простые).
+    // Phase 4 Stage P4-C part В (Convention #50) — block-формулы крупнее.
+    // 2. Высота = clamp(naturalHeight × 1.4, min 48dp, max 120dp). Раньше
+    //    «4/7 · x = 7 3/7» рендерилось высотой ~24dp — слишком мелко
+    //    относительно текста. Теперь минимум 48dp, естественные формулы
+    //    масштабируются в 1.4× ради читаемости.
+    val formulaMinDp = 48
     val formulaMaxDp = 120
     val naturalHeightDp = natural?.height?.coerceAtLeast(1f) ?: 72f
-    val effectiveHeightDp = minOf(naturalHeightDp, formulaMaxDp.toFloat())
+    val effectiveHeightDp = (naturalHeightDp * 1.4f)
+        .coerceAtLeast(formulaMinDp.toFloat())
+        .coerceAtMost(formulaMaxDp.toFloat())
     val heightPx = with(density) { effectiveHeightDp.dp.roundToPx() }
     val invert = isSystemInDarkTheme()
 
@@ -467,6 +472,9 @@ private fun BlockIllustration(
     }
 
     val bmp = image
+    // Phase 4 Stage P4-C part В (Convention #50) — иллюстрации крупнее:
+    // фиксируем minHeight = 120dp чтобы маленькие чертежи не выглядели
+    // обрезком; maxHeight остаётся как было (35% экрана / 360dp).
     if (bmp != null) {
         Image(
             bitmap = bmp.bitmap.asImageBitmap(),
@@ -474,7 +482,7 @@ private fun BlockIllustration(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = maxHeight)
+                .heightIn(min = 120.dp, max = maxHeight)
                 .clip(RoundedCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, Separator, RoundedCornerShape(14.dp))
@@ -484,7 +492,7 @@ private fun BlockIllustration(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = maxHeight)
+                .heightIn(min = 120.dp, max = maxHeight)
                 .padding(vertical = 4.dp),
         )
     }
@@ -502,8 +510,11 @@ fun HtmlRenderer(
 
     val blocks = remember(html) { parse(html) }
 
-    // Inline-формулы: высота строки текста ≈ baseFontSize × 1.4.
-    val inlineHeightSp = (baseFontSizeSp * 1.4f).toInt().coerceAtLeast(20)
+    // Phase 4 Stage P4-C part В (Convention #50) — крупнее формулы.
+    // Inline-формулы: scaleFactor 1.4 → 1.6 и минимум 28sp. На base=18sp
+    // это даёт 28sp (вместо 25sp было), на base=17 — 28sp (вместо 23.8).
+    // Math №6 «4/7 · x = 7 3/7» больше не выглядит крошечно рядом с заголовком.
+    val inlineHeightSp = (baseFontSizeSp * 1.6f).toInt().coerceAtLeast(28)
 
     // Block-картинка maxHeight = min(35% экрана, 360dp).
     val configuration = LocalConfiguration.current

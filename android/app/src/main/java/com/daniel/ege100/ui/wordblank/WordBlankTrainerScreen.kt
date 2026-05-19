@@ -35,6 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AnswerChecker
 import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TrainerProgress
@@ -224,7 +228,11 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
         val typed = cur.userInput.trim().lowercase()
         if (typed.isBlank() || cur.state is BlankInputState.Verdict) return
         val correct = word.answer.lowercase()
-        val isRight = typed == correct
+        // Phase 4 Stage P4-C part А — Convention #48: через AnswerChecker.
+        // Тренажёр пропусков обычно даёт одну букву — но если sdamgia
+        // когда-нибудь начнёт давать варианты типа «о|а», AnswerChecker
+        // обработает корректно.
+        val isRight = AnswerChecker.isCorrect(typed, correct, "string")
         if (!isRight) {
             viewModelScope.launch {
                 WordBlankErrorsStore.recordError(
@@ -245,6 +253,10 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 subtypeId = null,
                 isCorrect = isRight,
             )
+            // Phase 4 Stage P4-C part Е1 (Convention #54).
+            if (isRight) {
+                UserStatsStore.incrementTrainerWordsLearned(getApplication())
+            }
             StreakStore.onProblemSolved(getApplication())
             UserDataDatabase.get(getApplication()).attemptLogDao().insert(
                 AttemptLogEntity(
@@ -317,11 +329,13 @@ fun WordBlankTrainerScreen(
     defaultOrder: String,
     onBack: () -> Unit,
     contentPadding: PaddingValues,
+    onOpenAiSettings: () -> Unit = {},
     vm: WordBlankTrainerViewModel = viewModel(),
 ) {
     LaunchedEffect(typeNumber, defaultOrder) { vm.start(typeNumber, defaultOrder) }
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
+    var showAi by remember { mutableStateOf(false) }
 
     // Авто-переход при правильном.
     LaunchedEffect(st.state, st.position) {
@@ -366,7 +380,7 @@ fun WordBlankTrainerScreen(
             when {
                 st.loading -> CenteredText("Загрузка словаря…")
                 st.currentWord == null -> CenteredText("Слова не найдены")
-                else -> Body(st = st, vm = vm)
+                else -> Body(st = st, vm = vm, onAiClick = { showAi = true })
             }
         }
     }
@@ -382,6 +396,51 @@ fun WordBlankTrainerScreen(
             onDismiss = { vm.acceptStartOver() },
         )
     }
+
+    // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре пропусков.
+    if (showAi) {
+        val word = st.currentWord
+        val verdict = st.state as? BlankInputState.Verdict
+        if (word != null && verdict != null) {
+            val context = buildString {
+                append("Слово с пропуском: ${word.masked.replace("..", "_")}. ")
+                append("Полное слово: ${word.full}. ")
+                append("Правильная буква: «${verdict.correctAnswer}». ")
+                if (!verdict.isRight) {
+                    append("Пользователь ввёл: «${verdict.userAnswer}».")
+                } else {
+                    append("Пользователь ответил правильно.")
+                }
+            }
+            com.daniel.ege100.ui.ai.AskAiBottomSheet(
+                problemContext = context,
+                userAnswerForHint = if (!verdict.isRight) verdict.userAnswer else null,
+                onDismiss = { showAi = false },
+                onOpenSettings = {
+                    showAi = false
+                    onOpenAiSettings()
+                },
+                customQuickQuestions = listOf(
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Почему эта буква?",
+                        "Почему в слове «${word.full}» пишется именно «${verdict.correctAnswer}»?",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Какое правило?",
+                        "Какое орфографическое правило применимо к слову «${word.full}»?",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Похожие слова",
+                        "Приведи 3-5 похожих слов, где работает то же правило, чтобы я запомнил шаблон.",
+                    ),
+                    com.daniel.ege100.ui.ai.QuickQuestion(
+                        "Запомнить",
+                        "Подскажи мнемоническое правило или образ, чтобы запомнить написание слова «${word.full}».",
+                    ),
+                ),
+            )
+        }
+    }
 }
 
 @Composable
@@ -392,7 +451,11 @@ private fun CenteredText(s: String) {
 }
 
 @Composable
-private fun Body(st: WordBlankUi, vm: WordBlankTrainerViewModel) {
+private fun Body(
+    st: WordBlankUi,
+    vm: WordBlankTrainerViewModel,
+    onAiClick: () -> Unit = {},
+) {
     val word = st.currentWord ?: return
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 80.dp.toPx() }
@@ -465,6 +528,17 @@ private fun Body(st: WordBlankUi, vm: WordBlankTrainerViewModel) {
                     }
                 }
             }
+        }
+
+        // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
+        if (st.state is BlankInputState.Verdict) {
+            com.daniel.ege100.ui.common.SecondaryButton(
+                text = "🤖 Спросить ИИ",
+                onClick = onAiClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+            )
         }
 
         SwipeHint(

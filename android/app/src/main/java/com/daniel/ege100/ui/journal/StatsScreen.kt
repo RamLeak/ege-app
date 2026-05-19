@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.daniel.ege100.data.AccentErrorsStore
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.DailyStat
 import com.daniel.ege100.data.EgeDatabase
@@ -46,7 +45,6 @@ import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TypeAccuracy
 import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserStatsStore
-import com.daniel.ege100.data.WordBlankErrorsStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.LargeTitleBar
@@ -131,9 +129,12 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
 
             // Achievements.
             val streak = StreakStore.snapshot(ctx)
-            val accentErrors = AccentErrorsStore.snapshot(ctx).size
-            val wordBlankErrors = WordBlankErrorsStore.getAll(ctx).values.sumOf { it.size }
-            val wordsLearned = accentErrors + wordBlankErrors  // proxy — слов через которые прошли
+            // Phase 4 Stage P4-C part Е1 (Convention #54) — fix «Слов в тренажёре».
+            // Раньше суммировали число ошибок (accentErrors + wordBlankErrors),
+            // что отрицательно мотивирует и часто остаётся 0 у активного
+            // пользователя. Теперь используем явный счётчик правильных
+            // ответов в тренажёрах из UserStatsStore.
+            val wordsLearned = UserStatsStore.getTrainerWordsLearned(ctx)
             val favs = FavoritesStore.snapshot(ctx).size
             // Phase 3 Stage FINAL part Д (Convention #37): «освоено» = 15+ попыток И accuracy >= 70%.
             // Раньше было `count { it.attempts > 0 }` — это давало ложную мотивацию

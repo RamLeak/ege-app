@@ -39,6 +39,12 @@ data class UserStatsSnapshot(
     val typeStats: Map<String, Map<Int, String>> = emptyMap(),
     /** subtypeId → "total:correct" */
     val subtypeStats: Map<Long, String> = emptyMap(),
+    /**
+     * Phase 4 Stage P4-C part Е1 (Convention #54) — счётчик правильно
+     * отгаданных слов в тренажёрах (ударения + пропуски). Виден в
+     * AchievementsRow как «Слов выучено».
+     */
+    val trainerWordsLearned: Int = 0,
 )
 
 private val Context.userStatsStore by preferencesDataStore("user_stats")
@@ -57,6 +63,9 @@ object UserStatsStore {
 
     private fun subtypeTotalKey(id: Long) = intPreferencesKey("$SUBTYPE_TOTAL_PREFIX$id")
     private fun subtypeCorrectKey(id: Long) = intPreferencesKey("$SUBTYPE_CORRECT_PREFIX$id")
+
+    // Phase 4 Stage P4-C part Е1 (Convention #54).
+    private val TRAINER_WORDS_LEARNED = intPreferencesKey("trainer_words_learned")
 
     suspend fun recordAttempt(
         context: Context,
@@ -102,6 +111,23 @@ object UserStatsStore {
         val correct = prefs[subtypeCorrectKey(subtypeId)] ?: 0
         return total to correct
     }
+
+    /**
+     * Phase 4 Stage P4-C part Е1 (Convention #54): инкремент счётчика
+     * правильно отгаданных слов в тренажёрах. Зовётся в AccentTrainer и
+     * WordBlankTrainer **только при isCorrect=true**.
+     */
+    suspend fun incrementTrainerWordsLearned(context: Context) {
+        context.userStatsStore.edit { prefs ->
+            prefs[TRAINER_WORDS_LEARNED] = (prefs[TRAINER_WORDS_LEARNED] ?: 0) + 1
+        }
+    }
+
+    suspend fun getTrainerWordsLearned(context: Context): Int =
+        context.userStatsStore.data.first()[TRAINER_WORDS_LEARNED] ?: 0
+
+    fun trainerWordsLearnedFlow(context: Context): Flow<Int> =
+        context.userStatsStore.data.map { it[TRAINER_WORDS_LEARNED] ?: 0 }
 
     /** Flow для подписки в UI (например на главном экране). */
     fun typeStatsFlow(context: Context, subject: String, maxN: Int): Flow<List<TypeAccuracy>> =
@@ -156,7 +182,12 @@ object UserStatsStore {
                 }
             }
         }
-        return UserStatsSnapshot(typeStats.mapValues { it.value.toMap() }, subtypeStats.toMap())
+        val trainerWords = prefs[TRAINER_WORDS_LEARNED] ?: 0
+        return UserStatsSnapshot(
+            typeStats = typeStats.mapValues { it.value.toMap() },
+            subtypeStats = subtypeStats.toMap(),
+            trainerWordsLearned = trainerWords,
+        )
     }
 
     suspend fun restore(context: Context, snapshot: UserStatsSnapshot) {
@@ -174,6 +205,8 @@ object UserStatsStore {
                 prefs[subtypeTotalKey(id)] = total
                 prefs[subtypeCorrectKey(id)] = correct
             }
+            // Phase 4 Stage P4-C part Е1.
+            prefs[TRAINER_WORDS_LEARNED] = snapshot.trainerWordsLearned
         }
     }
 
