@@ -316,6 +316,7 @@ fun ProblemDetailScreen(
     onBack: () -> Unit,
     contentPadding: PaddingValues,
     fromErrors: Boolean = false,
+    onOpenAiSettings: () -> Unit = {},
     vm: ProblemDetailViewModel = viewModel(),
 ) {
     LaunchedEffect(problemId, typeId, subtypeId, fromErrors) {
@@ -324,6 +325,7 @@ fun ProblemDetailScreen(
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
     var showRule by remember { mutableStateOf(false) }
+    var showAi by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val currentPid = st.problem?.id
     val isFavorite by remember(currentPid) {
@@ -394,6 +396,7 @@ fun ProblemDetailScreen(
                     st = st,
                     vm = vm,
                     onRuleClick = { showRule = true },
+                    onAiClick = { showAi = true },
                 )
             }
         }
@@ -403,6 +406,50 @@ fun ProblemDetailScreen(
     if (showRule && rule != null) {
         RuleBottomSheet(rule = rule, onDismiss = { showRule = false })
     }
+    if (showAi) {
+        val problemPlain = remember(st.problem?.id) {
+            stripHtmlForAi(st.problem?.statementHtml.orEmpty())
+        }
+        val wrongAnswer = when (val r = st.checkResult) {
+            is CheckResult.Wrong -> st.userAnswer
+            else -> null
+        }
+        com.daniel.ege100.ui.ai.AskAiBottomSheet(
+            problemContext = problemPlain,
+            userAnswerForHint = wrongAnswer,
+            onDismiss = { showAi = false },
+            onOpenSettings = {
+                showAi = false
+                onOpenAiSettings()
+            },
+        )
+    }
+}
+
+/**
+ * Phase 4 Stage A5 + Quick fix #3 (Convention #47): HTML → plain текст для AI.
+ *
+ * Старая версия резала `<img alt="...">` regex'ом — у sdamgia формулы это
+ * `<img class="tex" alt="дробь: ...">`, alt-текст пропадал, AI получал
+ * условие без формул и отвечал наугад.
+ *
+ * Сейчас:
+ *  - Jsoup парсит HTML, сохраняем alt из `<img>` через inline TextNode.
+ *  - Лимит 4000 символов (Sonnet/Opus легко съедают).
+ *  - Обрезаем по концу предложения, чтобы не рвать на середине слова.
+ */
+private fun stripHtmlForAi(html: String): String {
+    if (html.isBlank()) return ""
+    val doc = org.jsoup.Jsoup.parse(html)
+    doc.select("img[alt]").forEach { img ->
+        val alt = img.attr("alt").trim()
+        if (alt.isNotEmpty()) img.replaceWith(org.jsoup.nodes.TextNode(" $alt "))
+    }
+    val text = doc.text().trim()
+    if (text.length <= 4000) return text
+    val cut = text.take(4000)
+    val lastSentence = cut.lastIndexOfAny(charArrayOf('.', '!', '?'))
+    return if (lastSentence > 3000) cut.substring(0, lastSentence + 1) else cut.substringBeforeLast(' ', cut)
 }
 
 @Composable
@@ -410,6 +457,7 @@ private fun ProblemBody(
     st: ProblemUiState,
     vm: ProblemDetailViewModel,
     onRuleClick: () -> Unit,
+    onAiClick: () -> Unit,
 ) {
     val problem = st.problem ?: return
     val hasAnswer = !problem.answer.isNullOrBlank()
@@ -480,8 +528,10 @@ private fun ProblemBody(
                         )
                         SecondaryButton(
                             text = "🤖 ИИ",
-                            onClick = {},
-                            enabled = false,
+                            // Phase 4 Stage A5 — кнопка активна ТОЛЬКО после
+                            // проверки ответа (Safety Rule #2 «Сначала попробуй»).
+                            onClick = onAiClick,
+                            enabled = st.checkResult !is CheckResult.Idle,
                             highlight = st.checkResult !is CheckResult.Idle,
                             modifier = Modifier.weight(1f),
                         )

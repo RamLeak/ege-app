@@ -48,6 +48,8 @@ android/app/src/main/assets/word_blanks.json
 android/app/src/main/assets/rules.json
 # quotes.json — исходник в parser/quotes.json (генерится generate_quotes.py); копия в assets/ gitignored.
 android/app/src/main/assets/quotes.json
+# fipi_variants.json — исходник в parser/fipi_variants.json (генерится parse_fipi_variants.py); копия в assets/ gitignored.
+android/app/src/main/assets/fipi_variants.json
 
 # Secrets
 .env

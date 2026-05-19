@@ -4,6 +4,12 @@
     <!-- Phase 3 Stage FINAL part Б — push для streak/daily/mock пробников. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Phase 4 Stage A3 — AI-запросы к OpenRouter/Gemini/Anthropic. До Phase 4
+         приложение было полностью офлайн (corpus.db + assets), поэтому
+         INTERNET permission никогда не добавлялся. Convention #45. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".EgeApplication"
         android:allowBackup="true"

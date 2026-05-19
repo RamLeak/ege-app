@@ -70,8 +70,10 @@ import com.daniel.ege100.ui.journal.ErrorsListScreen
 import com.daniel.ege100.ui.journal.FavoritesScreen
 import com.daniel.ege100.ui.journal.JournalScreen
 import com.daniel.ege100.ui.journal.StatsScreen
+import com.daniel.ege100.ui.mock.FipiVariantsScreen
 import com.daniel.ege100.ui.mock.MockExamCalendarScreen
 import com.daniel.ege100.ui.mock.MockExamDetailScreen
+import com.daniel.ege100.ui.mock.MockExamHistoryScreen
 import com.daniel.ege100.ui.mock.MockExamRunnerScreen
 import com.daniel.ege100.ui.modifiers.edgeSwipeBack
 import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
@@ -240,6 +242,13 @@ fun EgeApp() {
                         navController.navigate(QuickTrainerRoute.of(ids))
                     },
                     onMockExamCalendar = { navController.navigate(MockExamCalendarRoute) },
+                    onStartMockMath = {
+                        navController.navigate(MockExamRunnerRoute(planIndex = -1, subject = "math", fipiVariantId = null))
+                    },
+                    onStartMockRus = {
+                        navController.navigate(MockExamRunnerRoute(planIndex = -1, subject = "rus", fipiVariantId = null))
+                    },
+                    onFipiVariants = { navController.navigate(FipiVariantsRoute) },
                 )
             }
             composable<JournalStubRoute> {
@@ -366,6 +375,7 @@ fun EgeApp() {
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
                     fromErrors = args.fromErrors,
+                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
                 )
             }
             composable<AccentCategoriesRoute> {
@@ -408,9 +418,9 @@ fun EgeApp() {
                 MockExamCalendarScreen(
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
-                    onPlanClick = { idx ->
-                        navController.navigate(MockExamDetailRoute(idx))
-                    },
+                    onPlanClick = { idx -> navController.navigate(MockExamDetailRoute(idx)) },
+                    onFipiVariantsClick = { navController.navigate(FipiVariantsRoute) },
+                    onHistoryClick = { navController.navigate(MockExamHistoryRoute) },
                 )
             }
             composable<MockExamDetailRoute> { entry ->
@@ -419,8 +429,11 @@ fun EgeApp() {
                     planIndex = args.planIndex,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
-                    onStart = {
-                        navController.navigate(MockExamRunnerRoute(args.planIndex))
+                    onStartMath = {
+                        navController.navigate(MockExamRunnerRoute(args.planIndex, "math", null))
+                    },
+                    onStartRus = {
+                        navController.navigate(MockExamRunnerRoute(args.planIndex, "rus", null))
                     },
                 )
             }
@@ -428,6 +441,8 @@ fun EgeApp() {
                 val args = entry.toRoute<MockExamRunnerRoute>()
                 MockExamRunnerScreen(
                     planIndex = args.planIndex,
+                    subject = args.subject,
+                    fipiVariantId = args.fipiVariantId,
                     contentPadding = padding,
                     onBack = { navController.popBackStack() },
                     onFinish = {
@@ -435,6 +450,27 @@ fun EgeApp() {
                         // (которая перезагрузит result через LaunchedEffect).
                         navController.popBackStack()
                     },
+                )
+            }
+            composable<FipiVariantsRoute> {
+                FipiVariantsScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
+                    onVariantClick = { variant ->
+                        navController.navigate(
+                            MockExamRunnerRoute(
+                                planIndex = -1,
+                                subject = variant.subject,
+                                fipiVariantId = variant.id,
+                            ),
+                        )
+                    },
+                )
+            }
+            composable<MockExamHistoryRoute> {
+                MockExamHistoryScreen(
+                    contentPadding = padding,
+                    onBack = { navController.popBackStack() },
                 )
             }
         }

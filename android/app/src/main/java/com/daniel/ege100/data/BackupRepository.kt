@@ -47,11 +47,14 @@ data class BackupSnapshot(
     val mockExamResults: List<MockExamResultRecord> = emptyList(),
     val installDate: String? = null,
     val guardsState: GuardsState = GuardsState(),
+    // Phase 4 Stage B3: aiSettings (БЕЗ API ключей — Convention #40).
+    // aiResponseCache НЕ в бэкапе — можно восстановить запросами, не критично.
+    val aiSettings: AiSettings = AiSettings(),
 ) {
     companion object {
-        const val CURRENT_VERSION = "1.3"
+        const val CURRENT_VERSION = "1.5"
         /** Версии, которые мы можем восстановить (forward-compat). */
-        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2", "1.3")
+        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2", "1.3", "1.4", "1.5")
         fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
 }
@@ -76,6 +79,7 @@ object BackupRepository {
             val mockResults = userDb.mockExamResultDao().getAll().map(MockExamResultRecord::fromEntity)
             val installDate = MockExamSchedule.peekInstallDate(context)?.toString()
             val guards = SafetyGuardsStore.snapshot(context)
+            val aiSettings = AiSettingsStore.snapshot(context)
             val snapshot = BackupSnapshot(
                 version = BackupSnapshot.CURRENT_VERSION,
                 exportedAt = Instant.now().toString(),
@@ -94,6 +98,7 @@ object BackupRepository {
                 mockExamResults = mockResults,
                 installDate = installDate,
                 guardsState = guards,
+                aiSettings = aiSettings,
             )
             json.encodeToString(BackupSnapshot.serializer(), snapshot)
         }
@@ -141,12 +146,17 @@ object BackupRepository {
                 mockDao.deleteAll()
                 snapshot.errorLog.forEach { errorDao.insert(it.toEntity()) }
                 snapshot.attemptLog.forEach { attemptDao.insert(it.toEntity()) }
-                snapshot.mockExamResults.forEach { mockDao.insert(it.toEntity()) }
+                // Phase 4 B3: пропускаем записи с total=0 (старые v1.3 после миграции).
+                snapshot.mockExamResults
+                    .filter { it.total > 0 && it.scheduledDate.isNotBlank() }
+                    .forEach { mockDao.insert(it.toEntity()) }
                 // Phase 3 Stage FINAL: install_date + guards.
                 snapshot.installDate
                     ?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
                     ?.let { MockExamSchedule.restoreInstallDate(context, it) }
                 SafetyGuardsStore.restore(context, snapshot.guardsState)
+                // Phase 4 B3: aiSettings без ключей.
+                AiSettingsStore.restore(context, snapshot.aiSettings)
                 ImportResult.Success(snapshot.exportedAt)
             } catch (e: Throwable) {
                 ImportResult.Error(e.message ?: "Неизвестная ошибка")
@@ -173,5 +183,12 @@ object BackupRepository {
         userDb.errorLogDao().deleteAll()
         userDb.attemptLogDao().deleteAll()
         userDb.mockExamResultDao().deleteAll()
+        userDb.aiResponseCacheDao().deleteAll()
+        // Phase 4 B3: aiSettings и SecureKeyStore.
+        // aiSettings reset до дефолтов (OpenRouter + deepseek free).
+        AiSettingsStore.clearAll(context)
+        // API ключи также сбрасываем — пользователь "сбрасывает прогресс",
+        // ключи привязаны к нему, не к устройству на новом начале.
+        SecureKeyStore(context).clearAll()
     }
 }

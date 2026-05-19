@@ -64,10 +64,18 @@ private val DATE_FMT = DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Loca
 
 // ---------------------------------------------------------------------------
 
+data class PlanResults(
+    val math: MockExamResultEntity? = null,
+    val rus: MockExamResultEntity? = null,
+) {
+    val hasAny: Boolean get() = math != null || rus != null
+    val hasBoth: Boolean get() = math != null && rus != null
+}
+
 data class MockExamCalendarUi(
     val loading: Boolean = true,
     val plans: List<MockExamPlan> = emptyList(),
-    val resultsByIndex: Map<Int, MockExamResultEntity> = emptyMap(),
+    val resultsByIndex: Map<Int, PlanResults> = emptyMap(),
 )
 
 class MockExamCalendarViewModel(app: Application) : AndroidViewModel(app) {
@@ -83,8 +91,19 @@ class MockExamCalendarViewModel(app: Application) : AndroidViewModel(app) {
             val profile = UserProfileStore.snapshot(ctx)
             val examDate = profile.examDateParsed
             val plans = MockExamSchedule.getSchedule(ctx, examDate)
-            val results = resultDao.getAll().associateBy { it.planIndex }
-            _state.value = MockExamCalendarUi(loading = false, plans = plans, resultsByIndex = results)
+            val rawResults = resultDao.getAll().filter { it.source == "internal" && it.planIndex >= 0 }
+            val grouped = mutableMapOf<Int, PlanResults>()
+            for (r in rawResults) {
+                val existing = grouped[r.planIndex] ?: PlanResults()
+                grouped[r.planIndex] = when (r.subject) {
+                    "math" -> if (existing.math == null || existing.math.completedDate < r.completedDate)
+                        existing.copy(math = r) else existing
+                    "rus" -> if (existing.rus == null || existing.rus.completedDate < r.completedDate)
+                        existing.copy(rus = r) else existing
+                    else -> existing
+                }
+            }
+            _state.value = MockExamCalendarUi(loading = false, plans = plans, resultsByIndex = grouped)
         }
     }
 }
@@ -94,6 +113,8 @@ fun MockExamCalendarScreen(
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onPlanClick: (planIndex: Int) -> Unit,
+    onFipiVariantsClick: () -> Unit,
+    onHistoryClick: () -> Unit,
     vm: MockExamCalendarViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
@@ -131,14 +152,32 @@ fun MockExamCalendarScreen(
                 ) {
                     item("summary") {
                         SummaryCard(
-                            completed = st.resultsByIndex.size,
+                            completed = st.resultsByIndex.count { it.value.hasAny },
                             total = st.plans.size,
+                        )
+                    }
+                    item("fipi_entry") {
+                        com.daniel.ege100.ui.common.AppleListRow(
+                            title = "Варианты КИМ ФИПИ",
+                            subtitle = "Официальные пробники прошлых лет",
+                            leadingEmoji = "📂",
+                            leadingTint = com.daniel.ege100.ui.theme.SystemBlueTint,
+                            onClick = onFipiVariantsClick,
+                        )
+                    }
+                    item("history_entry") {
+                        com.daniel.ege100.ui.common.AppleListRow(
+                            title = "История пробников",
+                            subtitle = "Тренд балла + все прохождения",
+                            leadingEmoji = "📈",
+                            leadingTint = com.daniel.ege100.ui.theme.SystemBlueTint,
+                            onClick = onHistoryClick,
                         )
                     }
                     items(st.plans, key = { it.index }) { plan ->
                         MockExamCard(
                             plan = plan,
-                            result = st.resultsByIndex[plan.index],
+                            results = st.resultsByIndex[plan.index] ?: PlanResults(),
                             onClick = { onPlanClick(plan.index) },
                         )
                     }
@@ -175,10 +214,10 @@ private fun SummaryCard(completed: Int, total: Int) {
 }
 
 @Composable
-private fun MockExamCard(plan: MockExamPlan, result: MockExamResultEntity?, onClick: () -> Unit) {
+private fun MockExamCard(plan: MockExamPlan, results: PlanResults, onClick: () -> Unit) {
     AppleCard(onClick = onClick, paddingDp = 16) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StatusBadge(plan.status, completed = result != null)
+            StatusBadge(plan.status, completed = results.hasAny)
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -193,12 +232,15 @@ private fun MockExamCard(plan: MockExamPlan, result: MockExamResultEntity?, onCl
                     fontSize = 13.sp,
                     color = LabelSecondary,
                 )
-                if (result != null) {
+                if (results.hasAny) {
                     Spacer(Modifier.height(4.dp))
+                    val mathPart = results.math?.let { "📐 ${it.score}" } ?: "📐 —"
+                    val rusPart = results.rus?.let { "✍️ ${it.score}" } ?: "✍️ —"
+                    val color = if (results.hasBoth) SystemGreen else SystemOrange
                     Text(
-                        text = "📐 ${result.mathScore} · ✍️ ${result.rusScore}",
+                        text = "$mathPart · $rusPart",
                         fontSize = 13.sp,
-                        color = SystemGreen,
+                        color = color,
                         fontWeight = FontWeight.SemiBold,
                     )
                 } else {

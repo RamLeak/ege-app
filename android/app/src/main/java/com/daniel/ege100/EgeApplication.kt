@@ -13,6 +13,7 @@ import com.daniel.ege100.notifications.DailyReminderWorker
 import com.daniel.ege100.notifications.MockExamReminderWorker
 import com.daniel.ege100.notifications.NotificationHelper
 import com.daniel.ege100.notifications.StreakReminderWorker
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -41,6 +42,19 @@ class EgeApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         NotificationHelper.ensureChannel(this)
         scheduleReminderWorkers()
+        cleanupOldAiCache()
+    }
+
+    /** Phase 4 Stage A5: чистим AI-кеш старше 30 дней. */
+    private fun cleanupOldAiCache() {
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val cutoff = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
+                com.daniel.ege100.data.UserDataDatabase.get(this@EgeApplication)
+                    .aiResponseCacheDao()
+                    .deleteOlderThan(cutoff)
+            }
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

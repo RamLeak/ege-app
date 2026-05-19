@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Phase 3 Stage A part Д5 — Android 12+ data extraction rules.
+  Phase 3 Stage A part Д5 + Phase 4 Stage A2 — Android 12+ data extraction.
 
-  Два домена:
-    - cloud-backup: ежедневный бэкап в Google аккаунт.
-    - device-transfer: перенос на новое устройство (когда пользователь меняет
-      телефон или восстанавливает с Samsung Smart Switch).
-
-  Для обоих — sharedpref + database, исключение corpus.db.
+  Аналог backup_rules.xml для cloud-backup и device-transfer.
+  Convention #40: API ключи никогда не покидают устройство.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="ai_secure_keys.xml" />
         <include domain="database" path="." />
         <exclude domain="database" path="corpus.db" />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="ai_secure_keys.xml" />
         <include domain="database" path="." />
         <exclude domain="database" path="corpus.db" />
     </device-transfer>

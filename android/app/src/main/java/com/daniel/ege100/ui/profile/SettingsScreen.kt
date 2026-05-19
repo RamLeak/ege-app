@@ -39,9 +39,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.daniel.ege100.ai.AiProviderRegistry
+import com.daniel.ege100.ai.AiProviderType
+import com.daniel.ege100.data.AiSettings
+import com.daniel.ege100.data.AiSettingsStore
 import com.daniel.ege100.data.AppSettings
 import com.daniel.ege100.data.AppSettingsStore
 import com.daniel.ege100.data.RadarStyle
+import com.daniel.ege100.data.SecureKeyStore
 import com.daniel.ege100.data.ThemeMode
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleListRow
@@ -71,9 +76,17 @@ fun SettingsScreen(
     val context = LocalContext.current
     val settingsFlow = remember(context) { AppSettingsStore.settingsFlow(context) }
     val settings by settingsFlow.collectAsState(initial = AppSettings())
+    val aiSettingsFlow = remember(context) { AiSettingsStore.settingsFlow(context) }
+    val aiSettings by aiSettingsFlow.collectAsState(initial = AiSettings())
+    val keyStore = remember(context) { SecureKeyStore(context) }
+    var hasKeyTick by remember { mutableStateOf(0) }  // re-trigger hasKey() после save/remove
     val scope = rememberCoroutineScope()
     var showThemeSheet by remember { mutableStateOf(false) }
     var showRadarSheet by remember { mutableStateOf(false) }
+    var showProviderSheet by remember { mutableStateOf(false) }
+    var showModelSheet by remember { mutableStateOf(false) }
+    var showKeySheet by remember { mutableStateOf(false) }
+    var showLimitSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -145,6 +158,46 @@ fun SettingsScreen(
                         }
                     }
                 }
+                item("ai_title") { SectionTitle("AI помощник") }
+                item("ai") {
+                    val activeProvider = AiProviderRegistry.get(aiSettings.activeProvider)
+                    val currentModelId = aiSettings.modelFor(aiSettings.activeProvider)
+                    val currentModel = activeProvider.availableModels.firstOrNull { it.id == currentModelId }
+                    val keyStatus = remember(hasKeyTick, aiSettings.activeProvider) {
+                        keyStore.hasKey(aiSettings.activeProvider.name)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppleListRow(
+                            title = "Провайдер",
+                            subtitle = activeProvider.displayName,
+                            leadingEmoji = "🤖",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showProviderSheet = true },
+                        )
+                        AppleListRow(
+                            title = "Модель",
+                            subtitle = (currentModel?.displayName ?: currentModelId) +
+                                (if (currentModel?.isFree == true) " · бесплатно" else ""),
+                            leadingEmoji = "🧠",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showModelSheet = true },
+                        )
+                        AppleListRow(
+                            title = "API ключ",
+                            subtitle = if (keyStatus) "Сохранён ✓" else "Не задан",
+                            leadingEmoji = "🔑",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showKeySheet = true },
+                        )
+                        AppleListRow(
+                            title = "Лимит в день",
+                            subtitle = "${aiSettings.dailyLimit} запросов · сегодня ${aiSettings.todayUsage}",
+                            leadingEmoji = "💵",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showLimitSheet = true },
+                        )
+                    }
+                }
                 item("data_title") { SectionTitle("Данные") }
                 item("data") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -194,6 +247,56 @@ fun SettingsScreen(
                 showRadarSheet = false
             },
             onDismiss = { showRadarSheet = false },
+        )
+    }
+    if (showProviderSheet) {
+        ProviderChooserBottomSheet(
+            activeProvider = aiSettings.activeProvider,
+            onSelect = { type ->
+                scope.launch { AiSettingsStore.setActiveProvider(context, type) }
+                showProviderSheet = false
+            },
+            onDismiss = { showProviderSheet = false },
+        )
+    }
+    if (showModelSheet) {
+        ModelChooserBottomSheet(
+            provider = AiProviderRegistry.get(aiSettings.activeProvider),
+            currentModelId = aiSettings.modelFor(aiSettings.activeProvider),
+            onSelect = { modelId ->
+                scope.launch { AiSettingsStore.setModelFor(context, aiSettings.activeProvider, modelId) }
+                showModelSheet = false
+            },
+            onDismiss = { showModelSheet = false },
+        )
+    }
+    if (showKeySheet) {
+        val activeProvider = AiProviderRegistry.get(aiSettings.activeProvider)
+        val currentKey = keyStore.getKey(aiSettings.activeProvider.name)
+        ApiKeyEditBottomSheet(
+            provider = activeProvider,
+            currentKey = currentKey,
+            onSave = { key ->
+                keyStore.saveKey(aiSettings.activeProvider.name, key)
+                hasKeyTick++
+                showKeySheet = false
+            },
+            onRemove = {
+                keyStore.removeKey(aiSettings.activeProvider.name)
+                hasKeyTick++
+                showKeySheet = false
+            },
+            onDismiss = { showKeySheet = false },
+        )
+    }
+    if (showLimitSheet) {
+        DailyLimitBottomSheet(
+            current = aiSettings.dailyLimit,
+            onSave = { newLimit ->
+                scope.launch { AiSettingsStore.setDailyLimit(context, newLimit) }
+                showLimitSheet = false
+            },
+            onDismiss = { showLimitSheet = false },
         )
     }
 }

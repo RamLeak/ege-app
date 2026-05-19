@@ -41,6 +41,9 @@ fun HomeScreen(
     onSubtypeClick: (subtypeId: Long, typeId: Long) -> Unit,
     onQuickTrainerStart: (problemIds: List<Long>) -> Unit,
     onMockExamCalendar: () -> Unit,
+    onStartMockMath: () -> Unit,
+    onStartMockRus: () -> Unit,
+    onFipiVariants: () -> Unit,
     vm: HomeViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
@@ -129,6 +132,14 @@ fun HomeScreen(
                         MockExamPreviewCard(
                             daysUntilNext = st.daysUntilNextMock,
                             onClick = onMockExamCalendar,
+                        )
+                    }
+                    // Phase 4 Stage B3 — QuickActions для пробников math/rus + ФИПИ.
+                    item("quick_actions") {
+                        QuickActionsCard(
+                            onStartMockMath = onStartMockMath,
+                            onStartMockRus = onStartMockRus,
+                            onFipiVariants = onFipiVariants,
                         )
                     }
                 }

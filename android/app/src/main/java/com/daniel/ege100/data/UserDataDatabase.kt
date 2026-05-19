@@ -15,7 +15,7 @@ import kotlinx.serialization.Serializable
 /**
  * Phase 3 Stage C part А — отдельная пользовательская БД.
  *
- * **Важно**: НЕ часть corpus.db. corpus.db read-only, поставляется с APK
+ * Конвенция #28: не часть corpus.db. corpus.db read-only, поставляется с APK
  * (192 MB, неизменный). Журнал ошибок и попыток должен расти и меняться —
  * требует writable RoomDatabase, отдельный файл `user_data.db` в
  * `context.dataDir/databases/`.
@@ -23,8 +23,12 @@ import kotlinx.serialization.Serializable
  * **Foreign key к corpus.db нельзя** — это разные БД. Хранится только
  * `problem_id` как Long, целостность проверяется на уровне приложения.
  *
- * Версия 1: error_log + attempt_log. При добавлении полей в Phase 3 D+
- * (например MockExamScheduleEntity для уведомлений) — версия 2 + Migration.
+ * Версии:
+ *   v1 (P3-C): error_log + attempt_log.
+ *   v2 (P3-FINAL): + mock_exam_results (старая структура math+rus в одной строке).
+ *   v3 (P4-A1): mock_exam_results перестроена — отдельная строка per subject.
+ *                Старые данные конвертируются в Migration 2→3.
+ *   v4 (P4-A5): + ai_response_cache.
  */
 
 @Entity(
@@ -60,7 +64,7 @@ data class AttemptLogEntity(
     @ColumnInfo(name = "is_correct") val isCorrect: Boolean,
     @ColumnInfo(name = "duration_ms") val durationMs: Long,
     @ColumnInfo(name = "timestamp") val timestamp: Long,
-    /** "problem" | "accent_trainer" | "wordblank_trainer" | "quick_trainer" */
+    /** "problem" | "errors_retry" | "accent_trainer" | "wordblank_trainer" | "quick_trainer" | "mock_exam" */
     @ColumnInfo(name = "source") val source: String,
 )
 
@@ -131,24 +135,24 @@ data class AttemptLogRecord(
         ErrorLogEntity::class,
         AttemptLogEntity::class,
         MockExamResultEntity::class,
+        AiResponseCacheEntity::class,
     ],
-    version = 2,
+    version = 4,
     exportSchema = true,
 )
 abstract class UserDataDatabase : RoomDatabase() {
     abstract fun errorLogDao(): ErrorLogDao
     abstract fun attemptLogDao(): AttemptLogDao
     abstract fun mockExamResultDao(): MockExamResultDao
+    abstract fun aiResponseCacheDao(): AiResponseCacheDao
 
     companion object {
         @Volatile
         private var INSTANCE: UserDataDatabase? = null
 
         /**
-         * Phase 3 Stage FINAL: миграция 1→2 добавляет таблицу mock_exam_results.
-         * DDL должен **точно** совпадать с тем, что Room сгенерирует для
-         * `@Entity(MockExamResultEntity)` — иначе room схема-валидация
-         * выкинет IllegalStateException на старте.
+         * Phase 3 Stage FINAL: миграция 1→2 добавляет таблицу mock_exam_results
+         * со старой структурой (math и rus в одной строке).
          */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -174,6 +178,89 @@ abstract class UserDataDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Phase 4 Stage A1: миграция 2→3 перестраивает mock_exam_results —
+         * отдельная строка per subject + source. Каждая существующая строка
+         * v2 (math + rus в одной) → одна или две строки v3 (только не-нулевые).
+         *
+         * Алгоритм:
+         *   1. Создаём new_table с новой схемой.
+         *   2. INSERT в new_table математических данных из mock_exam_results
+         *      где math_total > 0.
+         *   3. INSERT русских аналогично.
+         *   4. DROP старой таблицы.
+         *   5. RENAME new_table → mock_exam_results.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `mock_exam_results_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `plan_index` INTEGER NOT NULL,
+                        `subject` TEXT NOT NULL,
+                        `source` TEXT NOT NULL DEFAULT 'internal',
+                        `scheduled_date` TEXT NOT NULL,
+                        `completed_date` INTEGER NOT NULL,
+                        `correct` INTEGER NOT NULL,
+                        `total` INTEGER NOT NULL,
+                        `score` INTEGER NOT NULL,
+                        `duration_ms` INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                // Перенос математических данных.
+                db.execSQL(
+                    """
+                    INSERT INTO mock_exam_results_new
+                        (plan_index, subject, source, scheduled_date, completed_date,
+                         correct, total, score, duration_ms)
+                    SELECT plan_index, 'math', 'internal', scheduled_date, completed_date,
+                           math_correct, math_total, math_score, duration_ms
+                    FROM mock_exam_results
+                    WHERE math_total > 0
+                    """.trimIndent(),
+                )
+                // Перенос русских данных.
+                db.execSQL(
+                    """
+                    INSERT INTO mock_exam_results_new
+                        (plan_index, subject, source, scheduled_date, completed_date,
+                         correct, total, score, duration_ms)
+                    SELECT plan_index, 'rus', 'internal', scheduled_date, completed_date,
+                           rus_correct, rus_total, rus_score, duration_ms
+                    FROM mock_exam_results
+                    WHERE rus_total > 0
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE mock_exam_results")
+                db.execSQL("ALTER TABLE mock_exam_results_new RENAME TO mock_exam_results")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_plan_index` ON `mock_exam_results` (`plan_index`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_completed_date` ON `mock_exam_results` (`completed_date`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_subject` ON `mock_exam_results` (`subject`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_mock_exam_results_source` ON `mock_exam_results` (`source`)")
+            }
+        }
+
+        /**
+         * Phase 4 Stage A5: миграция 3→4 добавляет ai_response_cache.
+         */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `ai_response_cache` (
+                        `cache_key` TEXT NOT NULL,
+                        `response` TEXT NOT NULL,
+                        `cached_at` INTEGER NOT NULL,
+                        PRIMARY KEY(`cache_key`)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_response_cache_cached_at` ON `ai_response_cache` (`cached_at`)")
+            }
+        }
+
         fun get(context: Context): UserDataDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -181,7 +268,7 @@ abstract class UserDataDatabase : RoomDatabase() {
                     UserDataDatabase::class.java,
                     "user_data.db",
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }

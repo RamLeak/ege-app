@@ -189,4 +189,18 @@ interface CatalogDao {
         """
     )
     suspend fun getRandomProblemsInSubtype(subtypeId: Long, limit: Int): List<ProblemEntity>
+
+    /**
+     * Phase 4 Stage A1 — все problem_id данного типа предмета (для MockExamComposer).
+     * Возвращаем ID, не Entity — на стороне composer выбирается random.
+     */
+    @Query(
+        """
+        SELECT p.id FROM problems p
+        JOIN problem_types pt ON p.type_id = pt.id
+        JOIN subjects s ON pt.subject_id = s.id
+        WHERE s.slug = :subjectSlug AND pt.number = :typeNumber AND pt.is_supplementary = 0
+        """
+    )
+    suspend fun getProblemIdsByTypeNumber(subjectSlug: String, typeNumber: Int): List<Long>
 }

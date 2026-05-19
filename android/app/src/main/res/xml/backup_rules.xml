@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Phase 3 Stage A part Д5 — Auto Backup от Android (legacy для Android 11 и ниже).
+  Phase 3 Stage A part Д5 — Auto Backup от Android (legacy Android 11-).
+  Phase 4 Stage A2 — исключаем ai_secure_keys.xml (API ключи).
 
   Что бэкапим автоматически в Google аккаунт пользователя:
     - sharedpref/* (DataStore Preferences: user_profile, app_settings,
-      trainer_progress, favorites, accent_errors, word_blank_errors)
-    - database/* (Room — solutions, problems metadata)
+      trainer_progress, favorites, accent_errors, word_blank_errors).
+    - database/* (Room user_data.db).
 
-  Что НЕ бэкапим (исключения):
-    - database/corpus.db — БД задач 192 MB, поставляется с APK
-      (ROM пакеты Android накладывают лимит ~25 MB на Auto Backup).
+  Что НЕ бэкапим:
+    - database/corpus.db — БД задач 192 MB, поставляется с APK.
+    - sharedpref/ai_secure_keys.xml — Convention #40. API ключи привязаны
+      к Android Keystore конкретного устройства; на новом устройстве
+      Keystore другой, бэкап даст нерасшифровываемый мусор.
 -->
 <full-backup-content>
     <include domain="sharedpref" path="." />
+    <exclude domain="sharedpref" path="ai_secure_keys.xml" />
     <include domain="database" path="." />
     <exclude domain="database" path="corpus.db" />
 </full-backup-content>

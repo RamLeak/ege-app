@@ -1,0 +1,740 @@
+{
+  "version": "1.0",
+  "variants": [
+    {
+      "id": "math_2024_v1",
+      "title": "Математика профильная · 2024 · Вариант 1",
+      "subject": "math",
+      "year": 2024,
+      "version": 1,
+      "taskCount": 19,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 25
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 304
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 616
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 705
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 726
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 808
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 1023
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 1107
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 1153
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 1276
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 1350
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 1451
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 1625
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 2456
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 2889
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 3134
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 3421
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 3896
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 4424
+        }
+      ]
+    },
+    {
+      "id": "math_2024_v2",
+      "title": "Математика профильная · 2024 · Вариант 2",
+      "subject": "math",
+      "year": 2024,
+      "version": 2,
+      "taskCount": 19,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 145
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 312
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 575
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 700
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 765
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 7
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 953
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 1058
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 1187
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 1229
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 1345
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 1524
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 1582
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 2293
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 2734
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 3106
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 3540
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 3998
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 4836
+        }
+      ]
+    },
+    {
+      "id": "math_2023_v1",
+      "title": "Математика профильная · 2023 · Вариант 1",
+      "subject": "math",
+      "year": 2023,
+      "version": 1,
+      "taskCount": 19,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 230
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 306
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 352
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 702
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 717
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 787
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 950
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 1079
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 1180
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 1261
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 1335
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 1421
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 1915
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 2135
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 2597
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 3186
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 3654
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 3897
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 4484
+        }
+      ]
+    },
+    {
+      "id": "rus_2024_v1",
+      "title": "Русский язык · 2024 · Вариант 1",
+      "subject": "rus",
+      "year": 2024,
+      "version": 1,
+      "taskCount": 26,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 4889
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 5035
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 5142
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 5255
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 5463
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 5738
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 5827
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 6240
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 6331
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 6420
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 6621
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 6744
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 6880
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 6969
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 7159
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 7517
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 7838
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 7925
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 8157
+        },
+        {
+          "position": 20,
+          "typeNumber": 20,
+          "problemId": 8432
+        },
+        {
+          "position": 21,
+          "typeNumber": 21,
+          "problemId": 8785
+        },
+        {
+          "position": 22,
+          "typeNumber": 22,
+          "problemId": 8899
+        },
+        {
+          "position": 23,
+          "typeNumber": 23,
+          "problemId": 9032
+        },
+        {
+          "position": 24,
+          "typeNumber": 24,
+          "problemId": 9413
+        },
+        {
+          "position": 25,
+          "typeNumber": 25,
+          "problemId": 9834
+        },
+        {
+          "position": 26,
+          "typeNumber": 26,
+          "problemId": 9952
+        }
+      ]
+    },
+    {
+      "id": "rus_2024_v2",
+      "title": "Русский язык · 2024 · Вариант 2",
+      "subject": "rus",
+      "year": 2024,
+      "version": 2,
+      "taskCount": 26,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 4924
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 4994
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 5157
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 5298
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 5502
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 5732
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 5954
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 6183
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 6348
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 6440
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 6561
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 6798
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 6837
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 6947
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 7170
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 7547
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 7809
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 8061
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 8348
+        },
+        {
+          "position": 20,
+          "typeNumber": 20,
+          "problemId": 8681
+        },
+        {
+          "position": 21,
+          "typeNumber": 21,
+          "problemId": 8838
+        },
+        {
+          "position": 22,
+          "typeNumber": 22,
+          "problemId": 8897
+        },
+        {
+          "position": 23,
+          "typeNumber": 23,
+          "problemId": 9182
+        },
+        {
+          "position": 24,
+          "typeNumber": 24,
+          "problemId": 9348
+        },
+        {
+          "position": 25,
+          "typeNumber": 25,
+          "problemId": 9727
+        },
+        {
+          "position": 26,
+          "typeNumber": 26,
+          "problemId": 9953
+        }
+      ]
+    },
+    {
+      "id": "rus_2023_v1",
+      "title": "Русский язык · 2023 · Вариант 1",
+      "subject": "rus",
+      "year": 2023,
+      "version": 1,
+      "taskCount": 26,
+      "tasks": [
+        {
+          "position": 1,
+          "typeNumber": 1,
+          "problemId": 4899
+        },
+        {
+          "position": 2,
+          "typeNumber": 2,
+          "problemId": 5001
+        },
+        {
+          "position": 3,
+          "typeNumber": 3,
+          "problemId": 5111
+        },
+        {
+          "position": 4,
+          "typeNumber": 4,
+          "problemId": 5270
+        },
+        {
+          "position": 5,
+          "typeNumber": 5,
+          "problemId": 5520
+        },
+        {
+          "position": 6,
+          "typeNumber": 6,
+          "problemId": 5595
+        },
+        {
+          "position": 7,
+          "typeNumber": 7,
+          "problemId": 5938
+        },
+        {
+          "position": 8,
+          "typeNumber": 8,
+          "problemId": 6224
+        },
+        {
+          "position": 9,
+          "typeNumber": 9,
+          "problemId": 6322
+        },
+        {
+          "position": 10,
+          "typeNumber": 10,
+          "problemId": 6493
+        },
+        {
+          "position": 11,
+          "typeNumber": 11,
+          "problemId": 6550
+        },
+        {
+          "position": 12,
+          "typeNumber": 12,
+          "problemId": 6796
+        },
+        {
+          "position": 13,
+          "typeNumber": 13,
+          "problemId": 6810
+        },
+        {
+          "position": 14,
+          "typeNumber": 14,
+          "problemId": 6944
+        },
+        {
+          "position": 15,
+          "typeNumber": 15,
+          "problemId": 7229
+        },
+        {
+          "position": 16,
+          "typeNumber": 16,
+          "problemId": 7550
+        },
+        {
+          "position": 17,
+          "typeNumber": 17,
+          "problemId": 7665
+        },
+        {
+          "position": 18,
+          "typeNumber": 18,
+          "problemId": 8101
+        },
+        {
+          "position": 19,
+          "typeNumber": 19,
+          "problemId": 8318
+        },
+        {
+          "position": 20,
+          "typeNumber": 20,
+          "problemId": 8460
+        },
+        {
+          "position": 21,
+          "typeNumber": 21,
+          "problemId": 8723
+        },
+        {
+          "position": 22,
+          "typeNumber": 22,
+          "problemId": 8860
+        },
+        {
+          "position": 23,
+          "typeNumber": 23,
+          "problemId": 9034
+        },
+        {
+          "position": 24,
+          "typeNumber": 24,
+          "problemId": 9293
+        },
+        {
+          "position": 25,
+          "typeNumber": 25,
+          "problemId": 9645
+        },
+        {
+          "position": 26,
+          "typeNumber": 26,
+          "problemId": 9954
+        }
+      ]
+    }
+  ]
+}

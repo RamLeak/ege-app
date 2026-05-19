@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.daniel.ege100.ui.theme.BgElevated2
@@ -34,6 +35,7 @@ fun IosTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     keyboardOptions: KeyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Text),
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val style = TextStyle(
         color = Label,
@@ -48,6 +50,7 @@ fun IosTextField(
         textStyle = style,
         cursorBrush = SolidColor(SystemBlue),
         keyboardOptions = keyboardOptions,
+        visualTransformation = visualTransformation,
         decorationBox = { inner ->
             if (value.isEmpty()) {
                 Text(

@@ -50,13 +50,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.daniel.ege100.data.AttemptLogEntity
 import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.EgeDatabase
+import com.daniel.ege100.data.FipiVariantsRepository
+import com.daniel.ege100.data.FipiVariant
+import com.daniel.ege100.data.FipiTask
 import com.daniel.ege100.data.FipiScoreTable
 import com.daniel.ege100.data.MockExamPlan
 import com.daniel.ege100.data.MockExamResultEntity
 import com.daniel.ege100.data.MockExamSchedule
 import com.daniel.ege100.data.ProblemEntity
-import com.daniel.ege100.data.ProblemTypeEntity
-import com.daniel.ege100.data.SubjectEntity
 import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.data.UserProfileStore
 import com.daniel.ege100.ui.common.AppleCard
@@ -82,36 +83,36 @@ import kotlinx.coroutines.launch
 // ---------------------------------------------------------------------------
 
 /**
- * Phase 3 Stage FINAL part А — экран прохождения пробника.
+ * Phase 4 Stage A1 + B1 — экран прохождения пробника.
  *
- * Последовательно 16 задач: 8 случайных из math (по одной из 8 разных
- * типов 1..19) + 8 из rus (1..26). Ответ пользователя сравнивается с
- * `problem.answer` (нормализация как в ProblemDetailViewModel). В
- * `attempt_log` пишется с `source = "mock_exam"`.
+ * Источник задач:
+ *   - internal с subject="math": 19 задач, по одной из каждого типа 1..19 mathb.
+ *   - internal с subject="rus": 26 задач, по одной из каждого типа 1..26 rus.
+ *   - fipi с fipiVariantId: задачи из FipiVariantsRepository (resolved problem_id).
  *
- * После 16-й задачи — экран результата (Math correct/total + Rus
- * correct/total + FipiScoreTable.rawToTest для прогноза балла), сохранение
- * в `mock_exam_results`.
+ * Сохранение в mock_exam_results с правильными `subject` + `source`. После
+ * 16-й задачи (или сколько в варианте) — экран результата с прогнозом
+ * ФИПИ-балла.
  */
 data class MockProblem(
     val problem: ProblemEntity,
-    val subject: String,        // "math" | "rus"
     val typeNumber: Int,
 )
 
 data class MockExamRunnerUi(
     val loading: Boolean = true,
     val plan: MockExamPlan? = null,
+    val fipiVariant: FipiVariant? = null,
+    val subject: String = "math",  // "math" | "rus"
     val problems: List<MockProblem> = emptyList(),
     val currentIndex: Int = 0,
     val userAnswer: String = "",
     val verdict: MockVerdict = MockVerdict.None,
-    val mathCorrect: Int = 0,
-    val mathTotal: Int = 0,
-    val rusCorrect: Int = 0,
-    val rusTotal: Int = 0,
+    val correct: Int = 0,
+    val total: Int = 0,
     val finished: Boolean = false,
     val durationMs: Long = 0L,
+    val displayTitle: String = "Пробник",
 )
 
 sealed class MockVerdict {
@@ -129,56 +130,71 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<MockExamRunnerUi> = _state.asStateFlow()
 
     private var startedAtMs: Long = 0L
-    private var planIndex: Int = -1
+    private var planIndex: Int = -2  // sentinel
+    private var subjectKey: String = "math"
+    private var fipiVariantId: String? = null
 
-    fun start(planIndex: Int) {
-        if (this.planIndex == planIndex && _state.value.problems.isNotEmpty()) return
+    fun start(planIndex: Int, subject: String, fipiVariantId: String?) {
+        if (this.planIndex == planIndex &&
+            this.subjectKey == subject &&
+            this.fipiVariantId == fipiVariantId &&
+            _state.value.problems.isNotEmpty()
+        ) return
         this.planIndex = planIndex
+        this.subjectKey = subject
+        this.fipiVariantId = fipiVariantId
         viewModelScope.launch {
             val ctx = getApplication<Application>()
             val profile = UserProfileStore.snapshot(ctx)
-            val plans = MockExamSchedule.getSchedule(ctx, profile.examDateParsed)
-            val plan = plans.firstOrNull { it.index == planIndex }
-            val problems = composeMix()
+            val plan = if (planIndex >= 0) {
+                MockExamSchedule.getSchedule(ctx, profile.examDateParsed)
+                    .firstOrNull { it.index == planIndex }
+            } else null
+
+            val (problems, variant, title) = if (fipiVariantId != null) {
+                val v = FipiVariantsRepository.getVariant(ctx, fipiVariantId)
+                val tasks = v?.tasks.orEmpty().sortedBy { it.position }
+                val resolved = tasks.mapNotNull { resolveFipiTask(it) }
+                Triple(resolved, v, v?.title ?: "Вариант ФИПИ")
+            } else {
+                val composed = if (subject == "math") composeMath() else composeRus()
+                val title = if (subject == "math") "Пробник №$planIndex · Математика"
+                            else "Пробник №$planIndex · Русский"
+                Triple(composed, null, title)
+            }
             startedAtMs = System.currentTimeMillis()
             _state.value = MockExamRunnerUi(
                 loading = false,
                 plan = plan,
+                fipiVariant = variant,
+                subject = subject,
                 problems = problems,
+                displayTitle = title,
             )
         }
     }
 
-    private suspend fun composeMix(): List<MockProblem> {
-        val math = pickFromSubject("mathb", "math", typeRange = 1..19, target = 8)
-        val rus = pickFromSubject("rus", "rus", typeRange = 1..26, target = 8)
-        // Перемешиваем чтобы предметы чередовались.
-        return (math + rus).shuffled()
-    }
+    private suspend fun composeMath(): List<MockProblem> = composeBySubject("mathb", 1..19)
+    private suspend fun composeRus(): List<MockProblem> = composeBySubject("rus", 1..26)
 
-    private suspend fun pickFromSubject(
-        slug: String,
-        statsKey: String,
-        typeRange: IntRange,
-        target: Int,
-    ): List<MockProblem> {
-        val subject = catalogDao.getSubjectBySlug(slug) ?: return emptyList()
-        val typesById = catalogDao.getTypesBySubject(subject.id)
-            .filter { it.isSupplementary == 0 && it.number in typeRange }
-        if (typesById.isEmpty()) return emptyList()
-        // Берём target случайных типов (если меньше — все).
-        val pickedTypes = typesById.shuffled().take(target)
-        return pickedTypes.mapNotNull { tc ->
-            // По одной случайной задаче из этого типа.
-            val problems = catalogDao.getProblemsByType(typeId = tc.id, limit = 1, offset = randomOffset(tc.problemCount))
-            problems.firstOrNull()?.let { p ->
-                MockProblem(problem = p, subject = statsKey, typeNumber = tc.number)
-            }
+    private suspend fun composeBySubject(slug: String, typeRange: IntRange): List<MockProblem> {
+        val result = mutableListOf<MockProblem>()
+        for (typeNumber in typeRange) {
+            val candidates = catalogDao.getProblemIdsByTypeNumber(slug, typeNumber)
+            if (candidates.isEmpty()) continue
+            val pickedId = candidates.random()
+            val problem = catalogDao.getProblem(pickedId) ?: continue
+            result += MockProblem(problem = problem, typeNumber = typeNumber)
         }
+        return result
     }
 
-    private fun randomOffset(count: Int): Int =
-        if (count <= 1) 0 else (0 until count).random()
+    private suspend fun resolveFipiTask(task: FipiTask): MockProblem? {
+        val pid = task.problemId ?: return null
+        val problem = catalogDao.getProblem(pid) ?: return null
+        val type = catalogDao.getType(problem.typeId)
+        return MockProblem(problem = problem, typeNumber = type?.number ?: task.typeNumber ?: 0)
+    }
 
     fun setAnswer(v: String) {
         if (_state.value.verdict is MockVerdict.None) {
@@ -194,7 +210,6 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
         if (typed.isBlank()) return
         val expected = current.problem.answer?.trim().orEmpty()
         if (expected.isBlank()) {
-            // Задача без короткого ответа — засчитываем как пропуск (incorrect).
             advanceWithResult(isCorrect = false, expected = expected, current = current)
             return
         }
@@ -204,29 +219,25 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun advanceWithResult(isCorrect: Boolean, expected: String, current: MockProblem) {
         val cur = _state.value
-        val newMathCorrect = cur.mathCorrect + if (current.subject == "math" && isCorrect) 1 else 0
-        val newMathTotal = cur.mathTotal + if (current.subject == "math") 1 else 0
-        val newRusCorrect = cur.rusCorrect + if (current.subject == "rus" && isCorrect) 1 else 0
-        val newRusTotal = cur.rusTotal + if (current.subject == "rus") 1 else 0
+        val newCorrect = cur.correct + if (isCorrect) 1 else 0
         _state.value = cur.copy(
             verdict = if (isCorrect) MockVerdict.Correct(expected) else MockVerdict.Wrong(expected),
-            mathCorrect = newMathCorrect,
-            mathTotal = newMathTotal,
-            rusCorrect = newRusCorrect,
-            rusTotal = newRusTotal,
+            correct = newCorrect,
+            total = cur.total + 1,
         )
-        // attempt_log с source=mock_exam.
+        // attempt_log с source=mock_exam (для internal) или fipi_exam (для fipi).
+        val source = if (fipiVariantId != null) "fipi_exam" else "mock_exam"
         viewModelScope.launch {
             attemptDao.insert(
                 AttemptLogEntity(
                     problemId = current.problem.id,
-                    subject = current.subject,
+                    subject = cur.subject,
                     typeNumber = current.typeNumber,
                     subtypeId = current.problem.subtypeId,
                     isCorrect = isCorrect,
                     durationMs = 0L,
                     timestamp = System.currentTimeMillis(),
-                    source = "mock_exam",
+                    source = source,
                 ),
             )
         }
@@ -249,30 +260,29 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun finishMockExam() {
         val cur = _state.value
-        val plan = cur.plan ?: return
         val durationMs = System.currentTimeMillis() - startedAtMs
-        // Прогноз балла на основе результата: масштабируем correct до 32 (math) / 50 (rus).
-        // Это грубо, но даёт ориентир.
-        val mathRaw = if (cur.mathTotal > 0) (cur.mathCorrect * 32 / cur.mathTotal) else 0
-        val rusRaw = if (cur.rusTotal > 0) (cur.rusCorrect * 50 / cur.rusTotal) else 0
-        val mathScore = FipiScoreTable.rawToTest("math", mathRaw)
-        val rusScore = FipiScoreTable.rawToTest("rus", rusRaw)
-        _state.value = cur.copy(
-            finished = true,
-            durationMs = durationMs,
-        )
+        val totalAttempted = cur.total
+        val raw = if (totalAttempted > 0) {
+            cur.correct * FipiScoreTable.maxRaw(cur.subject) / totalAttempted
+        } else 0
+        val score = FipiScoreTable.rawToTest(cur.subject, raw)
+        _state.value = cur.copy(finished = true, durationMs = durationMs)
         viewModelScope.launch {
+            // Phase 4 B1: для fipi используем variant.id как scheduledDate
+            // чтобы группировать прошлые прохождения в FipiVariantsScreen.
+            val scheduledDate = fipiVariantId
+                ?: cur.plan?.date
+                ?: java.time.LocalDate.now().toString()
             resultDao.insert(
                 MockExamResultEntity(
-                    planIndex = plan.index,
-                    scheduledDate = plan.date,
+                    planIndex = if (fipiVariantId != null) -1 else planIndex,
+                    subject = cur.subject,
+                    source = if (fipiVariantId != null) "fipi" else "internal",
+                    scheduledDate = scheduledDate,
                     completedDate = System.currentTimeMillis(),
-                    mathCorrect = cur.mathCorrect,
-                    mathTotal = cur.mathTotal,
-                    rusCorrect = cur.rusCorrect,
-                    rusTotal = cur.rusTotal,
-                    mathScore = mathScore,
-                    rusScore = rusScore,
+                    correct = cur.correct,
+                    total = totalAttempted,
+                    score = score,
                     durationMs = durationMs,
                 ),
             )
@@ -296,12 +306,14 @@ class MockExamRunnerViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun MockExamRunnerScreen(
     planIndex: Int,
+    subject: String,
+    fipiVariantId: String?,
     contentPadding: PaddingValues,
     onBack: () -> Unit,
     onFinish: () -> Unit,
     vm: MockExamRunnerViewModel = viewModel(),
 ) {
-    LaunchedEffect(planIndex) { vm.start(planIndex) }
+    LaunchedEffect(planIndex, subject, fipiVariantId) { vm.start(planIndex, subject, fipiVariantId) }
     val st by vm.state.collectAsState()
 
     if (st.finished) {
@@ -312,7 +324,7 @@ fun MockExamRunnerScreen(
     Scaffold(
         topBar = {
             LargeTitleBar(
-                title = "Пробник №$planIndex",
+                title = st.displayTitle,
                 subtitle = if (st.problems.isNotEmpty()) "${st.currentIndex + 1} из ${st.problems.size}" else null,
                 onBack = onBack,
             )
@@ -373,7 +385,7 @@ private fun RunnerBody(st: MockExamRunnerUi, vm: MockExamRunnerViewModel) {
                 item("badge") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = if (mock.subject == "math") "📐 Математика · №${mock.typeNumber}" else "✍️ Русский · №${mock.typeNumber}",
+                            text = "${subjectLabel(st.subject)} · №${mock.typeNumber}",
                             fontSize = 13.sp,
                             color = LabelTertiary,
                             fontWeight = FontWeight.Medium,
@@ -415,6 +427,12 @@ private fun RunnerBody(st: MockExamRunnerUi, vm: MockExamRunnerViewModel) {
             }
         }
     }
+}
+
+private fun subjectLabel(subject: String): String = when (subject) {
+    "math" -> "📐 Математика"
+    "rus" -> "✍️ Русский"
+    else -> subject
 }
 
 @Composable
@@ -460,12 +478,9 @@ private fun FinishedScreen(
     onClose: () -> Unit,
     contentPadding: PaddingValues,
 ) {
-    val mathAcc = if (st.mathTotal > 0) st.mathCorrect.toFloat() / st.mathTotal else 0f
-    val rusAcc = if (st.rusTotal > 0) st.rusCorrect.toFloat() / st.rusTotal else 0f
-    val mathRaw = if (st.mathTotal > 0) st.mathCorrect * 32 / st.mathTotal else 0
-    val rusRaw = if (st.rusTotal > 0) st.rusCorrect * 50 / st.rusTotal else 0
-    val mathScore = FipiScoreTable.rawToTest("math", mathRaw)
-    val rusScore = FipiScoreTable.rawToTest("rus", rusRaw)
+    val acc = if (st.total > 0) st.correct.toFloat() / st.total else 0f
+    val raw = if (st.total > 0) st.correct * FipiScoreTable.maxRaw(st.subject) / st.total else 0
+    val score = FipiScoreTable.rawToTest(st.subject, raw)
 
     Scaffold(containerColor = Bg) { inner ->
         Box(
@@ -480,8 +495,8 @@ private fun FinishedScreen(
                 Text("✓", fontSize = 64.sp, color = SystemGreen, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.size(12.dp))
                 Text(
-                    "Пробник №${st.plan?.index} завершён",
-                    fontSize = 24.sp,
+                    text = "${st.displayTitle} завершён",
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Label,
                     textAlign = TextAlign.Center,
@@ -489,13 +504,29 @@ private fun FinishedScreen(
                 Spacer(Modifier.size(24.dp))
                 AppleCard(paddingDp = 22) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        ResultRow("📐 Математика", st.mathCorrect, st.mathTotal, mathAcc, mathScore)
-                        Spacer(Modifier.height(14.dp))
-                        ResultRow("✍️ Русский", st.rusCorrect, st.rusTotal, rusAcc, rusScore)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                subjectLabel(st.subject),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Label,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text("$score", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = SystemGreen)
+                            Text(" /100", fontSize = 13.sp, color = LabelSecondary, modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        AppleProgressBar(progress = acc)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "${st.correct} из ${st.total} · точность ${(acc * 100).toInt()}%",
+                            fontSize = 12.sp,
+                            color = LabelTertiary,
+                        )
                     }
                 }
                 Spacer(Modifier.size(24.dp))
-                PrimaryButton(text = "К календарю", onClick = onClose)
+                PrimaryButton(text = "Готово", onClick = onClose)
                 Spacer(Modifier.size(10.dp))
                 SecondaryButton(
                     text = "На главный",
@@ -504,24 +535,5 @@ private fun FinishedScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ResultRow(label: String, correct: Int, total: Int, accuracy: Float, score: Int) {
-    Column {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Label, modifier = Modifier.weight(1f))
-            Text("$score", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = SystemGreen)
-            Text(" /100", fontSize = 13.sp, color = LabelSecondary, modifier = Modifier.padding(bottom = 4.dp))
-        }
-        Spacer(Modifier.height(6.dp))
-        AppleProgressBar(progress = accuracy)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "$correct из $total · ${(accuracy * 100).toInt()}%",
-            fontSize = 12.sp,
-            color = LabelTertiary,
-        )
     }
 }

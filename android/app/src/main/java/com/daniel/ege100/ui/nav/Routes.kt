@@ -96,10 +96,30 @@ object MockExamCalendarRoute
 data class MockExamDetailRoute(val planIndex: Int)
 
 /**
- * Phase 3 Stage FINAL: прохождение пробника.
+ * Phase 3 Stage FINAL + Phase 4 A1 + B1: прохождение пробника.
+ *
+ * Варианты входа:
+ *   planIndex >= 0 + subject = "math"/"rus" → internal пробник по subject.
+ *   planIndex == -1 + fipiVariantId != null → ФИПИ-вариант.
  */
 @Serializable
-data class MockExamRunnerRoute(val planIndex: Int)
+data class MockExamRunnerRoute(
+    val planIndex: Int,
+    val subject: String = "math",
+    val fipiVariantId: String? = null,
+)
+
+/**
+ * Phase 4 Stage B1: экран списка ФИПИ-вариантов.
+ */
+@Serializable
+object FipiVariantsRoute
+
+/**
+ * Phase 4 Stage B2: история пробников + тренд.
+ */
+@Serializable
+object MockExamHistoryRoute
 
 /**
  * Phase 3 Stage C: журнал ошибок (заходим из Журнала → «📝 Ошибки»).
