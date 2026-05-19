@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import com.daniel.ege100.ui.common.SmoothLazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
@@ -334,6 +334,12 @@ fun ProblemDetailScreen(
         }
     }
 
+    // Phase 4 Stage P4-C3 part В2 (Convention #63) — onboarding hints.
+    val appSettings by com.daniel.ege100.data.AppSettingsStore.settingsFlow(context)
+        .collectAsState(initial = com.daniel.ege100.data.AppSettings())
+    var hintsLocallyDismissed by remember { mutableStateOf(false) }
+    val showHints = !appSettings.swipeHintsShown && !hintsLocallyDismissed
+
     Scaffold(
         topBar = {
             LargeTitleBar(
@@ -415,6 +421,17 @@ fun ProblemDetailScreen(
             },
         )
     }
+
+    // Phase 4 Stage P4-C3 part В2 (Convention #63) — onboarding overlay.
+    com.daniel.ege100.ui.common.SwipeHintsOverlay(
+        visible = showHints,
+        onDismiss = {
+            hintsLocallyDismissed = true
+            coroutineScope.launch {
+                com.daniel.ege100.data.AppSettingsStore.markSwipeHintsShown(context)
+            }
+        },
+    )
 }
 
 /**
@@ -454,41 +471,19 @@ private fun ProblemBody(
     val hasAnswer = !problem.answer.isNullOrBlank()
     val keyForReset = problem.id
 
-    // Stage 5 part Е — горизонтальные свайпы между задачами.
-    // Игнорируем жесты, начатые в edge-зоне x<24dp (там работает edgeSwipeBack).
-    val density = LocalDensity.current
-    val edgePx = with(density) { 24.dp.toPx() }
-    val triggerPx = with(density) { 90.dp.toPx() }
-
-    LazyColumn(
+    // Phase 4 Stage P4-C3 part В2 (Convention #63) — старый pointerInput с
+    // detectHorizontalDragGestures на LazyColumn заменён на
+    // SwipeableProblemContent (визуальный animatable + резинка на границах).
+    com.daniel.ege100.ui.common.SwipeableProblemContent(
+        hasPrev = st.hasPrev,
+        hasNext = st.hasNext,
+        onPrev = { vm.goPrev() },
+        onNext = { vm.goNext() },
+    ) {
+    SmoothLazyColumn(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(problem.id) {
-                var startX = 0f
-                var totalDrag = 0f
-                var skip = false
-                detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        startX = offset.x
-                        totalDrag = 0f
-                        skip = startX < edgePx
-                    },
-                    onDragEnd = {
-                        if (!skip) {
-                            when {
-                                totalDrag < -triggerPx && st.hasNext -> vm.goNext()
-                                totalDrag > triggerPx && st.hasPrev -> vm.goPrev()
-                            }
-                        }
-                        startX = 0f
-                        totalDrag = 0f
-                        skip = false
-                    },
-                    onHorizontalDrag = { _, dx -> if (!skip) totalDrag += dx },
-                )
-            },
+        modifier = Modifier.fillMaxSize(),
     ) {
         // --- Условие ---
         item("statement_$keyForReset") {
@@ -605,6 +600,7 @@ private fun ProblemBody(
             MetaRow(problem = problem)
         }
     }
+    }  // end SwipeableProblemContent
 }
 
 @Composable

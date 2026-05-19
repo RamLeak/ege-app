@@ -1,6 +1,7 @@
 package com.daniel.ege100.ui.nav
 
 import android.widget.Toast
+import com.daniel.ege100.ui.common.SwipeBackContainer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -75,7 +76,6 @@ import com.daniel.ege100.ui.mock.MockExamCalendarScreen
 import com.daniel.ege100.ui.mock.MockExamDetailScreen
 import com.daniel.ege100.ui.mock.MockExamHistoryScreen
 import com.daniel.ege100.ui.mock.MockExamRunnerScreen
-import com.daniel.ege100.ui.modifiers.edgeSwipeBack
 import com.daniel.ege100.ui.profile.ImportConfirmBottomSheet
 import com.daniel.ege100.ui.profile.ProfileScreen
 import com.daniel.ege100.ui.profile.ResetProgressBottomSheet
@@ -219,15 +219,11 @@ fun EgeApp() {
         NavHost(
             navController = navController,
             startDestination = CatalogRoute,
-            modifier = Modifier
-                .fillMaxSize()
-                .edgeSwipeBack(
-                    onSwipeBack = {
-                        if (navController.previousBackStackEntry != null) {
-                            navController.popBackStack()
-                        }
-                    },
-                ),
+            // Phase 4 Stage P4-C3 part В1 (Convention #62) — global
+            // Modifier.edgeSwipeBack удалён. Каждый detail-screen теперь
+            // оборачивается в SwipeBackContainer с visual animatable
+            // feedback (translation за пальцем + spring обратно).
+            modifier = Modifier.fillMaxSize(),
             enterTransition = { if (isTabSwitch()) tabFadeEnter() else forwardEnter() },
             exitTransition = { if (isTabSwitch()) tabFadeExit() else forwardExit() },
             popEnterTransition = { if (isTabSwitch()) tabFadeEnter() else backEnter() },
@@ -265,58 +261,68 @@ fun EgeApp() {
                 )
             }
             composable<ErrorsListRoute> {
-                ErrorsListScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onRetry = { pid, tId, sId ->
-                        navController.navigate(
-                            ProblemDetailRoute(
-                                problemId = pid,
-                                typeId = tId,
-                                subtypeId = sId,
-                                fromErrors = true,
-                            ),
-                        )
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    ErrorsListScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onRetry = { pid, tId, sId ->
+                            navController.navigate(
+                                ProblemDetailRoute(
+                                    problemId = pid,
+                                    typeId = tId,
+                                    subtypeId = sId,
+                                    fromErrors = true,
+                                ),
+                            )
+                        },
+                    )
+                }
             }
             composable<StatsRoute> {
-                StatsScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    StatsScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
             composable<FavoritesRoute> {
-                FavoritesScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onProblemClick = { pid, tId, sId ->
-                        navController.navigate(
-                            ProblemDetailRoute(
-                                problemId = pid,
-                                typeId = tId,
-                                subtypeId = sId,
-                            ),
-                        )
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    FavoritesScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onProblemClick = { pid, tId, sId ->
+                            navController.navigate(
+                                ProblemDetailRoute(
+                                    problemId = pid,
+                                    typeId = tId,
+                                    subtypeId = sId,
+                                ),
+                            )
+                        },
+                    )
+                }
             }
             composable<ProfileRoute> {
-                ProfileScreen(
-                    contentPadding = padding,
-                    onSettingsClick = { navController.navigate(SettingsRoute) },
-                    onExportClick = ::triggerExport,
-                    onImportClick = ::triggerImport,
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    ProfileScreen(
+                        contentPadding = padding,
+                        onSettingsClick = { navController.navigate(SettingsRoute) },
+                        onExportClick = ::triggerExport,
+                        onImportClick = ::triggerImport,
+                    )
+                }
             }
             composable<SettingsRoute> {
-                SettingsScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onExportClick = ::triggerExport,
-                    onImportClick = ::triggerImport,
-                    onResetClick = { showReset = true },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    SettingsScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onExportClick = ::triggerExport,
+                        onImportClick = ::triggerImport,
+                        onResetClick = { showReset = true },
+                    )
+                }
             }
 
             composable<CatalogRoute> {
@@ -326,158 +332,184 @@ fun EgeApp() {
                 )
             }
             composable<TypesRoute> { entry ->
-                val args = entry.toRoute<TypesRoute>()
-                TypesScreen(
-                    subjectId = args.subjectId,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onTypeClick = { typeId -> navController.navigate(SubtypesRoute(typeId)) },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<TypesRoute>()
+                    TypesScreen(
+                        subjectId = args.subjectId,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onTypeClick = { typeId -> navController.navigate(SubtypesRoute(typeId)) },
+                    )
+                }
             }
             composable<SubtypesRoute> { entry ->
-                val args = entry.toRoute<SubtypesRoute>()
-                SubtypesScreen(
-                    typeId = args.typeId,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onTrainerClick = { tId ->
-                        navController.navigate(ProblemListRoute(typeId = tId, subtypeId = null))
-                    },
-                    onSubtypeClick = { sId, tId ->
-                        navController.navigate(ProblemListRoute(typeId = tId, subtypeId = sId))
-                    },
-                    onAccentTrainerClick = { navController.navigate(AccentCategoriesRoute) },
-                    onWordBlankTrainerClick = { typeNumber ->
-                        navController.navigate(WordBlankTrainerRoute(typeNumber))
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<SubtypesRoute>()
+                    SubtypesScreen(
+                        typeId = args.typeId,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onTrainerClick = { tId ->
+                            navController.navigate(ProblemListRoute(typeId = tId, subtypeId = null))
+                        },
+                        onSubtypeClick = { sId, tId ->
+                            navController.navigate(ProblemListRoute(typeId = tId, subtypeId = sId))
+                        },
+                        onAccentTrainerClick = { navController.navigate(AccentCategoriesRoute) },
+                        onWordBlankTrainerClick = { typeNumber ->
+                            navController.navigate(WordBlankTrainerRoute(typeNumber))
+                        },
+                    )
+                }
             }
             composable<ProblemListRoute> { entry ->
-                val args = entry.toRoute<ProblemListRoute>()
-                ProblemListScreen(
-                    typeId = args.typeId,
-                    subtypeId = args.subtypeId,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onProblemClick = { pid ->
-                        navController.navigate(
-                            ProblemDetailRoute(
-                                problemId = pid,
-                                typeId = args.typeId,
-                                subtypeId = args.subtypeId,
-                            ),
-                        )
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<ProblemListRoute>()
+                    ProblemListScreen(
+                        typeId = args.typeId,
+                        subtypeId = args.subtypeId,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onProblemClick = { pid ->
+                            navController.navigate(
+                                ProblemDetailRoute(
+                                    problemId = pid,
+                                    typeId = args.typeId,
+                                    subtypeId = args.subtypeId,
+                                ),
+                            )
+                        },
+                    )
+                }
             }
             composable<ProblemDetailRoute> { entry ->
-                val args = entry.toRoute<ProblemDetailRoute>()
-                ProblemDetailScreen(
-                    problemId = args.problemId,
-                    typeId = args.typeId,
-                    subtypeId = args.subtypeId,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    fromErrors = args.fromErrors,
-                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<ProblemDetailRoute>()
+                    ProblemDetailScreen(
+                        problemId = args.problemId,
+                        typeId = args.typeId,
+                        subtypeId = args.subtypeId,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        fromErrors = args.fromErrors,
+                        onOpenAiSettings = { navController.navigate(SettingsRoute) },
+                    )
+                }
             }
             composable<AccentCategoriesRoute> {
-                AccentCategoriesScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onCategoryClick = { catId, order ->
-                        navController.navigate(AccentTrainerRoute(catId, order))
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    AccentCategoriesScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onCategoryClick = { catId, order ->
+                            navController.navigate(AccentTrainerRoute(catId, order))
+                        },
+                    )
+                }
             }
             composable<AccentTrainerRoute> { entry ->
-                val args = entry.toRoute<AccentTrainerRoute>()
-                AccentTrainerScreen(
-                    categoryId = args.categoryId,
-                    defaultOrder = args.defaultOrder,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<AccentTrainerRoute>()
+                    AccentTrainerScreen(
+                        categoryId = args.categoryId,
+                        defaultOrder = args.defaultOrder,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onOpenAiSettings = { navController.navigate(SettingsRoute) },
+                    )
+                }
             }
             composable<WordBlankTrainerRoute> { entry ->
-                val args = entry.toRoute<WordBlankTrainerRoute>()
-                WordBlankTrainerScreen(
-                    typeNumber = args.typeNumber,
-                    defaultOrder = args.defaultOrder,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onOpenAiSettings = { navController.navigate(SettingsRoute) },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<WordBlankTrainerRoute>()
+                    WordBlankTrainerScreen(
+                        typeNumber = args.typeNumber,
+                        defaultOrder = args.defaultOrder,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onOpenAiSettings = { navController.navigate(SettingsRoute) },
+                    )
+                }
             }
             composable<QuickTrainerRoute> { entry ->
-                val args = entry.toRoute<QuickTrainerRoute>()
-                QuickTrainerScreen(
-                    problemIds = args.problemIds,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onFinish = { navController.popBackStack() },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<QuickTrainerRoute>()
+                    QuickTrainerScreen(
+                        problemIds = args.problemIds,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onFinish = { navController.popBackStack() },
+                    )
+                }
             }
             composable<MockExamCalendarRoute> {
-                MockExamCalendarScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onPlanClick = { idx -> navController.navigate(MockExamDetailRoute(idx)) },
-                    onFipiVariantsClick = { navController.navigate(FipiVariantsRoute) },
-                    onHistoryClick = { navController.navigate(MockExamHistoryRoute) },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    MockExamCalendarScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onPlanClick = { idx -> navController.navigate(MockExamDetailRoute(idx)) },
+                        onFipiVariantsClick = { navController.navigate(FipiVariantsRoute) },
+                        onHistoryClick = { navController.navigate(MockExamHistoryRoute) },
+                    )
+                }
             }
             composable<MockExamDetailRoute> { entry ->
-                val args = entry.toRoute<MockExamDetailRoute>()
-                MockExamDetailScreen(
-                    planIndex = args.planIndex,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onStartMath = {
-                        navController.navigate(MockExamRunnerRoute(args.planIndex, "math", null))
-                    },
-                    onStartRus = {
-                        navController.navigate(MockExamRunnerRoute(args.planIndex, "rus", null))
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<MockExamDetailRoute>()
+                    MockExamDetailScreen(
+                        planIndex = args.planIndex,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onStartMath = {
+                            navController.navigate(MockExamRunnerRoute(args.planIndex, "math", null))
+                        },
+                        onStartRus = {
+                            navController.navigate(MockExamRunnerRoute(args.planIndex, "rus", null))
+                        },
+                    )
+                }
             }
             composable<MockExamRunnerRoute> { entry ->
-                val args = entry.toRoute<MockExamRunnerRoute>()
-                MockExamRunnerScreen(
-                    planIndex = args.planIndex,
-                    subject = args.subject,
-                    fipiVariantId = args.fipiVariantId,
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onFinish = {
-                        // После завершения — popBackStack() возвращает на Detail
-                        // (которая перезагрузит result через LaunchedEffect).
-                        navController.popBackStack()
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    val args = entry.toRoute<MockExamRunnerRoute>()
+                    MockExamRunnerScreen(
+                        planIndex = args.planIndex,
+                        subject = args.subject,
+                        fipiVariantId = args.fipiVariantId,
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onFinish = {
+                            // После завершения — popBackStack() возвращает на Detail
+                            // (которая перезагрузит result через LaunchedEffect).
+                            navController.popBackStack()
+                        },
+                    )
+                }
             }
             composable<FipiVariantsRoute> {
-                FipiVariantsScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                    onVariantClick = { variant ->
-                        navController.navigate(
-                            MockExamRunnerRoute(
-                                planIndex = -1,
-                                subject = variant.subject,
-                                fipiVariantId = variant.id,
-                            ),
-                        )
-                    },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    FipiVariantsScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                        onVariantClick = { variant ->
+                            navController.navigate(
+                                MockExamRunnerRoute(
+                                    planIndex = -1,
+                                    subject = variant.subject,
+                                    fipiVariantId = variant.id,
+                                ),
+                            )
+                        },
+                    )
+                }
             }
             composable<MockExamHistoryRoute> {
-                MockExamHistoryScreen(
-                    contentPadding = padding,
-                    onBack = { navController.popBackStack() },
-                )
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    MockExamHistoryScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
         }
     }

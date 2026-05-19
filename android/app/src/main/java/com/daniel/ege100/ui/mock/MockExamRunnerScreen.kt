@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import com.daniel.ege100.ui.common.SmoothLazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Scaffold
@@ -369,7 +369,7 @@ private fun RunnerBody(st: MockExamRunnerUi, vm: MockExamRunnerViewModel) {
             modifier = Modifier.weight(1f),
         ) { idx ->
             val mock = st.problems.getOrNull(idx) ?: return@AnimatedContent
-            LazyColumn(
+            SmoothLazyColumn(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize(),

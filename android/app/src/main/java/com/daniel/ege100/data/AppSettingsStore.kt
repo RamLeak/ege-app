@@ -35,6 +35,13 @@ data class AppSettings(
      * букву → закрыть»).
      */
     val useLetterChoices: Boolean = true,
+    /**
+     * Phase 4 Stage P4-C3 part В2 (Convention #63) — onboarding-подсказка
+     * про свайпы (между задачами + edge swipe-back) была показана
+     * пользователю. Default = false → при первом открытии
+     * ProblemDetail/Trainer выводится tooltip, после показа = true.
+     */
+    val swipeHintsShown: Boolean = false,
 )
 
 private val Context.appSettingsStore by preferencesDataStore("app_settings")
@@ -46,6 +53,7 @@ object AppSettingsStore {
     private val NOTIFY_STREAK = booleanPreferencesKey("notify_streak")
     private val NOTIFY_REMINDERS = booleanPreferencesKey("notify_reminders")
     private val USE_LETTER_CHOICES = booleanPreferencesKey("use_letter_choices")
+    private val SWIPE_HINTS_SHOWN = booleanPreferencesKey("swipe_hints_shown")
 
     fun settingsFlow(context: Context): Flow<AppSettings> =
         context.appSettingsStore.data.map { prefs ->
@@ -56,6 +64,7 @@ object AppSettingsStore {
                 notifyStreak = prefs[NOTIFY_STREAK] ?: true,
                 notifyReminders = prefs[NOTIFY_REMINDERS] ?: true,
                 useLetterChoices = prefs[USE_LETTER_CHOICES] ?: true,
+                swipeHintsShown = prefs[SWIPE_HINTS_SHOWN] ?: false,
             )
         }
 
@@ -86,6 +95,11 @@ object AppSettingsStore {
         context.appSettingsStore.edit { it[USE_LETTER_CHOICES] = value }
     }
 
+    /** Phase 4 Stage P4-C3 part В2 — пометить onboarding-подсказку показанной. */
+    suspend fun markSwipeHintsShown(context: Context) {
+        context.appSettingsStore.edit { it[SWIPE_HINTS_SHOWN] = true }
+    }
+
     /** Stage P3-A part Д: восстановление из бэкапа. */
     suspend fun restore(context: Context, settings: AppSettings) {
         context.appSettingsStore.edit { prefs ->
@@ -95,6 +109,7 @@ object AppSettingsStore {
             prefs[NOTIFY_STREAK] = settings.notifyStreak
             prefs[NOTIFY_REMINDERS] = settings.notifyReminders
             prefs[USE_LETTER_CHOICES] = settings.useLetterChoices
+            prefs[SWIPE_HINTS_SHOWN] = settings.swipeHintsShown
         }
     }
 }

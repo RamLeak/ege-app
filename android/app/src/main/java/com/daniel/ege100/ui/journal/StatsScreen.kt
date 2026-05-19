@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import com.daniel.ege100.ui.common.SmoothLazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -201,7 +201,7 @@ fun StatsScreen(
                     subtitle = "Реши хотя бы одну задачу — и здесь появятся графики и таблицы.",
                 )
             } else {
-                LazyColumn(
+                SmoothLazyColumn(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                     modifier = Modifier.fillMaxSize(),

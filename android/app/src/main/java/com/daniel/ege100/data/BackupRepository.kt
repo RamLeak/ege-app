@@ -52,12 +52,14 @@ data class BackupSnapshot(
     val aiSettings: AiSettings = AiSettings(),
 ) {
     companion object {
-        // Phase 4 Stage P4-C part Е3 (Convention #54) — v1.6.
-        // Поле userStats.trainerWordsLearned добавлено как опциональное —
-        // старые бэкапы парсятся OK (default = 0).
-        const val CURRENT_VERSION = "1.6"
+        // Phase 4 Stage P4-C3 part В2 (Convention #63) — v1.7.
+        // Добавлено поле AppSettings.swipeHintsShown (Boolean = false).
+        // Старые бэкапы v1.0-v1.6 парсятся OK (default + ignoreUnknownKeys).
+        const val CURRENT_VERSION = "1.7"
         /** Версии, которые мы можем восстановить (forward-compat). */
-        private val SUPPORTED_VERSIONS = setOf("1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6")
+        private val SUPPORTED_VERSIONS = setOf(
+            "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7",
+        )
         fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
 }

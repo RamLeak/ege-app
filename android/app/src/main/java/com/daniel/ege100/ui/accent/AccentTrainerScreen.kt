@@ -534,24 +534,21 @@ private fun TrainerBody(
                 .padding(top = 4.dp, bottom = 28.dp),
         )
 
+        // Phase 4 Stage P4-C3 part В2 (Convention #63) — единый swipe-механизм
+        // с резинкой /3 на границах + visual animatable. Старый
+        // detectHorizontalDragGestures с фиксированным threshold заменён.
+        // onSwipeStart отменяет pendingAdvanceJob чтобы auto-advance не
+        // сработал во время свайпа.
+        com.daniel.ege100.ui.common.SwipeableProblemContent(
+            hasPrev = st.position > 0,
+            hasNext = st.position < st.total - 1,
+            onPrev = { vm.goPrev() },
+            onNext = { vm.goNext() },
+            onSwipeStart = { vm.onAskAiOpened() },  // отмена auto-advance
+            modifier = Modifier.weight(1f),
+        ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .pointerInput(st.position) {
-                    var totalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { totalDrag = 0f },
-                        onDragEnd = {
-                            when {
-                                totalDrag < -swipeThresholdPx -> vm.goNext()
-                                totalDrag > swipeThresholdPx -> vm.goPrev()
-                            }
-                            totalDrag = 0f
-                        },
-                        onHorizontalDrag = { _, dx -> totalDrag += dx },
-                    )
-                },
+            modifier = Modifier.fillMaxSize(),
         ) {
             // Phase 3 part А3 — плавнее переход: spring 0.85f + StiffnessMediumLow
             // + fade 280ms. Меньше bounce, дольше движение — ощущается «как iOS».
@@ -591,6 +588,7 @@ private fun TrainerBody(
                 }
             }
         }
+        }  // end SwipeableProblemContent
 
         // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
         if (st.tap is SyllableTapState.Verdict) {

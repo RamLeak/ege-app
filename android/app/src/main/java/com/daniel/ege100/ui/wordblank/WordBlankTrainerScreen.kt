@@ -528,24 +528,17 @@ private fun Body(
                 .padding(top = 4.dp, bottom = 20.dp),
         )
 
+        // Phase 4 Stage P4-C3 part В2 (Convention #63) — SwipeableProblemContent.
+        com.daniel.ege100.ui.common.SwipeableProblemContent(
+            hasPrev = st.position > 0,
+            hasNext = st.position < st.total - 1,
+            onPrev = { vm.goPrev() },
+            onNext = { vm.goNext() },
+            onSwipeStart = { vm.onAskAiOpened() },
+            modifier = Modifier.weight(1f),
+        ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .pointerInput(st.position) {
-                    var totalDrag = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { totalDrag = 0f },
-                        onDragEnd = {
-                            when {
-                                totalDrag < -swipeThresholdPx -> vm.goNext()
-                                totalDrag > swipeThresholdPx -> vm.goPrev()
-                            }
-                            totalDrag = 0f
-                        },
-                        onHorizontalDrag = { _, dx -> totalDrag += dx },
-                    )
-                },
+            modifier = Modifier.fillMaxSize(),
         ) {
             AnimatedContent(
                 targetState = st.position,
@@ -596,6 +589,7 @@ private fun Body(
                 }
             }
         }
+        }  // end SwipeableProblemContent
 
         // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
         if (st.state is BlankInputState.Verdict) {
