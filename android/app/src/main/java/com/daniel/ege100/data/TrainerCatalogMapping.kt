@@ -5,7 +5,6 @@ import com.daniel.ege100.ui.nav.AccentCategoriesRoute
 import com.daniel.ege100.ui.nav.CollocationTrainerRoute
 import com.daniel.ege100.ui.nav.DerivativesTrainerRoute
 import com.daniel.ege100.ui.nav.GeometryTrainerRoute
-import com.daniel.ege100.ui.nav.GrammarTrainerRoute
 import com.daniel.ege100.ui.nav.LogPowerTrainerRoute
 import com.daniel.ege100.ui.nav.ParonymTrainerRoute
 import com.daniel.ege100.ui.nav.PleonasmTrainerRoute
@@ -67,13 +66,9 @@ object TrainerCatalogMapping {
             TrainerEntry("rus_collocation", "Тренажёр словосочетаний", "Найди ошибку и исправь · 269 задач",
                 "📝", Color(0x1FFF9F0A), CollocationTrainerRoute, 269),
         ),
-        Pair("rus", 8) to listOf(
-            // Phase 4 Stage P4-D5 (Convention #84) — multi-choice грамошибок перенесён
-            // сюда из №7 (на самом деле это формат задачи №8 ЕГЭ: сопоставление
-            // с типами ошибок). trainerId "rus_grammar" сохраняет прогресс.
-            TrainerEntry("rus_grammar", "Тренажёр грамошибок", "4 варианта исправления · 34 задачи",
-                "⚠", Color(0x1FFF453A), GrammarTrainerRoute, 34),
-        ),
+        // Phase 4 Stage P4-D6 (Convention #90) — №8 multi-choice тренажёр полностью
+        // удалён. Pair("rus", 8) намеренно отсутствует — в каталоге №8 показывает
+        // только секцию «📋 Задачи» без блока «🎯 Тренажёры».
         Pair("rus", 9) to listOf(
             TrainerEntry("wordblank_t9", "Тренажёр корней", "Пропущенная буква · корни",
                 "🌱", RusTint, WordBlankTrainerRoute(9), 847),

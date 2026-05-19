@@ -16,19 +16,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,13 +31,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -84,17 +72,8 @@ import com.daniel.ege100.ui.profile.ResetProgressBottomSheet
 import com.daniel.ege100.ui.profile.SettingsScreen
 import com.daniel.ege100.ui.quick.QuickTrainerScreen
 import com.daniel.ege100.ui.theme.Bg
-import com.daniel.ege100.ui.theme.LabelTertiary
-import com.daniel.ege100.ui.theme.SeparatorHairline
-import com.daniel.ege100.ui.theme.SystemBlue
 import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
 import kotlinx.coroutines.launch
-
-private data class TabSpec(
-    val route: Any,
-    val label: String,
-    val icon: String,
-)
 
 // ---- Анимации перехода ----
 // Spring slide-стек навигации iOS-style. Параллакс-эффект: уходящий экран
@@ -204,30 +183,28 @@ fun EgeApp() {
     }
 
     val tabs = listOf(
-        TabSpec(HomeStubRoute, "Главная", "🏠"),
-        TabSpec(CatalogRoute, "Решать", "📚"),
-        TabSpec(JournalStubRoute, "Журнал", "📊"),
-        TabSpec(ProfileRoute, "Профиль", "👤"),
+        LiquidGlassTab("home", "Главная", "🏠", HomeStubRoute),
+        LiquidGlassTab("catalog", "Решать", "📚", CatalogRoute),
+        LiquidGlassTab("journal", "Журнал", "📊", JournalStubRoute),
+        LiquidGlassTab("profile", "Профиль", "👤", ProfileRoute),
     )
+    val selectedKey = tabs.firstOrNull { tab -> currentDest?.matchesRoot(tab.route) == true }?.key
 
-    Scaffold(
-        containerColor = Bg,
-        bottomBar = {
-            BottomTabBar(
-                tabs = tabs,
-                currentDest = currentDest,
-                onTabClick = { route ->
-                    navController.navigate(route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    // Phase 4 Stage P4-D6 (Convention #89) — Box overlay вместо Scaffold.bottomBar.
+    // NavHost занимает весь экран, LiquidGlassBottomNav рисуется поверх в нижней
+    // части. Каждый экран получает `contentPadding` с bottom = высота nav + nav-bar
+    // inset, чтобы контент не залазил под капсулу. RenderEffect blur (Android 12+)
+    // видит размытый scroll-контент позади себя — это даёт настоящий «iOS-glass».
+    val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // 16dp вертикальный padding контейнера (8 сверху + 8 снизу) + 64dp капсула + nav bar.
+    val liquidGlassHeight = 80.dp + navBarsBottom
+    val padding = PaddingValues(bottom = liquidGlassHeight)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Bg),
+    ) {
         NavHost(
             navController = navController,
             startDestination = CatalogRoute,
@@ -573,31 +550,8 @@ fun EgeApp() {
                     }
                 }
             }
-            composable<GrammarTrainerRoute> {
-                SwipeBackContainer(onBack = { navController.popBackStack() }) {
-                    var showCongrats by remember { mutableStateOf<Int?>(null) }
-                    com.daniel.ege100.ui.trainer.GrammarErrorTrainerScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenSettings = { navController.navigate(SettingsRoute) },
-                        onCompleted = { count ->
-                            // Phase 4 Stage P4-D5 (Convention #84) — multi-choice
-                            // тренажёр теперь привязан к №8 (rus.8). trainerId
-                            // остаётся "rus_grammar" — прогресс сохраняется.
-                            scope.launch { UserStatsStore.markTrainerCompleted(context, "rus_grammar") }
-                            showCongrats = count
-                        },
-                        contentPadding = padding,
-                    )
-                    showCongrats?.let { count ->
-                        com.daniel.ege100.ui.trainer.CongratulationDialog(
-                            trainerName = "Грамошибки (№8)",
-                            wordsCount = count,
-                            onClose = { showCongrats = null; navController.popBackStack() },
-                            onAgain = { showCongrats = null },
-                        )
-                    }
-                }
-            }
+            // Phase 4 Stage P4-D6 (Convention #90) — composable<GrammarTrainerRoute>
+            // удалён вместе с UI multi-choice №8. №8 в каталоге теперь без тренажёра.
             // Phase 4 Stage P4-D5 (Convention #83) — правильный №7: словосочетания
             // с двухшаговой логикой (выбор фразы + ввод правильной формы).
             composable<CollocationTrainerRoute> {
@@ -733,6 +687,22 @@ fun EgeApp() {
                 }
             }
         }
+
+        // Phase 4 Stage P4-D6 (Convention #89) — Liquid Glass bottom nav поверх NavHost.
+        LiquidGlassBottomNav(
+            items = tabs,
+            selectedKey = selectedKey,
+            onTabClick = { tab ->
+                navController.navigate(tab.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     // Import confirmation bottom sheet.
@@ -779,89 +749,8 @@ fun EgeApp() {
     }
 }
 
-@Composable
-private fun BottomTabBar(
-    tabs: List<TabSpec>,
-    currentDest: NavDestination?,
-    onTabClick: (Any) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(SeparatorHairline),
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Bg)
-                .height(84.dp)
-                .padding(horizontal = 4.dp),
-        ) {
-            tabs.forEach { tab ->
-                val selected = currentDest?.matchesRoot(tab.route) == true
-                BottomTabItem(
-                    icon = tab.icon,
-                    label = tab.label,
-                    selected = selected,
-                    onClick = { onTabClick(tab.route) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BottomTabItem(
-    icon: String,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scaleTarget = when {
-        pressed -> 0.92f
-        selected -> 1.05f
-        else -> 1f
-    }
-    val scale by animateFloatAsState(
-        targetValue = scaleTarget,
-        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
-        label = "tab-scale",
-    )
-    val haptic = LocalHapticFeedback.current
-    val color = if (selected) SystemBlue else LabelTertiary
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .scale(scale)
-            .fillMaxSize()
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-            ) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onClick()
-            },
-    ) {
-        // 4 таба — иконки 24sp (раньше 26sp), label 11sp.
-        Text(text = icon, fontSize = 24.sp, color = color)
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = color,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-    }
-}
+// Phase 4 Stage P4-D6 (Convention #89) — старые BottomTabBar + BottomTabItem
+// удалены, заменены на LiquidGlassBottomNav (см. ui/nav/LiquidGlassBottomNav.kt).
 
 private fun NavDestination.matchesRoot(root: Any): Boolean {
     if (hasRoute(root::class)) return true

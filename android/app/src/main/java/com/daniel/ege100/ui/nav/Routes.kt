@@ -151,7 +151,9 @@ data class QuickTrainerRoute(
 }
 
 /**
- * Phase 4 Stage P4-D (Convention #71) — 3 новых русских тренажёра.
+ * Phase 4 Stage P4-D (Convention #71) — русские тренажёры.
+ * Phase 4 Stage P4-D6 (Convention #90) — `GrammarTrainerRoute` (multi-choice №8)
+ * полностью удалён вместе с UI, Repository и JSON.
  */
 @Serializable
 object ParonymTrainerRoute
@@ -159,13 +161,9 @@ object ParonymTrainerRoute
 @Serializable
 object PleonasmTrainerRoute
 
-@Serializable
-object GrammarTrainerRoute
-
 /**
- * Phase 4 Stage P4-D5 (Convention #83) — правильный №7: словосочетания
+ * Phase 4 Stage P4-D5 (Convention #83) — №7: словосочетания
  * с двухшаговой логикой (тап на ошибочную фразу + ввод исправления).
- * GrammarTrainerRoute теперь привязан к №8 (TrainerCatalogMapping #84).
  */
 @Serializable
 object CollocationTrainerRoute

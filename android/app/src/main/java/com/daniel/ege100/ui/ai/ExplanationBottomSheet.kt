@@ -1,6 +1,8 @@
 package com.daniel.ege100.ui.ai
 
 import android.app.Application
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,12 +10,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,7 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -46,17 +58,14 @@ import com.daniel.ege100.data.EgeDatabase
 import com.daniel.ege100.data.SecureKeyStore
 import com.daniel.ege100.data.UserDataDatabase
 import com.daniel.ege100.ui.common.PrimaryButton
-import com.daniel.ege100.ui.common.SecondaryButton
 import com.daniel.ege100.ui.common.SimpleMarkdownRenderer
 import com.daniel.ege100.ui.theme.BgElevated
 import com.daniel.ege100.ui.theme.BgElevated2
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.LabelSecondary
 import com.daniel.ege100.ui.theme.LabelTertiary
-import com.daniel.ege100.ui.theme.Separator
 import com.daniel.ege100.ui.theme.SystemBlue
-import com.daniel.ege100.ui.theme.SystemBlueTint
-import com.daniel.ege100.ui.theme.SystemGreen
+import com.daniel.ege100.ui.theme.SystemOrange
 import com.daniel.ege100.ui.theme.SystemRed
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,26 +75,31 @@ import org.json.JSONObject
 import java.security.MessageDigest
 
 /**
- * Phase 4 Stage P4-D (Convention #71) — единый bottom sheet с 4 табами
- * (Почему / Правило / Примеры / Запомнить).
+ * Phase 4 Stage P4-D (Convention #71) → P4-D6 redesign (Convention #88).
  *
- * Алгоритм load():
- *   1. Pre-gen из corpus.db (TrainerExplanationDao.get).
- *      Source = "pre_gen" → badge «Pre-generated».
- *   2. Online cache (тот же AI-кеш, что у AskAi).
+ * Структура:
+ *   - Кастомный drag handle сверху (тёмная iOS-капсула 40×4dp).
+ *   - Шапка: 📖 + слово (headline) + inline SourceBadge («✨ Opus 4.7») | ✕.
+ *   - Pill-style TabRow с `animateColorAsState` для smooth подсветки активного.
+ *   - Контент: `heightIn(min=140.dp, max=400.dp)` + verticalScroll.
+ *   - `windowInsetsPadding(WindowInsets.navigationBars)` гарантирует что нижняя
+ *     часть не залазит под navigation bar системы.
+ *   - НЕТ нижней кнопки «Закрыть» — закрытие через handle / крестик / тап вне.
+ *
+ * Алгоритм load() остался прежним (P4-D5 + #87):
+ *   1. Pre-gen из corpus.db (`TrainerExplanationDao.get(word, kind)`).
+ *      Source = "pre_gen" → badge «✨ Opus 4.7».
+ *   2. Online cache в user_data.db по sha256(provider|model|EXPL|word|kind|ctx).
  *      Source = "online_cached".
- *   3. Online AI запрос — JSON с 4 полями. При успехе кешируется.
- *      Source = "online_ai".
- *   4. Если нет API ключа или AI выключен — error message с CTA на Настройки.
- *
- * Используется в 8 новых тренажёрах (3 рус + 5 матем) Phase 4 Stage P4-D.
- * AskAiBottomSheet (Convention #38) остаётся для свободных вопросов в задачах.
+ *   3. Online AI запрос с JSON-промптом → парсинг → кеширование. При неудаче
+ *      JSON-парсинга весь текст кладётся в `explanation` (source = "online_ai_raw").
+ *   4. Если нет API ключа — error message с CTA на Настройки.
  */
-enum class ExplanationTab(val title: String) {
-    WHY("Почему"),
-    RULE("Правило"),
-    EXAMPLES("Примеры"),
-    MNEMONIC("Запомнить"),
+enum class ExplanationTab(val shortTitle: String, val fullTitle: String) {
+    WHY("Почему", "Почему именно так"),
+    RULE("Правило", "Правило ЕГЭ"),
+    EXAMPLES("Примеры", "Похожие примеры"),
+    MNEMONIC("Запомнить", "Запоминалка"),
 }
 
 data class ExplanationUi(
@@ -125,8 +139,7 @@ class ExplanationViewModel(app: Application) : AndroidViewModel(app) {
             "Explanation.load: word='${word.take(40)}', kind=$kind",
         )
 
-        // Phase 4 Stage P4-D5 fix (Convention #86) — диагностика. Видна через
-        // `adb logcat -s Explanation:D` или CrashRecoveryDialog → Поделиться.
+        // Phase 4 Stage P4-D5 (Convention #86) — диагностика.
         val countAll = runCatching { explanationDao.countAll() }.getOrNull() ?: -1
         val countKind = runCatching { explanationDao.countByKind(kind) }.getOrNull() ?: -1
         android.util.Log.d(
@@ -178,7 +191,7 @@ class ExplanationViewModel(app: Application) : AndroidViewModel(app) {
         """.trimIndent()
         val combinedContext = "Слово/выражение: $word. Тип тренажёра: $kind."
 
-        // Cache lookup (тот же sha256 механизм что в AskAi)
+        // Cache lookup
         val cacheKey = sha256("${settings.activeProvider.name}|$modelId|EXPL|$word|$kind|${fallbackContext.trim()}")
         val cached = runCatching { aiCacheDao.get(cacheKey) }.getOrNull()
         if (cached != null) {
@@ -236,7 +249,6 @@ class ExplanationViewModel(app: Application) : AndroidViewModel(app) {
                 source = source,
             )
         } else {
-            // Не JSON — кладём весь текст в explanation, остальное пусто.
             ExplanationUi(
                 isLoading = false,
                 explanation = text,
@@ -262,7 +274,7 @@ fun ExplanationBottomSheet(
     onOpenSettings: () -> Unit,
     vm: ExplanationViewModel = viewModel(),
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val st by vm.state.collectAsState()
     var activeTab by remember { mutableStateOf(ExplanationTab.WHY) }
 
@@ -273,169 +285,297 @@ fun ExplanationBottomSheet(
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         containerColor = BgElevated,
-        modifier = Modifier.fillMaxHeight(0.92f),
-        dragHandle = null,
+        dragHandle = { CapsuleDragHandle() },
+        // Параметр `windowInsets` в нашей версии Material3 (Compose BOM
+        // 2024.12.01) не выставляется здесь. Управляем insets через
+        // `windowInsetsPadding(WindowInsets.navigationBars)` на Column.
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars),
         ) {
-            // Шапка
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📖", fontSize = 28.sp)
-                Spacer(Modifier.size(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = word.ifBlank { "Объяснение" },
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Label,
-                    )
-                    Text(
-                        text = sourceLabel(st.source),
-                        fontSize = 12.sp,
-                        color = LabelSecondary,
-                    )
-                }
-                if (st.source == "pre_gen") {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(SystemBlueTint)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                    ) {
-                        Text("Opus 4.7", fontSize = 10.sp, color = SystemBlue, fontWeight = FontWeight.Medium)
-                    }
-                }
-            }
+            // Header: 📖 + word + inline badge | ✕
+            SheetHeader(
+                word = word,
+                source = st.source,
+                onClose = onDismiss,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            // Pill-style tabs
+            PillTabRow(
+                tabs = ExplanationTab.entries,
+                activeTab = activeTab,
+                onSelect = { activeTab = it },
+            )
             Spacer(Modifier.height(16.dp))
 
-            // Tabs
-            Row(
+            // Content area с адаптивной высотой
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(BgElevated2)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    .heightIn(min = 140.dp, max = 400.dp)
+                    .verticalScroll(rememberScrollState()),
             ) {
-                ExplanationTab.entries.forEach { tab ->
-                    TabChip(
-                        title = tab.title,
-                        active = activeTab == tab,
-                        onClick = { activeTab = tab },
-                        modifier = Modifier.weight(1f),
+                when {
+                    st.isLoading -> LoadingState()
+                    st.error != null -> ErrorState(
+                        error = st.error!!,
+                        showSettingsCta = st.errorIsAuth,
+                        onOpenSettings = {
+                            onOpenSettings()
+                        },
                     )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-
-            // Content
-            when {
-                st.isLoading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = SystemBlue)
-                            Spacer(Modifier.height(12.dp))
-                            Text("Загружаем объяснение…", color = LabelSecondary, fontSize = 13.sp)
+                    else -> {
+                        val content = when (activeTab) {
+                            ExplanationTab.WHY -> st.explanation
+                            ExplanationTab.RULE -> st.rule
+                            ExplanationTab.EXAMPLES -> st.examples
+                            ExplanationTab.MNEMONIC -> st.mnemonic
                         }
-                    }
-                }
-                st.error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                    ) {
-                        Text("⚠️ ${st.error}", color = SystemRed, fontSize = 15.sp)
-                        if (st.errorIsAuth) {
-                            Spacer(Modifier.height(16.dp))
-                            PrimaryButton(
-                                text = "Открыть Настройки → AI",
-                                onClick = onOpenSettings,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        SecondaryButton(
-                            text = "Закрыть",
-                            onClick = onDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                else -> {
-                    val content = when (activeTab) {
-                        ExplanationTab.WHY -> st.explanation
-                        ExplanationTab.RULE -> st.rule
-                        ExplanationTab.EXAMPLES -> st.examples
-                        ExplanationTab.MNEMONIC -> st.mnemonic
-                    }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(360.dp)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
                         if (content.isBlank()) {
-                            Text(
-                                text = "Для этого слова раздел «${activeTab.title.lowercase()}» пуст.",
-                                color = LabelTertiary,
-                                fontSize = 14.sp,
-                            )
+                            EmptyTabContent(activeTab)
                         } else {
                             SimpleMarkdownRenderer(markdown = content)
                         }
                     }
-                    Spacer(Modifier.height(16.dp))
-                    SecondaryButton(
-                        text = "Закрыть",
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
-private fun sourceLabel(source: String): String = when (source) {
-    "pre_gen" -> "Pre-generated (Opus 4.7)"
-    "online_ai" -> "Онлайн (AI)"
-    "online_cached" -> "Из кеша AI"
-    "online_ai_raw" -> "Онлайн (AI, без структуры)"
-    "online_cached_raw" -> "Из кеша (без структуры)"
-    "" -> "Загружаем…"
-    else -> source
+@Composable
+private fun CapsuleDragHandle() {
+    // Кастомный drag handle — iOS-style капсула 40×4dp с верхним padding.
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(LabelTertiary.copy(alpha = 0.55f)),
+        )
+    }
 }
 
 @Composable
-private fun TabChip(
-    title: String,
-    active: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun SheetHeader(
+    word: String,
+    source: String,
+    onClose: () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (active) BgElevated else BgElevated2)
-            .clickable(onClick = onClick)
-            .padding(vertical = 9.dp),
-        contentAlignment = Alignment.Center,
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = title,
-            color = if (active) Label else LabelSecondary,
-            fontSize = 13.sp,
-            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+            text = "📖",
+            fontSize = 30.sp,
+            modifier = Modifier.padding(end = 12.dp),
         )
+        Column(modifier = Modifier
+            .padding(end = 8.dp)
+            .weight(1f, fill = true),
+        ) {
+            Text(
+                text = word.ifBlank { "Объяснение" },
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Label,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (source.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                SourceBadge(source = source)
+            }
+        }
+        // ✕ кнопка
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(BgElevated2)
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClose()
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "✕",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = LabelSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SourceBadge(source: String) {
+    val (icon, label, color) = when (source) {
+        "pre_gen" -> Triple("✨", "Opus 4.7", SystemBlue)
+        "online_cached" -> Triple("💾", "Кеш AI", SystemBlue)
+        "online_ai" -> Triple("🌐", "Онлайн AI", SystemOrange)
+        "online_ai_raw" -> Triple("🌐", "Онлайн (raw)", SystemOrange)
+        "online_cached_raw" -> Triple("💾", "Кеш (raw)", SystemBlue)
+        else -> Triple("📖", "Объяснение", LabelSecondary)
+    }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.14f))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = icon,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(end = 4.dp),
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun PillTabRow(
+    tabs: List<ExplanationTab>,
+    activeTab: ExplanationTab,
+    onSelect: (ExplanationTab) -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(BgElevated2)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        tabs.forEach { tab ->
+            val isActive = tab == activeTab
+            val bg by animateColorAsState(
+                targetValue = if (isActive) BgElevated else Color.Transparent,
+                animationSpec = tween(durationMillis = 200),
+                label = "tab_bg",
+            )
+            val fg by animateColorAsState(
+                targetValue = if (isActive) Label else LabelSecondary,
+                animationSpec = tween(durationMillis = 200),
+                label = "tab_fg",
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(bg)
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSelect(tab)
+                    }
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = tab.shortTitle,
+                    fontSize = 13.sp,
+                    color = fg,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 40.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(
+                color = SystemBlue,
+                modifier = Modifier.size(32.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Загружаем объяснение…",
+                fontSize = 13.sp,
+                color = LabelSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorState(
+    error: String,
+    showSettingsCta: Boolean,
+    onOpenSettings: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("⚠️", fontSize = 36.sp)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = error,
+            fontSize = 14.sp,
+            color = SystemRed,
+            textAlign = TextAlign.Center,
+        )
+        if (showSettingsCta) {
+            Spacer(Modifier.height(16.dp))
+            PrimaryButton(
+                text = "Открыть Настройки → AI",
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyTabContent(tab: ExplanationTab) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 40.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("📭", fontSize = 40.sp)
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Раздел «${tab.fullTitle.lowercase()}» для этого слова пуст",
+                fontSize = 13.sp,
+                color = LabelSecondary,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }

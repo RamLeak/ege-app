@@ -87,9 +87,11 @@ object UserStatsStore {
         "accent_all_alphabetical", "accent_all_random",
         "wordblank_t9", "wordblank_t10", "wordblank_t11", "wordblank_t12",
         "paronym", "pleonasm",
-        // Phase 4 Stage P4-D5 (Conventions #83, #84): rus.7 = словосочетания
-        // (новый), rus.8 = multi-choice грамошибок (бывший rus.7).
-        "rus_collocation", "rus_grammar",
+        // Phase 4 Stage P4-D5 (Convention #83): rus.7 = словосочетания.
+        // Phase 4 Stage P4-D6 (Convention #90): "rus_grammar" удалён (тренажёр №8
+        // полностью удалён). Если в Set<String> trainers_completed у пользователя
+        // осталась запись — она просто игнорируется (UI её нигде не покажет).
+        "rus_collocation",
         "math_trig", "math_shortmult", "math_logpower",
         "math_derivatives", "math_geometry",
     )

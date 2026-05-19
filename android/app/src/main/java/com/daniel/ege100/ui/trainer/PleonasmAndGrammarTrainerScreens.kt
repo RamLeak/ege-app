@@ -161,9 +161,8 @@ fun PleonasmTrainerScreen(
     }
 }
 
-// Phase 4 Stage P4-D4 (Convention #79) — GrammarErrorTrainer вынесен в отдельный
-// файл `GrammarErrorTrainerScreen.kt` с multi-choice UI (SentenceChoiceTrainer).
-// Старая tap-on-word реализация удалена.
+// Phase 4 Stage P4-D6 (Convention #90) — GrammarErrorTrainer + SentenceChoiceTrainer
+// полностью удалены. Файл оставлен для PleonasmTrainer (№6).
 
 // ============================================================================
 // Общий Scaffold для tap-based тренажёров (Pleonasm)
