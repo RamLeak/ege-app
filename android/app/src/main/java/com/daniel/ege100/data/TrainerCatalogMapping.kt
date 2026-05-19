@@ -2,6 +2,7 @@ package com.daniel.ege100.data
 
 import androidx.compose.ui.graphics.Color
 import com.daniel.ege100.ui.nav.AccentCategoriesRoute
+import com.daniel.ege100.ui.nav.CollocationTrainerRoute
 import com.daniel.ege100.ui.nav.DerivativesTrainerRoute
 import com.daniel.ege100.ui.nav.GeometryTrainerRoute
 import com.daniel.ege100.ui.nav.GrammarTrainerRoute
@@ -61,7 +62,16 @@ object TrainerCatalogMapping {
                 "✂", RusTint, PleonasmTrainerRoute, 96),
         ),
         Pair("rus", 7) to listOf(
-            TrainerEntry("grammar", "Тренажёр грамошибок", "4 варианта исправления · 34 задачи",
+            // Phase 4 Stage P4-D5 (Conventions #83, #84) — настоящий №7: словосочетания
+            // с двухшаговой логикой (выбор + ввод исправления). 269 задач.
+            TrainerEntry("rus_collocation", "Тренажёр словосочетаний", "Найди ошибку и исправь · 269 задач",
+                "📝", Color(0x1FFF9F0A), CollocationTrainerRoute, 269),
+        ),
+        Pair("rus", 8) to listOf(
+            // Phase 4 Stage P4-D5 (Convention #84) — multi-choice грамошибок перенесён
+            // сюда из №7 (на самом деле это формат задачи №8 ЕГЭ: сопоставление
+            // с типами ошибок). trainerId "rus_grammar" сохраняет прогресс.
+            TrainerEntry("rus_grammar", "Тренажёр грамошибок", "4 варианта исправления · 34 задачи",
                 "⚠", Color(0x1FFF453A), GrammarTrainerRoute, 34),
         ),
         Pair("rus", 9) to listOf(

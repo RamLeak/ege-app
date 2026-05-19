@@ -103,3 +103,44 @@ object GrammarErrorsRepository {
         }
     }
 }
+
+/**
+ * Phase 4 Stage P4-D5 (Convention #83) — тренажёр словосочетаний для №7 ЕГЭ.
+ *
+ * Двухшаговая логика: пользователь сначала выбирает ошибочное словосочетание
+ * из 5, затем вводит правильную форму в OutlinedTextField. Принимаются все
+ * варианты из `correctAnswers` (Convention #85 — tolerant input checking).
+ *
+ * Источник — `parser/scrapers/extract_collocations.py` из corpus.db (задачи №7
+ * русского). 269 валидных задач (минимум 30 по spec'у).
+ */
+@kotlinx.serialization.Serializable
+data class CollocationItem(
+    val id: String = "",
+    val problem_id: Long? = null,
+    val items: List<String> = emptyList(),
+    val wrong_index: Int = 0,
+    val wrong_word_in_phrase: String = "",
+    val correct_answers: List<String> = emptyList(),
+)
+
+object CollocationsRepository {
+    private const val ASSET = "word_collocations.json"
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Volatile private var cached: List<CollocationItem>? = null
+
+    suspend fun load(context: Context): List<CollocationItem> = withContext(Dispatchers.IO) {
+        cached?.let { return@withContext it }
+        synchronized(this) {
+            cached?.let { return@withContext it }
+            val text = context.assets.open(ASSET).use { it.bufferedReader(Charsets.UTF_8).readText() }
+            val parsed = json.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(CollocationItem.serializer()),
+                text,
+            )
+            cached = parsed
+            parsed
+        }
+    }
+}

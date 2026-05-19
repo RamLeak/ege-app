@@ -452,51 +452,38 @@ fun WordBlankTrainerScreen(
         if (showAi) vm.onAskAiOpened()
     }
 
-    // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре пропусков.
+    // Phase 4 Stage P4-D5 fix (Convention #86) — ExplanationBottomSheet с pre-gen
+    // lookup по (word=word.full, kind="word_blank"). word.full в JSON хранится в
+    // lowercase без выделений, точно как в БД (75 t9 слов).
     if (showAi) {
         val word = st.currentWord
         val verdict = st.state as? BlankInputState.Verdict
         if (word != null && verdict != null) {
-            val context = buildString {
+            val fallbackContext = buildString {
                 append("Слово с пропуском: ${word.masked.replace("..", "_")}. ")
                 append("Полное слово: ${word.full}. ")
                 append("Правильная буква: «${verdict.correctAnswer}». ")
                 if (!verdict.isRight) {
-                    append("Пользователь ввёл: «${verdict.userAnswer}».")
+                    append("Пользователь ввёл: «${verdict.userAnswer}». ")
                 } else {
-                    append("Пользователь ответил правильно.")
+                    append("Пользователь ответил правильно. ")
                 }
+                append("Объясни какое орфографическое правило применяется, дай 3-5 похожих ")
+                append("слов и мнемонику для запоминания.")
             }
-            com.daniel.ege100.ui.ai.AskAiBottomSheet(
-                problemContext = context,
-                userAnswerForHint = if (!verdict.isRight) verdict.userAnswer else null,
+            com.daniel.ege100.ui.ai.ExplanationBottomSheet(
+                word = word.full,
+                kind = "word_blank",
+                fallbackContext = fallbackContext,
                 onDismiss = {
                     showAi = false
-                    // Phase 4 Stage P4-C2 part А (Convention #56) — resume.
+                    // Convention #56 — resume.
                     vm.onAskAiClosed(verdict.isRight)
                 },
                 onOpenSettings = {
                     showAi = false
                     onOpenAiSettings()
                 },
-                customQuickQuestions = listOf(
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Почему эта буква?",
-                        "Почему в слове «${word.full}» пишется именно «${verdict.correctAnswer}»?",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Какое правило?",
-                        "Какое орфографическое правило применимо к слову «${word.full}»?",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Похожие слова",
-                        "Приведи 3-5 похожих слов, где работает то же правило, чтобы я запомнил шаблон.",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Запомнить",
-                        "Подскажи мнемоническое правило или образ, чтобы запомнить написание слова «${word.full}».",
-                    ),
-                ),
             )
         }
     }
@@ -595,10 +582,12 @@ private fun Body(
         }
         }  // end SwipeableProblemContent
 
-        // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
+        // Phase 4 Stage P4-D5 fix (Convention #86) — переход на ExplanationBottomSheet.
+        // Pre-gen в trainer_explanations есть для t9 (75 слов, kind="word_blank").
+        // Для t10/t11/t12 pre-gen нет — fallback на онлайн AI.
         if (st.state is BlankInputState.Verdict) {
             com.daniel.ege100.ui.common.SecondaryButton(
-                text = "🤖 Спросить ИИ",
+                text = "📖 Объяснение",
                 onClick = onAiClick,
                 modifier = Modifier
                     .fillMaxWidth()

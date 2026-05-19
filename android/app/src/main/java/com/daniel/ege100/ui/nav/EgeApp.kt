@@ -580,14 +580,41 @@ fun EgeApp() {
                         onBack = { navController.popBackStack() },
                         onOpenSettings = { navController.navigate(SettingsRoute) },
                         onCompleted = { count ->
-                            scope.launch { UserStatsStore.markTrainerCompleted(context, "grammar") }
+                            // Phase 4 Stage P4-D5 (Convention #84) — multi-choice
+                            // тренажёр теперь привязан к №8 (rus.8). trainerId
+                            // остаётся "rus_grammar" — прогресс сохраняется.
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "rus_grammar") }
                             showCongrats = count
                         },
                         contentPadding = padding,
                     )
                     showCongrats?.let { count ->
                         com.daniel.ege100.ui.trainer.CongratulationDialog(
-                            trainerName = "Грамошибки (№7)",
+                            trainerName = "Грамошибки (№8)",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            // Phase 4 Stage P4-D5 (Convention #83) — правильный №7: словосочетания
+            // с двухшаговой логикой (выбор фразы + ввод правильной формы).
+            composable<CollocationTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.WordCollocationTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "rus_collocation") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Словосочетания (№7)",
                             wordsCount = count,
                             onClose = { showCongrats = null; navController.popBackStack() },
                             onAgain = { showCongrats = null },

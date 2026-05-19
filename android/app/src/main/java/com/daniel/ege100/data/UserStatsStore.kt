@@ -86,7 +86,10 @@ object UserStatsStore {
         "accent_participles", "accent_gerunds", "accent_adverbs",
         "accent_all_alphabetical", "accent_all_random",
         "wordblank_t9", "wordblank_t10", "wordblank_t11", "wordblank_t12",
-        "paronym", "pleonasm", "grammar",
+        "paronym", "pleonasm",
+        // Phase 4 Stage P4-D5 (Conventions #83, #84): rus.7 = словосочетания
+        // (новый), rus.8 = multi-choice грамошибок (бывший rus.7).
+        "rus_collocation", "rus_grammar",
         "math_trig", "math_shortmult", "math_logpower",
         "math_derivatives", "math_geometry",
     )

@@ -163,6 +163,14 @@ object PleonasmTrainerRoute
 object GrammarTrainerRoute
 
 /**
+ * Phase 4 Stage P4-D5 (Convention #83) — правильный №7: словосочетания
+ * с двухшаговой логикой (тап на ошибочную фразу + ввод исправления).
+ * GrammarTrainerRoute теперь привязан к №8 (TrainerCatalogMapping #84).
+ */
+@Serializable
+object CollocationTrainerRoute
+
+/**
  * Phase 4 Stage P4-D (Convention #74) — 5 новых математических тренажёров.
  */
 @Serializable

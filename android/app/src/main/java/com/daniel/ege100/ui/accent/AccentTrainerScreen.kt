@@ -453,7 +453,11 @@ fun AccentTrainerScreen(
         if (showAi) vm.onAskAiOpened()
     }
 
-    // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре ударений.
+    // Phase 4 Stage P4-D5 fix (Convention #86) — ExplanationBottomSheet вместо
+    // AskAiBottomSheet. Делает pre-gen lookup в trainer_explanations по
+    // (word=word.word, kind="accent"), затем 4-табный UI (Почему/Правило/
+    // Примеры/Запомнить). word.word в JSON хранится в lowercase без ударений
+    // (`"аэропорты"`/`"банты"`), точно как в БД — mismatch ключей невозможен.
     if (showAi) {
         val word = st.currentWord
         val verdict = st.tap as? SyllableTapState.Verdict
@@ -462,48 +466,30 @@ fun AccentTrainerScreen(
             val correctSyllable = syllables.getOrNull(verdict.correctSyllable)?.text.orEmpty()
             val selectedSyllable = syllables.getOrNull(verdict.selectedSyllable)?.text.orEmpty()
             val highlighted = highlightedWord(word.word, word.stressed_index)
-            val context = buildString {
+            val fallbackContext = buildString {
                 append("Слово: ${word.word}. ")
-                append("Правильное ударение на слог «$correctSyllable» (${highlighted}). ")
+                append("Правильное ударение на слог «$correctSyllable» ($highlighted). ")
                 if (!verdict.isRight) {
-                    append("Пользователь ошибочно поставил ударение на слог «$selectedSyllable».")
+                    append("Пользователь ошибочно поставил ударение на слог «$selectedSyllable». ")
                 } else {
-                    append("Пользователь ответил правильно.")
+                    append("Пользователь ответил правильно. ")
                 }
+                append("Объясни почему ударение именно здесь, какое правило, дай 3-5 похожих ")
+                append("слов с тем же типом ударения и мнемонику для запоминания.")
             }
-            com.daniel.ege100.ui.ai.AskAiBottomSheet(
-                problemContext = context,
-                userAnswerForHint = if (!verdict.isRight) selectedSyllable else null,
+            com.daniel.ege100.ui.ai.ExplanationBottomSheet(
+                word = word.word,
+                kind = "accent",
+                fallbackContext = fallbackContext,
                 onDismiss = {
                     showAi = false
-                    // Phase 4 Stage P4-C2 part А (Convention #56) — после
-                    // закрытия AI возобновляем auto-advance через 500мс,
-                    // но только если ответ был верным (иначе пусть юзер
-                    // сам свайпнёт).
+                    // Convention #56 — resume auto-advance через 500мс если answer был верным.
                     vm.onAskAiClosed(verdict.isRight)
                 },
                 onOpenSettings = {
                     showAi = false
                     onOpenAiSettings()
                 },
-                customQuickQuestions = listOf(
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Почему этот слог?",
-                        "Почему ударение в слове «${word.word}» падает именно на слог «$correctSyllable»?",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Какое правило?",
-                        "Какое правило русского языка отвечает за ударение в слове «${word.word}»?",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Похожие слова",
-                        "Приведи 3-5 похожих слов с таким же типом ударения, чтобы запомнить шаблон.",
-                    ),
-                    com.daniel.ege100.ui.ai.QuickQuestion(
-                        "Запомнить",
-                        "Подскажи мнемоническое правило или образ, чтобы запомнить ударение в слове «${word.word}».",
-                    ),
-                ),
             )
         }
     }
@@ -594,10 +580,13 @@ private fun TrainerBody(
         }
         }  // end SwipeableProblemContent
 
-        // Phase 4 Stage P4-C part Д (Convention #53) — AI-кнопка после verdict.
+        // Phase 4 Stage P4-D5 fix (Convention #86) — переход с AskAiBottomSheet
+        // на ExplanationBottomSheet. Кнопка «📖 Объяснение» делает pre-gen lookup
+        // в trainer_explanations (229 accent слов в БД, kind="accent") → если нет,
+        // fallback на онлайн AI с структурированными 4 табами.
         if (st.tap is SyllableTapState.Verdict) {
             com.daniel.ege100.ui.common.SecondaryButton(
-                text = "🤖 Спросить ИИ",
+                text = "📖 Объяснение",
                 onClick = onAiClick,
                 modifier = Modifier
                     .fillMaxWidth()

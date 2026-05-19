@@ -125,8 +125,22 @@ class ExplanationViewModel(app: Application) : AndroidViewModel(app) {
             "Explanation.load: word='${word.take(40)}', kind=$kind",
         )
 
+        // Phase 4 Stage P4-D5 fix (Convention #86) — диагностика. Видна через
+        // `adb logcat -s Explanation:D` или CrashRecoveryDialog → Поделиться.
+        val countAll = runCatching { explanationDao.countAll() }.getOrNull() ?: -1
+        val countKind = runCatching { explanationDao.countByKind(kind) }.getOrNull() ?: -1
+        android.util.Log.d(
+            "Explanation",
+            "Looking up word='$word' kind='$kind' (db total=$countAll, db kind=$countKind)",
+        )
+
         // 1. Pre-gen lookup
         val preGen = runCatching { explanationDao.get(word, kind) }.getOrNull()
+        android.util.Log.d(
+            "Explanation",
+            "Pre-gen lookup result: " +
+                if (preGen == null) "NULL" else "found word='${preGen.word}' subtype='${preGen.subtype}' explanation_len=${preGen.explanation?.length ?: 0}",
+        )
         if (preGen != null && !preGen.explanation.isNullOrBlank()) {
             _state.value = ExplanationUi(
                 isLoading = false,

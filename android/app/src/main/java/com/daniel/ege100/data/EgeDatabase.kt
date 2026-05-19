@@ -33,7 +33,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SolutionEntity::class,
         TrainerExplanationEntity::class,
     ],
-    version = 3,
+    // Phase 4 Stage P4-D5 fix (Convention #86) — бамп с 3 до 4 БЕЗ migration,
+    // чтобы fallbackToDestructiveMigration перетащил свежий corpus.db из asset'а
+    // (с 304 pre-gen объяснениями). Без бампа Room на устройстве с уже-стоявшим
+    // P4-D держит локальную копию старого asset'а (где было только 30 объяснений)
+    // и не подхватывает обновлённые 304.
+    version = 4,
     exportSchema = true,
 )
 abstract class EgeDatabase : RoomDatabase() {
