@@ -32,6 +32,8 @@ android/app/build/
 android/local.properties
 android/.cxx/
 android/.kotlin/
+# Локальные build-helpers для Claude Code (вызов gradle через Bash tool) — не в репо.
+android/_build_*.bat
 *.apk
 *.aab
 *.keystore

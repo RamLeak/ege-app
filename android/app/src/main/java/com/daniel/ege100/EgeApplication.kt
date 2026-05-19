@@ -11,6 +11,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.daniel.ege100.data.BreadcrumbLog
 import com.daniel.ege100.data.CrashLog
+import com.daniel.ege100.data.SafeMode
 import com.daniel.ege100.notifications.DailyReminderWorker
 import com.daniel.ege100.notifications.MockExamReminderWorker
 import com.daniel.ege100.notifications.NotificationHelper
@@ -69,8 +70,11 @@ class EgeApplication : Application(), ImageLoaderFactory {
                 exception,
             )
             // Не должны рекурсивно крашиться — все ошибки внутри
-            // writeCrashReport проглочены через runCatching.
+            // writeCrashReport / SafeMode.recordCrash проглочены через runCatching.
             CrashLog.writeCrashReport(this, thread, exception)
+            // Phase 4 Stage P4-D3 (Convention #69) — учёт крашей за 30-сек окно.
+            // При 3+ крашах за окно — следующий старт пойдёт в SafeMode UI.
+            SafeMode.recordCrash(this)
             defaultHandler?.uncaughtException(thread, exception)
         }
     }

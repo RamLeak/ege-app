@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import com.daniel.ege100.ui.common.SmoothLazyColumn
@@ -511,12 +512,19 @@ private fun ProblemBody(
                         placeholder = "Твой ответ",
                     )
                     // Phase 4 Stage P4-C part А5 — подсказка для multi-answer.
+                    // Phase 4 Stage P4-D3 (Convention #69) — было
+                    // `Modifier.padding(top = (-8).dp)` → Compose стал бросать
+                    // `IllegalArgumentException: Padding must be non-negative`
+                    // (поймано через CrashRecoveryDialog 2026-05-19).
+                    // Семантически правильно — `offset`, он допускает
+                    // отрицательные значения и используется именно для
+                    // «визуального подтягивания» без изменения layout-границ.
                     if (hasMultiple) {
                         Text(
                             text = "💡 Можно ввести любой из правильных вариантов",
                             fontSize = 12.sp,
                             color = LabelSecondary,
-                            modifier = Modifier.padding(top = (-8).dp),
+                            modifier = Modifier.offset(y = (-8).dp),
                         )
                     }
                     // Phase 4 Stage P4-C part Г2 (Convention #52) — при CORRECT
