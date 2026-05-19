@@ -28,11 +28,26 @@ data class PleonasmItem(
 )
 
 @Serializable
+data class GrammarOption(
+    val text: String,
+    val is_correct: Boolean,
+)
+
+/**
+ * Phase 4 Stage P4-D4 (Convention #79) — формат multi-choice.
+ *
+ * Старый формат P4-D (`sentence` + `error_word` + `correct_form`) был тап-на-слово
+ * в составной фразе с 5 пунктами через ` · ` — неудобно на устройстве. Новый
+ * формат: одно `wrong_sentence` с CAPS-маркером + 4 `options` (1 правильный +
+ * 3 правдоподобных дистрактора). `error_type` показывается в заголовке.
+ */
+@Serializable
 data class GrammarErrorItem(
+    val id: String = "",
     val problem_id: Long? = null,
-    val sentence: String,
-    val error_word: String,
-    val correct_form: String,
+    val error_type: String = "",
+    val wrong_sentence: String = "",
+    val options: List<GrammarOption> = emptyList(),
 )
 
 object ParonymsRepository {

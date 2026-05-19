@@ -44,8 +44,6 @@ fun HomeScreen(
     onStartMockMath: () -> Unit,
     onStartMockRus: () -> Unit,
     onFipiVariants: () -> Unit,
-    onAllTrainers: () -> Unit = {},
-    onRandomTrainer: () -> Unit = {},
     vm: HomeViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
@@ -141,14 +139,13 @@ fun HomeScreen(
                             onClick = onMockExamCalendar,
                         )
                     }
-                    // Phase 4 Stage B3 + P4-D — QuickActions: пробники + тренажёры.
+                    // Phase 4 Stage B3 — QuickActions: пробники + ФИПИ. Тренажёрные
+                    // кнопки убраны в P4-D4 (Convention #81), тренажёры через каталог.
                     item("quick_actions") {
                         QuickActionsCard(
                             onStartMockMath = onStartMockMath,
                             onStartMockRus = onStartMockRus,
                             onFipiVariants = onFipiVariants,
-                            onRandomTrainer = onRandomTrainer,
-                            onAllTrainers = onAllTrainers,
                         )
                     }
                 }

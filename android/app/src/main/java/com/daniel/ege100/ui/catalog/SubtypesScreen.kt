@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,6 +36,8 @@ import com.daniel.ege100.data.ProblemTypeEntity
 import com.daniel.ege100.data.ProgressRepository
 import com.daniel.ege100.data.SubjectEntity
 import com.daniel.ege100.data.SubtypeWithCount
+import com.daniel.ege100.data.TrainerCatalogMapping
+import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleListRow
 import com.daniel.ege100.ui.common.AppleProgressBar
@@ -127,8 +130,7 @@ fun SubtypesScreen(
     onBack: () -> Unit,
     onTrainerClick: (typeId: Long) -> Unit,
     onSubtypeClick: (subtypeId: Long, typeId: Long) -> Unit,
-    onAccentTrainerClick: () -> Unit,
-    onWordBlankTrainerClick: (typeNumber: Int) -> Unit,
+    onAttachedTrainerClick: (route: Any) -> Unit,
     contentPadding: PaddingValues,
     vm: SubtypesViewModel = viewModel(),
 ) {
@@ -137,6 +139,10 @@ fun SubtypesScreen(
     val st by vm.state.collectAsState()
     val title = st.type?.let { "№${it.number}" } ?: "Подвиды"
     val subtitle = st.type?.title
+    // Phase 4 Stage P4-D4 (Convention #80) — completedTrainers для ✓-метки.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val completedTrainers by remember(context) { UserStatsStore.trainersCompletedFlow(context) }
+        .collectAsState(initial = emptySet())
 
     Scaffold(
         topBar = {
@@ -162,36 +168,30 @@ fun SubtypesScreen(
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else {
-                val isRus = st.subject?.slug == "rus"
+                val subjectSlug = st.subject?.slug ?: ""
                 val typeNumber = st.type?.number ?: 0
-                val isAccentTrainerHost = isRus && typeNumber == 4
-                val wordBlankType: Int? = if (isRus && typeNumber in listOf(9, 10, 11, 12)) typeNumber else null
+                // Phase 4 Stage P4-D4 (Convention #80) — реестр привязок тренажёров.
+                val attachedTrainers = TrainerCatalogMapping.getForType(subjectSlug, typeNumber)
 
                 SmoothLazyColumn(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (isAccentTrainerHost) {
-                        item("accent_trainer") {
-                            AppleListRow(
-                                title = "Тренажёр ударений",
-                                subtitle = "Словник ФИПИ · 230 слов",
-                                leadingEmoji = "🔤",
-                                leadingTint = Color(0x1F0A84FF),
-                                onClick = onAccentTrainerClick,
+                    if (attachedTrainers.isNotEmpty()) {
+                        item("trainers_heading") {
+                            SectionHeading(text = "🎯 Тренажёры")
+                        }
+                        items(attachedTrainers, key = { "trainer_${it.id}" }) { entry ->
+                            AttachedTrainerCard(
+                                entry = entry,
+                                isCompleted = completedTrainers.contains(entry.id),
+                                onClick = { onAttachedTrainerClick(entry.route) },
                             )
                         }
-                    }
-                    if (wordBlankType != null) {
-                        item("word_blank_trainer") {
-                            AppleListRow(
-                                title = wordBlankTrainerTitle(wordBlankType),
-                                subtitle = "Ввод буквы · тренажёр",
-                                leadingEmoji = wordBlankTrainerIcon(wordBlankType),
-                                leadingTint = wordBlankTrainerTint(wordBlankType),
-                                onClick = { onWordBlankTrainerClick(wordBlankType) },
-                            )
+                        item("problems_heading") {
+                            Spacer(Modifier.height(4.dp))
+                            SectionHeading(text = "📋 Задачи")
                         }
                     }
                     item("trainer") {
@@ -214,6 +214,37 @@ fun SubtypesScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SectionHeading(text: String) {
+    Text(
+        text = text,
+        color = LabelSecondary,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 2.dp),
+    )
+}
+
+/**
+ * Phase 4 Stage P4-D4 (Convention #80) — карточка тренажёра в каталоге типа.
+ * Прикрепляется через `TrainerCatalogMapping.getForType()`. При `isCompleted=true`
+ * показывает ✓-метку справа (через trainersCompletedFlow).
+ */
+@Composable
+private fun AttachedTrainerCard(
+    entry: TrainerCatalogMapping.TrainerEntry,
+    isCompleted: Boolean,
+    onClick: () -> Unit,
+) {
+    AppleListRow(
+        title = if (isCompleted) "${entry.title} ✓" else entry.title,
+        subtitle = entry.subtitle,
+        leadingEmoji = entry.emoji,
+        leadingTint = entry.tint,
+        onClick = onClick,
+    )
 }
 
 /**

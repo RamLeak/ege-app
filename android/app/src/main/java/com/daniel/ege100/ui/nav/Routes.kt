@@ -180,9 +180,5 @@ object DerivativesTrainerRoute
 @Serializable
 object GeometryTrainerRoute
 
-/**
- * Phase 4 Stage P4-D (Convention #76) — экран «Все тренажёры» (расширенный
- * каталог из 20 пунктов с прогресс-метками completed/in-progress).
- */
-@Serializable
-object AllTrainersRoute
+// Phase 4 Stage P4-D4 (Convention #81) — AllTrainersRoute удалён. Тренажёры теперь
+// открываются исключительно через каталог (TrainerCatalogMapping → SubtypesScreen).

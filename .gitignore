@@ -36,7 +36,10 @@ android/.kotlin/
 android/_build_*.bat
 # Phase 4 Stage P4-D — временные batch-файлы для pre-gen.
 parser/_batch_*.json
+parser/_b*.json
 parser/.processing.lock
+# Phase 4 Stage P4-D4 — drafts от build_grammar_v2.py (заполняются inline).
+parser/data/grammar_errors_draft.json
 *.apk
 *.aab
 *.keystore

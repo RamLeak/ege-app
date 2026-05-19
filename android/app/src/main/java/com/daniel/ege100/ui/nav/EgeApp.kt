@@ -261,21 +261,6 @@ fun EgeApp() {
                         navController.navigate(MockExamRunnerRoute(planIndex = -1, subject = "rus", fipiVariantId = null))
                     },
                     onFipiVariants = { navController.navigate(FipiVariantsRoute) },
-                    onAllTrainers = { navController.navigate(AllTrainersRoute) },
-                    onRandomTrainer = {
-                        // Phase 4 Stage P4-D — выбираем случайный тренажёр из 8 новых
-                        // + accent + 4 wordblank. Реализация простая — random pick
-                        // и navigate на соответствующий route.
-                        val routes: List<Any> = listOf(
-                            ParonymTrainerRoute, PleonasmTrainerRoute, GrammarTrainerRoute,
-                            TrigTrainerRoute, ShortMultTrainerRoute, LogPowerTrainerRoute,
-                            DerivativesTrainerRoute, GeometryTrainerRoute,
-                            AccentCategoriesRoute,
-                            WordBlankTrainerRoute(9), WordBlankTrainerRoute(10),
-                            WordBlankTrainerRoute(11), WordBlankTrainerRoute(12),
-                        )
-                        navController.navigate(routes.random())
-                    },
                 )
             }
             composable<JournalStubRoute> {
@@ -382,9 +367,10 @@ fun EgeApp() {
                         onSubtypeClick = { sId, tId ->
                             navController.navigate(ProblemListRoute(typeId = tId, subtypeId = sId))
                         },
-                        onAccentTrainerClick = { navController.navigate(AccentCategoriesRoute) },
-                        onWordBlankTrainerClick = { typeNumber ->
-                            navController.navigate(WordBlankTrainerRoute(typeNumber))
+                        onAttachedTrainerClick = { route ->
+                            // Phase 4 Stage P4-D4 (Convention #80) — навигация на любой
+                            // тренажёр через type-safe route из TrainerCatalogMapping.
+                            navController.navigate(route)
                         },
                     )
                 }
@@ -539,29 +525,10 @@ fun EgeApp() {
                 }
             }
             // ============================================================
-            // Phase 4 Stage P4-D — 8 новых тренажёров + AllTrainers хаб.
-            // (Convention #71, #74, #76)
+            // Phase 4 Stage P4-D + P4-D4 — 8 новых тренажёров (Conventions #71, #74).
+            // AllTrainersRoute удалён в P4-D4 (Convention #81) — тренажёры только
+            // через каталог (TrainerCatalogMapping → SubtypesScreen).
             // ============================================================
-            composable<AllTrainersRoute> {
-                SwipeBackContainer(onBack = { navController.popBackStack() }) {
-                    com.daniel.ege100.ui.trainer.AllTrainersScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenParonym = { navController.navigate(ParonymTrainerRoute) },
-                        onOpenPleonasm = { navController.navigate(PleonasmTrainerRoute) },
-                        onOpenGrammar = { navController.navigate(GrammarTrainerRoute) },
-                        onOpenTrig = { navController.navigate(TrigTrainerRoute) },
-                        onOpenShortMult = { navController.navigate(ShortMultTrainerRoute) },
-                        onOpenLogPower = { navController.navigate(LogPowerTrainerRoute) },
-                        onOpenDerivatives = { navController.navigate(DerivativesTrainerRoute) },
-                        onOpenGeometry = { navController.navigate(GeometryTrainerRoute) },
-                        onOpenAccentCategories = { navController.navigate(AccentCategoriesRoute) },
-                        onOpenWordBlank = { typeNumber ->
-                            navController.navigate(WordBlankTrainerRoute(typeNumber))
-                        },
-                        contentPadding = padding,
-                    )
-                }
-            }
             composable<ParonymTrainerRoute> {
                 SwipeBackContainer(onBack = { navController.popBackStack() }) {
                     var showCongrats by remember { mutableStateOf<Int?>(null) }
