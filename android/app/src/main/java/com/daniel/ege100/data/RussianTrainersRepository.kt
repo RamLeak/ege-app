@@ -1,0 +1,90 @@
+package com.daniel.ege100.data
+
+import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+/**
+ * Phase 4 Stage P4-D (Convention #72) — три новых русских тренажёра, источник
+ * `corpus.db` через парсеры `extract_paronyms.py`, `extract_pleonasms.py`,
+ * `extract_grammar_errors.py`. JSON-файлы в assets.
+ */
+
+@Serializable
+data class ParonymItem(
+    val problem_id: Long? = null,
+    val sentence: String,
+    val wrong_word: String,
+    val correct_word: String,
+)
+
+@Serializable
+data class PleonasmItem(
+    val problem_id: Long? = null,
+    val sentence: String,
+    val extra_word: String,
+)
+
+@Serializable
+data class GrammarErrorItem(
+    val problem_id: Long? = null,
+    val sentence: String,
+    val error_word: String,
+    val correct_form: String,
+)
+
+object ParonymsRepository {
+    private const val ASSET = "paronyms.json"
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Volatile private var cached: List<ParonymItem>? = null
+
+    suspend fun load(context: Context): List<ParonymItem> = withContext(Dispatchers.IO) {
+        cached?.let { return@withContext it }
+        synchronized(this) {
+            cached?.let { return@withContext it }
+            val text = context.assets.open(ASSET).use { it.bufferedReader(Charsets.UTF_8).readText() }
+            val parsed = json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(ParonymItem.serializer()), text)
+            cached = parsed
+            parsed
+        }
+    }
+}
+
+object PleonasmsRepository {
+    private const val ASSET = "pleonasms.json"
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Volatile private var cached: List<PleonasmItem>? = null
+
+    suspend fun load(context: Context): List<PleonasmItem> = withContext(Dispatchers.IO) {
+        cached?.let { return@withContext it }
+        synchronized(this) {
+            cached?.let { return@withContext it }
+            val text = context.assets.open(ASSET).use { it.bufferedReader(Charsets.UTF_8).readText() }
+            val parsed = json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(PleonasmItem.serializer()), text)
+            cached = parsed
+            parsed
+        }
+    }
+}
+
+object GrammarErrorsRepository {
+    private const val ASSET = "grammar_errors.json"
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Volatile private var cached: List<GrammarErrorItem>? = null
+
+    suspend fun load(context: Context): List<GrammarErrorItem> = withContext(Dispatchers.IO) {
+        cached?.let { return@withContext it }
+        synchronized(this) {
+            cached?.let { return@withContext it }
+            val text = context.assets.open(ASSET).use { it.bufferedReader(Charsets.UTF_8).readText() }
+            val parsed = json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(GrammarErrorItem.serializer()), text)
+            cached = parsed
+            parsed
+        }
+    }
+}

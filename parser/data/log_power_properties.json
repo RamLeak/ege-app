@@ -1,0 +1,15 @@
+[
+  {"id": "log_product", "left": "log(a · b)", "right": "log(a) + log(b)"},
+  {"id": "log_quotient", "left": "log(a / b)", "right": "log(a) − log(b)"},
+  {"id": "log_power", "left": "log(a^n)", "right": "n · log(a)"},
+  {"id": "log_one", "left": "log(1)", "right": "0"},
+  {"id": "log_self", "left": "log_a(a)", "right": "1"},
+  {"id": "log_base_change", "left": "log_a(b)", "right": "log(b) / log(a)"},
+  {"id": "pow_mult", "left": "a^m · a^n", "right": "a^(m+n)"},
+  {"id": "pow_div", "left": "a^m / a^n", "right": "a^(m−n)"},
+  {"id": "pow_pow", "left": "(a^m)^n", "right": "a^(m·n)"},
+  {"id": "pow_zero", "left": "a^0 (a ≠ 0)", "right": "1"},
+  {"id": "pow_neg", "left": "a^(−n)", "right": "1 / a^n"},
+  {"id": "pow_root", "left": "a^(1/n)", "right": "корень n-й степени из a"},
+  {"id": "pow_product", "left": "(a · b)^n", "right": "a^n · b^n"}
+]

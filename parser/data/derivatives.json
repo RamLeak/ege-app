@@ -1,0 +1,15 @@
+[
+  {"function": "c (константа)", "derivative": "0"},
+  {"function": "x", "derivative": "1"},
+  {"function": "x^n", "derivative": "n · x^(n−1)"},
+  {"function": "√x", "derivative": "1 / (2√x)"},
+  {"function": "1 / x", "derivative": "−1 / x²"},
+  {"function": "sin(x)", "derivative": "cos(x)"},
+  {"function": "cos(x)", "derivative": "−sin(x)"},
+  {"function": "tg(x)", "derivative": "1 / cos²(x)"},
+  {"function": "ctg(x)", "derivative": "−1 / sin²(x)"},
+  {"function": "e^x", "derivative": "e^x"},
+  {"function": "a^x", "derivative": "a^x · ln(a)"},
+  {"function": "ln(x)", "derivative": "1 / x"},
+  {"function": "log_a(x)", "derivative": "1 / (x · ln(a))"}
+]

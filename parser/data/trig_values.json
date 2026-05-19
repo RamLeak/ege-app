@@ -1,0 +1,13 @@
+[
+  {"angle_deg": 0, "angle_rad": "0", "sin": "0", "cos": "1", "tan": "0", "ctg": "не определён"},
+  {"angle_deg": 30, "angle_rad": "пи/6", "sin": "1/2", "cos": "√3/2", "tan": "1/√3", "ctg": "√3"},
+  {"angle_deg": 45, "angle_rad": "пи/4", "sin": "√2/2", "cos": "√2/2", "tan": "1", "ctg": "1"},
+  {"angle_deg": 60, "angle_rad": "пи/3", "sin": "√3/2", "cos": "1/2", "tan": "√3", "ctg": "1/√3"},
+  {"angle_deg": 90, "angle_rad": "пи/2", "sin": "1", "cos": "0", "tan": "не определён", "ctg": "0"},
+  {"angle_deg": 120, "angle_rad": "2пи/3", "sin": "√3/2", "cos": "-1/2", "tan": "-√3", "ctg": "-1/√3"},
+  {"angle_deg": 135, "angle_rad": "3пи/4", "sin": "√2/2", "cos": "-√2/2", "tan": "-1", "ctg": "-1"},
+  {"angle_deg": 150, "angle_rad": "5пи/6", "sin": "1/2", "cos": "-√3/2", "tan": "-1/√3", "ctg": "-√3"},
+  {"angle_deg": 180, "angle_rad": "пи", "sin": "0", "cos": "-1", "tan": "0", "ctg": "не определён"},
+  {"angle_deg": 270, "angle_rad": "3пи/2", "sin": "-1", "cos": "0", "tan": "не определён", "ctg": "0"},
+  {"angle_deg": 360, "angle_rad": "2пи", "sin": "0", "cos": "1", "tan": "0", "ctg": "не определён"}
+]

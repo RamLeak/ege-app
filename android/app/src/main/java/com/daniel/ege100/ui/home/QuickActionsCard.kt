@@ -13,18 +13,22 @@ import androidx.compose.ui.unit.sp
 import com.daniel.ege100.ui.common.AppleListRow
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.SystemBlueTint
+import com.daniel.ege100.ui.theme.SystemGreenTint
+import com.daniel.ege100.ui.theme.SystemOrange
 
 /**
- * Phase 4 Stage B3 — блок «Быстрый старт» на главном.
+ * Phase 4 Stage B3 + P4-D — блок «Быстрый старт» на главном.
  *
- * 3 быстрых действия: пробник math, пробник rus, варианты КИМ ФИПИ.
- * Кнопка «Решить слабые места» уже есть в RadarCard — здесь не дублируем.
+ * Действия: пробник math, пробник rus, варианты КИМ ФИПИ, случайный тренажёр,
+ * все тренажёры. Кнопка «Решить слабые места» уже есть в RadarCard — не дублируем.
  */
 @Composable
 fun QuickActionsCard(
     onStartMockMath: () -> Unit,
     onStartMockRus: () -> Unit,
     onFipiVariants: () -> Unit,
+    onRandomTrainer: () -> Unit = {},
+    onAllTrainers: () -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -35,6 +39,20 @@ fun QuickActionsCard(
             modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
         )
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            AppleListRow(
+                title = "🎲 Случайный тренажёр",
+                subtitle = "Один из 20 — выбирается наугад",
+                leadingEmoji = "🎲",
+                leadingTint = SystemOrange.copy(alpha = 0.18f),
+                onClick = onRandomTrainer,
+            )
+            AppleListRow(
+                title = "Все тренажёры",
+                subtitle = "20 тренажёров: ударения, орфография, паронимы, математика",
+                leadingEmoji = "📚",
+                leadingTint = SystemGreenTint,
+                onClick = onAllTrainers,
+            )
             AppleListRow(
                 title = "Пробник: Математика",
                 subtitle = "19 заданий, по одному из каждого типа",

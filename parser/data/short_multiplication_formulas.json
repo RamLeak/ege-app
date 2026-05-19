@@ -1,0 +1,9 @@
+[
+  {"id": "square_sum", "name": "Квадрат суммы", "left": "(a + b)²", "right": "a² + 2ab + b²"},
+  {"id": "square_diff", "name": "Квадрат разности", "left": "(a − b)²", "right": "a² − 2ab + b²"},
+  {"id": "diff_squares", "name": "Разность квадратов", "left": "a² − b²", "right": "(a − b)(a + b)"},
+  {"id": "cube_sum", "name": "Куб суммы", "left": "(a + b)³", "right": "a³ + 3a²b + 3ab² + b³"},
+  {"id": "cube_diff", "name": "Куб разности", "left": "(a − b)³", "right": "a³ − 3a²b + 3ab² − b³"},
+  {"id": "sum_cubes", "name": "Сумма кубов", "left": "a³ + b³", "right": "(a + b)(a² − ab + b²)"},
+  {"id": "diff_cubes", "name": "Разность кубов", "left": "a³ − b³", "right": "(a − b)(a² + ab + b²)"}
+]

@@ -46,29 +46,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        BreadcrumbLog.add("MainActivity.onCreate")
+        runCatching { enableEdgeToEdge() }
+        runCatching { BreadcrumbLog.add("MainActivity.onCreate") }
 
         // Phase 4 Stage P4-D3 (Convention #69) — crash-loop protection.
         // 3+ краша за 30 секунд → SafeMode UI без основного NavHost.
         // Делаем ДО любых обращений к DataStore/Room/Compose-NavHost, чтобы
         // даже если они и есть источник краша — пользователь увидел кнопку
         // «Сбросить», а не пустой экран.
-        if (SafeMode.isActive(this)) {
-            BreadcrumbLog.add("SafeMode active — rendering recovery UI")
+        val safeModeActive = runCatching { SafeMode.isActive(this) }.getOrDefault(false)
+        if (safeModeActive) {
+            runCatching { BreadcrumbLog.add("SafeMode active — rendering recovery UI") }
             setContent {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Color(0xFF000000),
                 ) {
                     SafeModeScreen(onReset = {
-                        SafeMode.reset(this@MainActivity)
-                        // Перезапуск Activity — простейший способ откатиться
-                        // к нормальной инициализации.
+                        runCatching { SafeMode.reset(this@MainActivity) }
                         val restart = Intent(this@MainActivity, MainActivity::class.java).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         }
-                        startActivity(restart)
+                        runCatching { startActivity(restart) }
                         finish()
                     })
                 }
@@ -76,42 +75,63 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        requestNotificationPermissionIfNeeded()
+        runCatching { requestNotificationPermissionIfNeeded() }
 
         // Phase 4 Stage P4-D2 part Г (Convention #68) — проверяем флаг
         // незавершённого краша от прошлой сессии.
-        val showCrashDialogInitial = CrashLog.hasUnhandledCrash(this)
+        val showCrashDialogInitial = runCatching { CrashLog.hasUnhandledCrash(this) }.getOrDefault(false)
         if (showCrashDialogInitial) {
-            // Сразу сбрасываем флаг — диалог покажем один раз. Файл остаётся
-            // в filesDir/crashes/, доступен через Настройки → «Отправить crash log».
-            CrashLog.clearUnhandledFlag(this)
+            runCatching { CrashLog.clearUnhandledFlag(this) }
         }
 
-        setContent {
-            // Phase 3 Stage A part Г: подписка на AppSettings.themeMode.
-            // При смене темы в Настройках — этот flow эмитит новое значение,
-            // MainActivity рекомпозит EgeTheme → весь UI перекрашивается.
-            val context = LocalContext.current
-            val settingsFlow = remember(context) { AppSettingsStore.settingsFlow(context) }
-            val settings by settingsFlow.collectAsState(initial = AppSettings())
+        // Phase 4 Stage P4-D2 hotfix (init-краш) — оборачиваем setContent
+        // в try/catch. Если сборка NavHost / DataStore / Room упадёт, покажем
+        // SafeModeScreen с пояснением вместо чёрного экрана. SafeMode.recordCrash
+        // тоже зовём чтобы при следующем запуске SafeMode гарантированно сработал.
+        try {
+            setContent {
+                val context = LocalContext.current
+                val settingsFlow = remember(context) { AppSettingsStore.settingsFlow(context) }
+                val settings by settingsFlow.collectAsState(initial = AppSettings())
 
-            var showCrashDialog by remember { mutableStateOf(showCrashDialogInitial) }
+                var showCrashDialog by remember { mutableStateOf(showCrashDialogInitial) }
 
-            EgeTheme(themeMode = settings.themeMode) {
+                EgeTheme(themeMode = settings.themeMode) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        EgeApp()
+                        if (showCrashDialog) {
+                            CrashRecoveryDialog(
+                                onSend = {
+                                    runCatching { CrashLog.shareLatest(this@MainActivity) }
+                                    showCrashDialog = false
+                                },
+                                onDismiss = { showCrashDialog = false },
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "setContent crashed", t)
+            runCatching { CrashLog.writeCrashReport(this, Thread.currentThread(), t) }
+            runCatching { SafeMode.recordCrash(this) }
+            // Fallback UI — минимальный SafeModeScreen с пояснением.
+            setContent {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+                    color = Color(0xFF000000),
                 ) {
-                    EgeApp()
-                    if (showCrashDialog) {
-                        CrashRecoveryDialog(
-                            onSend = {
-                                CrashLog.shareLatest(this@MainActivity)
-                                showCrashDialog = false
-                            },
-                            onDismiss = { showCrashDialog = false },
-                        )
-                    }
+                    SafeModeScreen(onReset = {
+                        runCatching { SafeMode.reset(this@MainActivity) }
+                        val restart = Intent(this@MainActivity, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                        runCatching { startActivity(restart) }
+                        finish()
+                    })
                 }
             }
         }

@@ -171,3 +171,40 @@ data class SubtypeWithType(
     @ColumnInfo(name = "subject_id") val subjectId: Long,
     @ColumnInfo(name = "type_number") val typeNumber: Int,
 )
+
+/**
+ * Phase 4 Stage P4-D (Convention #71): pre-generated объяснения для тренажёров.
+ *
+ * Таблица создаётся скриптом `parser/scrapers/save_explanations_batch.py` в
+ * `parser/corpus.db`. После копирования asset Room считывает её read-only через
+ * `TrainerExplanationDao.get(word, kind)`. UNIQUE(word, kind, subtype) гарантирует
+ * один pre-gen на каждое слово (subtype = категория тренажёра: nouns/verbs/t9/...).
+ *
+ * Schema через table-level PRIMARY KEY — иначе Room считает id nullable
+ * (Convention #12, инцидент Stage 2 Fix). Default 0 на generated_at — для записей,
+ * добавленных ДО трекинга времени.
+ *
+ * Phase 4 Stage P4-D2 hotfix (init-краш): индекс `idx_explanations_lookup`
+ * физически создаётся в pre-packaged corpus.db и MIGRATION_2_3, поэтому ОБЯЗАТЕЛЬНО
+ * декларировать его в @Entity — иначе Room schema validation сравнивает
+ * объявленный набор индексов с реальным и бросает IllegalStateException
+ * «Pre-packaged database has an invalid schema» при первом open. Тот же класс
+ * проблем что Convention #12 (Stage 2 schema mismatch).
+ */
+@Entity(
+    tableName = "trainer_explanations",
+    indices = [
+        Index(value = ["word", "kind"], name = "idx_explanations_lookup"),
+    ],
+)
+data class TrainerExplanationEntity(
+    @PrimaryKey val id: Long,
+    val word: String,
+    val kind: String,
+    val subtype: String,
+    val explanation: String?,
+    val rule: String?,
+    val examples: String?,
+    val mnemonic: String?,
+    @ColumnInfo(name = "generated_at", defaultValue = "0") val generatedAt: Long,
+)

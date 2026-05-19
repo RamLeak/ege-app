@@ -60,6 +60,7 @@ import com.daniel.ege100.data.BackupSnapshot
 import com.daniel.ege100.data.BreadcrumbLog
 import com.daniel.ege100.data.CsvExporter
 import com.daniel.ege100.data.ImportResult
+import com.daniel.ege100.data.UserStatsStore
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
 import com.daniel.ege100.ui.accent.AccentTrainerScreen
 import com.daniel.ege100.ui.catalog.CatalogScreen
@@ -260,6 +261,21 @@ fun EgeApp() {
                         navController.navigate(MockExamRunnerRoute(planIndex = -1, subject = "rus", fipiVariantId = null))
                     },
                     onFipiVariants = { navController.navigate(FipiVariantsRoute) },
+                    onAllTrainers = { navController.navigate(AllTrainersRoute) },
+                    onRandomTrainer = {
+                        // Phase 4 Stage P4-D — выбираем случайный тренажёр из 8 новых
+                        // + accent + 4 wordblank. Реализация простая — random pick
+                        // и navigate на соответствующий route.
+                        val routes: List<Any> = listOf(
+                            ParonymTrainerRoute, PleonasmTrainerRoute, GrammarTrainerRoute,
+                            TrigTrainerRoute, ShortMultTrainerRoute, LogPowerTrainerRoute,
+                            DerivativesTrainerRoute, GeometryTrainerRoute,
+                            AccentCategoriesRoute,
+                            WordBlankTrainerRoute(9), WordBlankTrainerRoute(10),
+                            WordBlankTrainerRoute(11), WordBlankTrainerRoute(12),
+                        )
+                        navController.navigate(routes.random())
+                    },
                 )
             }
             composable<JournalStubRoute> {
@@ -520,6 +536,206 @@ fun EgeApp() {
                         contentPadding = padding,
                         onBack = { navController.popBackStack() },
                     )
+                }
+            }
+            // ============================================================
+            // Phase 4 Stage P4-D — 8 новых тренажёров + AllTrainers хаб.
+            // (Convention #71, #74, #76)
+            // ============================================================
+            composable<AllTrainersRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    com.daniel.ege100.ui.trainer.AllTrainersScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenParonym = { navController.navigate(ParonymTrainerRoute) },
+                        onOpenPleonasm = { navController.navigate(PleonasmTrainerRoute) },
+                        onOpenGrammar = { navController.navigate(GrammarTrainerRoute) },
+                        onOpenTrig = { navController.navigate(TrigTrainerRoute) },
+                        onOpenShortMult = { navController.navigate(ShortMultTrainerRoute) },
+                        onOpenLogPower = { navController.navigate(LogPowerTrainerRoute) },
+                        onOpenDerivatives = { navController.navigate(DerivativesTrainerRoute) },
+                        onOpenGeometry = { navController.navigate(GeometryTrainerRoute) },
+                        onOpenAccentCategories = { navController.navigate(AccentCategoriesRoute) },
+                        onOpenWordBlank = { typeNumber ->
+                            navController.navigate(WordBlankTrainerRoute(typeNumber))
+                        },
+                        contentPadding = padding,
+                    )
+                }
+            }
+            composable<ParonymTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.ParonymTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "paronym") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Паронимы (№5)",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<PleonasmTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.PleonasmTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "pleonasm") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Плеоназмы (№6)",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<GrammarTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.GrammarErrorTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "grammar") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Грамошибки (№7)",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<TrigTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.TrigTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "math_trig") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Тригонометрия",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<ShortMultTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.ShortMultTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "math_shortmult") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Сокращённое умножение",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<LogPowerTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.LogPowerTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "math_logpower") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Логарифмы и степени",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<DerivativesTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.DerivativesTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "math_derivatives") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Производные",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
+                }
+            }
+            composable<GeometryTrainerRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    var showCongrats by remember { mutableStateOf<Int?>(null) }
+                    com.daniel.ege100.ui.trainer.GeometryTrainerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSettings = { navController.navigate(SettingsRoute) },
+                        onCompleted = { count ->
+                            scope.launch { UserStatsStore.markTrainerCompleted(context, "math_geometry") }
+                            showCongrats = count
+                        },
+                        contentPadding = padding,
+                    )
+                    showCongrats?.let { count ->
+                        com.daniel.ege100.ui.trainer.CongratulationDialog(
+                            trainerName = "Геометрические формулы",
+                            wordsCount = count,
+                            onClose = { showCongrats = null; navController.popBackStack() },
+                            onAgain = { showCongrats = null },
+                        )
+                    }
                 }
             }
         }

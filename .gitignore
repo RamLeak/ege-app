@@ -34,6 +34,9 @@ android/.cxx/
 android/.kotlin/
 # Локальные build-helpers для Claude Code (вызов gradle через Bash tool) — не в репо.
 android/_build_*.bat
+# Phase 4 Stage P4-D — временные batch-файлы для pre-gen.
+parser/_batch_*.json
+parser/.processing.lock
 *.apk
 *.aab
 *.keystore
@@ -52,6 +55,15 @@ android/app/src/main/assets/rules.json
 android/app/src/main/assets/quotes.json
 # fipi_variants.json — исходник в parser/fipi_variants.json (генерится parse_fipi_variants.py); копия в assets/ gitignored.
 android/app/src/main/assets/fipi_variants.json
+# Phase 4 Stage P4-D — исходники в parser/data/ (генерится extract_*.py); копии в assets/ gitignored.
+android/app/src/main/assets/paronyms.json
+android/app/src/main/assets/pleonasms.json
+android/app/src/main/assets/grammar_errors.json
+android/app/src/main/assets/trig_values.json
+android/app/src/main/assets/short_multiplication_formulas.json
+android/app/src/main/assets/log_power_properties.json
+android/app/src/main/assets/derivatives.json
+android/app/src/main/assets/geometric_formulas.json
 
 # Secrets
 .env

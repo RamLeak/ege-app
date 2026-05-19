@@ -149,3 +149,40 @@ data class QuickTrainerRoute(
         fun of(ids: List<Long>) = QuickTrainerRoute(ids.joinToString(","))
     }
 }
+
+/**
+ * Phase 4 Stage P4-D (Convention #71) — 3 новых русских тренажёра.
+ */
+@Serializable
+object ParonymTrainerRoute
+
+@Serializable
+object PleonasmTrainerRoute
+
+@Serializable
+object GrammarTrainerRoute
+
+/**
+ * Phase 4 Stage P4-D (Convention #74) — 5 новых математических тренажёров.
+ */
+@Serializable
+object TrigTrainerRoute
+
+@Serializable
+object ShortMultTrainerRoute
+
+@Serializable
+object LogPowerTrainerRoute
+
+@Serializable
+object DerivativesTrainerRoute
+
+@Serializable
+object GeometryTrainerRoute
+
+/**
+ * Phase 4 Stage P4-D (Convention #76) — экран «Все тренажёры» (расширенный
+ * каталог из 20 пунктов с прогресс-метками completed/in-progress).
+ */
+@Serializable
+object AllTrainersRoute

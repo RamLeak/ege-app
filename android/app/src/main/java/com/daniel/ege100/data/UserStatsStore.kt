@@ -3,6 +3,7 @@ package com.daniel.ege100.data
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -45,6 +46,12 @@ data class UserStatsSnapshot(
      * AchievementsRow как «Слов выучено».
      */
     val trainerWordsLearned: Int = 0,
+    /**
+     * Phase 4 Stage P4-D (Convention #76) — имена пройденных тренажёров.
+     * "Пройден" = пользователь дошёл до последнего слова/задачи. UI показывает
+     * «Тренажёров пройдено: N из 18».
+     */
+    val trainersCompleted: Set<String> = emptySet(),
 )
 
 private val Context.userStatsStore by preferencesDataStore("user_stats")
@@ -66,6 +73,23 @@ object UserStatsStore {
 
     // Phase 4 Stage P4-C part Е1 (Convention #54).
     private val TRAINER_WORDS_LEARNED = intPreferencesKey("trainer_words_learned")
+
+    // Phase 4 Stage P4-D (Convention #76).
+    private val TRAINERS_COMPLETED = stringSetPreferencesKey("trainers_completed")
+
+    /**
+     * Полный список всех 20 тренажёров приложения (для подсчёта "N из 20" и
+     * для UI «Все тренажёры»). При добавлении нового тренажёра — расширить.
+     */
+    val ALL_TRAINER_IDS: List<String> = listOf(
+        "accent_nouns", "accent_adjectives", "accent_verbs",
+        "accent_participles", "accent_gerunds", "accent_adverbs",
+        "accent_all_alphabetical", "accent_all_random",
+        "wordblank_t9", "wordblank_t10", "wordblank_t11", "wordblank_t12",
+        "paronym", "pleonasm", "grammar",
+        "math_trig", "math_shortmult", "math_logpower",
+        "math_derivatives", "math_geometry",
+    )
 
     suspend fun recordAttempt(
         context: Context,
@@ -129,6 +153,20 @@ object UserStatsStore {
     fun trainerWordsLearnedFlow(context: Context): Flow<Int> =
         context.userStatsStore.data.map { it[TRAINER_WORDS_LEARNED] ?: 0 }
 
+    /** Phase 4 Stage P4-D (Convention #76): пометить тренажёр пройденным. */
+    suspend fun markTrainerCompleted(context: Context, trainerId: String) {
+        context.userStatsStore.edit { prefs ->
+            val current = prefs[TRAINERS_COMPLETED] ?: emptySet()
+            prefs[TRAINERS_COMPLETED] = current + trainerId
+        }
+    }
+
+    suspend fun getTrainersCompleted(context: Context): Set<String> =
+        context.userStatsStore.data.first()[TRAINERS_COMPLETED] ?: emptySet()
+
+    fun trainersCompletedFlow(context: Context): Flow<Set<String>> =
+        context.userStatsStore.data.map { it[TRAINERS_COMPLETED] ?: emptySet() }
+
     /** Flow для подписки в UI (например на главном экране). */
     fun typeStatsFlow(context: Context, subject: String, maxN: Int): Flow<List<TypeAccuracy>> =
         context.userStatsStore.data.map { prefs ->
@@ -183,10 +221,12 @@ object UserStatsStore {
             }
         }
         val trainerWords = prefs[TRAINER_WORDS_LEARNED] ?: 0
+        val completed = prefs[TRAINERS_COMPLETED] ?: emptySet()
         return UserStatsSnapshot(
             typeStats = typeStats.mapValues { it.value.toMap() },
             subtypeStats = subtypeStats.toMap(),
             trainerWordsLearned = trainerWords,
+            trainersCompleted = completed,
         )
     }
 
@@ -207,6 +247,8 @@ object UserStatsStore {
             }
             // Phase 4 Stage P4-C part Е1.
             prefs[TRAINER_WORDS_LEARNED] = snapshot.trainerWordsLearned
+            // Phase 4 Stage P4-D (Convention #76).
+            prefs[TRAINERS_COMPLETED] = snapshot.trainersCompleted
         }
     }
 

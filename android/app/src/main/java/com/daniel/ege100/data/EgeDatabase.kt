@@ -31,13 +31,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProblemSubtypeEntity::class,
         ProblemEntity::class,
         SolutionEntity::class,
+        TrainerExplanationEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class EgeDatabase : RoomDatabase() {
 
     abstract fun catalogDao(): CatalogDao
+    abstract fun trainerExplanationDao(): TrainerExplanationDao
 
     companion object {
         private const val DB_NAME = "corpus.db"
@@ -51,6 +53,39 @@ abstract class EgeDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Phase 4 Stage P4-D — добавили TrainerExplanationEntity. Таблица
+         * trainer_explanations создана скриптом `save_explanations_batch.py` в
+         * pre-packaged corpus.db, поэтому DDL/ALTER не нужны — Room просто
+         * валидирует схему и обновит identity_hash.
+         *
+         * Если устройство стоит на v=2 без таблицы (старый asset) — создаём её
+         * на месте. Тогда pre-gen объяснений не будет, но fallback на онлайн AI
+         * сохраняет функциональность.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS trainer_explanations (
+                        id INTEGER NOT NULL,
+                        word TEXT NOT NULL,
+                        kind TEXT NOT NULL,
+                        subtype TEXT NOT NULL,
+                        explanation TEXT,
+                        rule TEXT,
+                        examples TEXT,
+                        mnemonic TEXT,
+                        generated_at INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY(id),
+                        UNIQUE(word, kind, subtype)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_explanations_lookup ON trainer_explanations(word, kind)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: EgeDatabase? = null
 
@@ -61,13 +96,20 @@ abstract class EgeDatabase : RoomDatabase() {
         }
 
         private fun build(context: Context): EgeDatabase {
+            // Phase 4 Stage P4-D2 hotfix (init-краш): fallbackToDestructiveMigration
+            // как страховка. Если схема не сходится по какой-то новой причине —
+            // Room сотрёт локальную копию и пересоздаст её. На createFromAsset это
+            // безопасно: после destroy Room снова копирует asset (read-only, в APK).
+            // Пользовательские данные хранятся в `user_data.db` (UserDataDatabase),
+            // не здесь, поэтому destructive reset не теряет прогресс.
             return Room.databaseBuilder(
                 context.applicationContext,
                 EgeDatabase::class.java,
                 DB_NAME,
             )
                 .createFromAsset(DB_NAME)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigration()
                 .build()
         }
     }

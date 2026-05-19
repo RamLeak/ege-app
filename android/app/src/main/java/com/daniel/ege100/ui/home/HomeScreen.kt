@@ -44,10 +44,17 @@ fun HomeScreen(
     onStartMockMath: () -> Unit,
     onStartMockRus: () -> Unit,
     onFipiVariants: () -> Unit,
+    onAllTrainers: () -> Unit = {},
+    onRandomTrainer: () -> Unit = {},
     vm: HomeViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
-    LaunchedEffect(Unit) { vm.refresh() }
+    // Phase 4 Stage P4-D2 hotfix — defensive try/catch на refresh.
+    LaunchedEffect(Unit) {
+        try { vm.refresh() } catch (e: Throwable) {
+            android.util.Log.e("HomeScreen", "vm.refresh crashed", e)
+        }
+    }
     val scope = rememberCoroutineScope()
 
     Scaffold(containerColor = Bg) { inner ->
@@ -134,12 +141,14 @@ fun HomeScreen(
                             onClick = onMockExamCalendar,
                         )
                     }
-                    // Phase 4 Stage B3 — QuickActions для пробников math/rus + ФИПИ.
+                    // Phase 4 Stage B3 + P4-D — QuickActions: пробники + тренажёры.
                     item("quick_actions") {
                         QuickActionsCard(
                             onStartMockMath = onStartMockMath,
                             onStartMockRus = onStartMockRus,
                             onFipiVariants = onFipiVariants,
+                            onRandomTrainer = onRandomTrainer,
+                            onAllTrainers = onAllTrainers,
                         )
                     }
                 }

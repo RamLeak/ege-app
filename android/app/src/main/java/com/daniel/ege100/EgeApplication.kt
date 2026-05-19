@@ -42,12 +42,22 @@ import java.util.concurrent.TimeUnit
 class EgeApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
+        // Phase 4 Stage P4-D2 hotfix — crash handler ставится САМЫМ ПЕРВЫМ,
+        // ДО super.onCreate(). Если что-то в super или ниже падает — мы хотя бы
+        // запишем stack trace в CrashLog для следующего запуска.
+        runCatching { installCrashHandler() }
         super.onCreate()
-        installCrashHandler()
-        BreadcrumbLog.add("App started")
-        NotificationHelper.ensureChannel(this)
-        scheduleReminderWorkers()
-        cleanupOldAiCache()
+        // Всё остальное в onCreate — в широком try/catch чтобы не падать на
+        // мелких init-проблемах (WorkManager, Coil, NotificationChannel и т.п.).
+        runCatching {
+            BreadcrumbLog.add("App started")
+        }
+        runCatching { NotificationHelper.ensureChannel(this) }
+            .onFailure { android.util.Log.e("EgeApp", "ensureChannel failed", it) }
+        runCatching { scheduleReminderWorkers() }
+            .onFailure { android.util.Log.e("EgeApp", "scheduleReminderWorkers failed", it) }
+        runCatching { cleanupOldAiCache() }
+            .onFailure { android.util.Log.e("EgeApp", "cleanupOldAiCache failed", it) }
     }
 
     /**
