@@ -141,6 +141,37 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
     private var defaultOrder: String = "alphabetical"
     private var initialized = false
 
+    // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance Job.
+    // Раньше delay 1000ms был в LaunchedEffect Screen'а — если пользователь
+    // открывал AI bottom-sheet, экран всё равно через 1 сек переключал слово
+    // и контекст AI становился «не про то слово». Сейчас Job — на VM, можно
+    // отменить через onAskAiOpened().
+    private var pendingAdvanceJob: kotlinx.coroutines.Job? = null
+
+    private fun scheduleAutoAdvance(delayMs: Long = 1000L) {
+        pendingAdvanceJob?.cancel()
+        pendingAdvanceJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(delayMs)
+            goNext()
+            pendingAdvanceJob = null
+        }
+    }
+
+    fun onAskAiOpened() {
+        pendingAdvanceJob?.cancel()
+        pendingAdvanceJob = null
+    }
+
+    /** Возвращает true если ответ на текущем слове был правильным. */
+    fun lastVerdictWasRight(): Boolean =
+        (_state.value.tap as? SyllableTapState.Verdict)?.isRight == true
+
+    fun onAskAiClosed(wasRight: Boolean) {
+        if (wasRight && _state.value.tap is SyllableTapState.Verdict) {
+            scheduleAutoAdvance(delayMs = 500L)
+        }
+    }
+
     /** Stage 5 part А: trainerId для TrainerProgressStore. */
     private fun trainerId(): String = when {
         categoryId != null -> "accent_${categoryId}"
@@ -307,6 +338,13 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
             is SyllableTapState.Verdict -> s
         }
         _state.value = cur.copy(tap = next)
+        // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance Job
+        // на ViewModel вместо LaunchedEffect-delay в Screen. Запускается
+        // только когда Verdict.isRight; AI-кнопка может его отменить
+        // через onAskAiOpened().
+        if (next is SyllableTapState.Verdict && next.isRight) {
+            scheduleAutoAdvance(delayMs = 1000L)
+        }
     }
 
     fun goNext() {
@@ -352,13 +390,8 @@ fun AccentTrainerScreen(
     val haptic = LocalHapticFeedback.current
     var showAi by remember { mutableStateOf(false) }
 
-    LaunchedEffect(st.tap, st.position) {
-        val v = st.tap
-        if (v is SyllableTapState.Verdict && v.isRight) {
-            delay(1000L)
-            vm.goNext()
-        }
-    }
+    // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance перенесён
+    // в ViewModel.scheduleAutoAdvance(); здесь только haptic feedback.
 
     LaunchedEffect(st.tap) {
         when (val v = st.tap) {
@@ -409,6 +442,13 @@ fun AccentTrainerScreen(
         )
     }
 
+    // Phase 4 Stage P4-C2 part А (Convention #56) — отменяем auto-advance
+    // при открытии AI-окна, иначе экран переключится через 1 сек и
+    // контекст AI станет «не про то слово».
+    LaunchedEffect(showAi) {
+        if (showAi) vm.onAskAiOpened()
+    }
+
     // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре ударений.
     if (showAi) {
         val word = st.currentWord
@@ -430,7 +470,14 @@ fun AccentTrainerScreen(
             com.daniel.ege100.ui.ai.AskAiBottomSheet(
                 problemContext = context,
                 userAnswerForHint = if (!verdict.isRight) selectedSyllable else null,
-                onDismiss = { showAi = false },
+                onDismiss = {
+                    showAi = false
+                    // Phase 4 Stage P4-C2 part А (Convention #56) — после
+                    // закрытия AI возобновляем auto-advance через 500мс,
+                    // но только если ответ был верным (иначе пусть юзер
+                    // сам свайпнёт).
+                    vm.onAskAiClosed(verdict.isRight)
+                },
                 onOpenSettings = {
                     showAi = false
                     onOpenAiSettings()

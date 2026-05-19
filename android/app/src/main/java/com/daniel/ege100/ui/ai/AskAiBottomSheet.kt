@@ -122,96 +122,123 @@ class AskAiViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.isLoading) return
         val ctx = getApplication<Application>()
         viewModelScope.launch {
-            val settings = AiSettingsStore.snapshot(ctx)
-            val provider = AiProviderRegistry.get(settings.activeProvider)
-            val modelId = settings.modelFor(settings.activeProvider)
+            try {
+                askImpl(ctx, question, context)
+            } catch (e: Throwable) {
+                // Phase 4 Stage P4-C2 part Г (Convention #55) — защита от
+                // непредвиденных ошибок (Encrypted prefs Keystore issues,
+                // network exceptions не пойманные OkHttp, парсинг JSON).
+                android.util.Log.e("AskAi", "ask() crash", e)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    response = null,
+                    error = "Внутренняя ошибка: ${e.message?.take(120) ?: e.javaClass.simpleName}",
+                )
+            }
+        }
+    }
 
-            // Quick fix #3 — диагностика передачи контекста (можно убрать после релиза).
-            android.util.Log.d("AskAi", "Question: $question")
-            android.util.Log.d(
-                "AskAi",
-                "Context length: ${context.length}, preview: ${context.take(200)}",
+    private suspend fun askImpl(ctx: Application, question: String, context: String) {
+        val settings = AiSettingsStore.snapshot(ctx)
+        val provider = AiProviderRegistry.get(settings.activeProvider)
+        val modelId = settings.modelFor(settings.activeProvider)
+
+        // Quick fix #3 — диагностика передачи контекста (можно убрать после релиза).
+        android.util.Log.d("AskAi", "Question: $question")
+        android.util.Log.d(
+            "AskAi",
+            "Context length: ${context.length}, preview: ${context.take(200)}",
+        )
+        android.util.Log.d("AskAi", "Provider: ${provider.type}, model: $modelId")
+
+        // Quick fix #3 — защита от пустого условия (Convention #47).
+        if (context.isBlank()) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                response = null,
+                error = "Не удалось извлечь условие задачи. Скриншот сделай отдельно.",
             )
-            android.util.Log.d("AskAi", "Provider: ${provider.type}, model: $modelId")
+            return
+        }
 
-            // Quick fix #3 — защита от пустого условия (Convention #47).
-            // Если stripHtmlForAi вернул "" — у AI нет шансов ответить осмысленно.
-            if (context.isBlank()) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    response = null,
-                    error = "Не удалось извлечь условие задачи. Скриншот сделай отдельно.",
-                )
-                return@launch
-            }
+        val keyStore = SecureKeyStore(ctx)
+        val apiKey = keyStore.getKey(settings.activeProvider.name)
+        if (apiKey.isNullOrBlank()) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                response = null,
+                error = "API ключ не задан. Открой Настройки → AI помощник.",
+                errorIsAuth = true,
+            )
+            return
+        }
 
-            val keyStore = SecureKeyStore(ctx)
-            val apiKey = keyStore.getKey(settings.activeProvider.name)
-            if (apiKey.isNullOrBlank()) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    response = null,
-                    error = "API ключ не задан. Открой Настройки → AI помощник.",
-                    errorIsAuth = true,
-                )
-                return@launch
-            }
+        // Phase 4 Stage P4-C2 part В.4 (Convention #59): кеш-хит ИДЁТ ПЕРВЫМ,
+        // не инкрементит todayUsage и не делает HTTP-запрос — просто отдаёт
+        // сохранённый ответ. Это корректно сейчас, проверено повторно.
+        val cacheKey = sha256("${settings.activeProvider.name}|$modelId|${question.trim()}|${context.trim()}")
+        val cached = cacheDao.get(cacheKey)
+        if (cached != null) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                response = cached,
+                error = null,
+                errorIsAuth = false,
+                errorIsRateLimit = false,
+                cached = true,
+            )
+            return
+        }
 
-            val cacheKey = sha256("${settings.activeProvider.name}|$modelId|${question.trim()}|${context.trim()}")
-            val cached = cacheDao.get(cacheKey)
-            if (cached != null) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    response = cached,
-                    error = null,
-                    errorIsAuth = false,
-                    errorIsRateLimit = false,
-                    cached = true,
-                )
-                return@launch
-            }
+        // Phase 4 Stage P4-C2 part В.1 (Convention #59): различаем НАШ лимит
+        // (внутренний счётчик в AiSettingsStore) от 429 провайдера. Здесь
+        // проверяем только свой; 429 ловится в runRequest.
+        if (!AiSettingsStore.canMakeRequest(ctx)) {
+            _state.value = _state.value.copy(
+                isLoading = false,
+                error = "Достигнут твой дневной лимит (${settings.todayUsage}/${settings.dailyLimit}). " +
+                    "Увеличить или сбросить — в Настройках → AI → Лимит в день.",
+            )
+            return
+        }
 
-            if (!AiSettingsStore.canMakeRequest(ctx)) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = "Достигнут дневной лимит (${settings.dailyLimit}). " +
-                        "Завтра сбросится автоматически или измени лимит в Настройках.",
-                )
-                return@launch
-            }
+        _state.value = _state.value.copy(isLoading = true, error = null, response = null, cached = false)
 
-            _state.value = _state.value.copy(isLoading = true, error = null, response = null, cached = false)
-
-            when (val resp = provider.ask(question, context, modelId, apiKey)) {
-                is AiResponse.Success -> {
-                    AiSettingsStore.incrementTodayUsage(ctx)
-                    // Phase 4 Stage P4-C part Б (Convention #49):
-                    // Очищаем LaTeX ДО кеширования — в кеш сохраняется
-                    // готовый-к-рендеру текст, повторный запрос не платит
-                    // ни за токены, ни за повторную чистку.
-                    val cleaned = LatexCleaner.clean(resp.text)
-                    cacheDao.put(
-                        AiResponseCacheEntity(
-                            cacheKey = cacheKey,
-                            response = cleaned,
-                            cachedAt = System.currentTimeMillis(),
-                        ),
-                    )
-                    _state.value = _state.value.copy(
-                        isLoading = false,
+        when (val resp = provider.ask(question, context, modelId, apiKey)) {
+            is AiResponse.Success -> {
+                AiSettingsStore.incrementTodayUsage(ctx)
+                // Phase 4 Stage P4-C part Б (Convention #49):
+                // Очищаем LaTeX ДО кеширования — в кеш сохраняется
+                // готовый-к-рендеру текст, повторный запрос не платит
+                // ни за токены, ни за повторную чистку.
+                val cleaned = LatexCleaner.clean(resp.text)
+                cacheDao.put(
+                    AiResponseCacheEntity(
+                        cacheKey = cacheKey,
                         response = cleaned,
-                        error = null,
-                    )
-                }
-                is AiResponse.Error -> {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = resp.message,
-                        errorIsAuth = resp.isAuthError,
-                        errorIsRateLimit = resp.isRateLimit,
-                        response = null,
-                    )
-                }
+                        cachedAt = System.currentTimeMillis(),
+                    ),
+                )
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    response = cleaned,
+                    error = null,
+                )
+            }
+            is AiResponse.Error -> {
+                // Phase 4 Stage P4-C2 part В.1 (Convention #59) — 429 от
+                // провайдера получает явный текст «лимит провайдера», не
+                // мешается с нашим внутренним лимитом.
+                val message = if (resp.isRateLimit) {
+                    "Превышен лимит провайдера. Попробуй через пару минут или переключись на другой провайдер в Настройках."
+                } else resp.message
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = message,
+                    errorIsAuth = resp.isAuthError,
+                    errorIsRateLimit = resp.isRateLimit,
+                    response = null,
+                )
             }
         }
     }

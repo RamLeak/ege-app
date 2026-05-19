@@ -198,6 +198,22 @@ fun SettingsScreen(
                         )
                     }
                 }
+                // Phase 4 Stage P4-C2 part Б (Convention #58) — toggle для
+                // кнопок букв в №9-12 (default ON — лучший mobile UX).
+                item("trainers_title") { SectionTitle("Тренажёры") }
+                item("trainers") {
+                    AppleCard(paddingDp = 4) {
+                        SwitchRow(
+                            emoji = "🔤",
+                            title = "Кнопки выбора букв",
+                            subtitle = "В тренажёрах № 9-12 русского — вместо ручного ввода",
+                            checked = settings.useLetterChoices,
+                            onChange = { v ->
+                                scope.launch { AppSettingsStore.setUseLetterChoices(context, v) }
+                            },
+                        )
+                    }
+                }
                 item("data_title") { SectionTitle("Данные") }
                 item("data") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -292,8 +308,13 @@ fun SettingsScreen(
     if (showLimitSheet) {
         DailyLimitBottomSheet(
             current = aiSettings.dailyLimit,
+            todayUsage = aiSettings.todayUsage,
             onSave = { newLimit ->
                 scope.launch { AiSettingsStore.setDailyLimit(context, newLimit) }
+                showLimitSheet = false
+            },
+            onResetTodayUsage = {
+                scope.launch { AiSettingsStore.resetTodayUsage(context) }
                 showLimitSheet = false
             },
             onDismiss = { showLimitSheet = false },

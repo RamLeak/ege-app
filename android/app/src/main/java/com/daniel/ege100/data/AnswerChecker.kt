@@ -33,7 +33,29 @@ object AnswerChecker {
      * @param answerFormat `problems.answer_format` — number / string /
      *                    alternatives / multipart / null.
      */
-    fun isCorrect(userAnswer: String, correctAnswer: String, answerFormat: String?): Boolean {
+    fun isCorrect(userAnswer: String, correctAnswer: String?, answerFormat: String?): Boolean {
+        // Phase 4 Stage P4-C2 part Г (Convention #55) — defensive guards.
+        // Сигнатура расширена до `String?` — некоторые вызывающие места
+        // могут когда-нибудь передать null (Kotlin не помешает если
+        // другая ветка кода в будущем уберёт `.orEmpty()`). Кроме того
+        // оборачиваем всю логику в try/catch с fallback на простое
+        // case-insensitive equals — это даёт хоть какое-то поведение
+        // при неожиданном вводе вместо краша приложения.
+        if (correctAnswer.isNullOrBlank()) return false
+        if (userAnswer.isBlank()) return false
+        return try {
+            checkImpl(userAnswer, correctAnswer, answerFormat)
+        } catch (e: Throwable) {
+            android.util.Log.e(
+                "AnswerChecker",
+                "isCorrect crash for user='${userAnswer.take(50)}' correct='${correctAnswer.take(50)}'",
+                e,
+            )
+            userAnswer.trim().equals(correctAnswer.trim(), ignoreCase = true)
+        }
+    }
+
+    private fun checkImpl(userAnswer: String, correctAnswer: String, answerFormat: String?): Boolean {
         val nt = normalize(userAnswer)
         if (nt.isEmpty()) return false
         val variants = splitVariants(correctAnswer).map { normalize(it) }.filter { it.isNotEmpty() }

@@ -32,7 +32,7 @@ import java.time.LocalDate
 data class AiSettings(
     val activeProvider: AiProviderType = AiProviderType.OPENROUTER,
     val modelByProvider: Map<String, String> = defaultModels(),
-    val dailyLimit: Int = 50,
+    val dailyLimit: Int = 200,
     val todayUsage: Int = 0,
     val todayDate: String = "",
 ) {
@@ -77,7 +77,9 @@ object AiSettingsStore {
                     AiProviderType.GEMINI.name to (prefs[MODEL_GEMINI] ?: "gemini-2.0-flash"),
                     AiProviderType.ANTHROPIC.name to (prefs[MODEL_ANTHROPIC] ?: "claude-sonnet-4-6"),
                 ),
-                dailyLimit = prefs[DAILY_LIMIT] ?: 50,
+                // Phase 4 Stage P4-C2 part В.3 (Convention #59) — default 50→200.
+                // 50 было слишком мало для активной подготовки.
+                dailyLimit = prefs[DAILY_LIMIT] ?: 200,
                 todayUsage = usage,
                 todayDate = if (savedDate == today) today else "",
             )
@@ -108,6 +110,20 @@ object AiSettingsStore {
             val savedDate = prefs[TODAY_DATE]
             val current = if (savedDate == today) prefs[TODAY_USAGE] ?: 0 else 0
             prefs[TODAY_USAGE] = current + 1
+            prefs[TODAY_DATE] = today
+        }
+    }
+
+    /**
+     * Phase 4 Stage P4-C2 part В.2 (Convention #59) — ручной сброс счётчика.
+     * Полезно если пользователь случайно сжёг лимит на тестовых запросах
+     * или хочет проверить новую модель не дожидаясь следующего дня. Дата
+     * сохраняется — следующее `incrementTodayUsage` пойдёт с 0+1.
+     */
+    suspend fun resetTodayUsage(context: Context) {
+        val today = LocalDate.now().toString()
+        context.aiSettingsStore.edit { prefs ->
+            prefs[TODAY_USAGE] = 0
             prefs[TODAY_DATE] = today
         }
     }

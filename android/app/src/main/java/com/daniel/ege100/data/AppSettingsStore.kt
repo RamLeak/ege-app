@@ -28,6 +28,13 @@ data class AppSettings(
     val notifyMockExams: Boolean = true,
     val notifyStreak: Boolean = true,
     val notifyReminders: Boolean = true,
+    /**
+     * Phase 4 Stage P4-C2 part Б (Convention #58) — в тренажёрах №9-12
+     * показывать кнопки 2-3 букв вместо текстового поля. Default = true:
+     * это лучший mobile UX (тап один раз vs «открыть клавиатуру → найти
+     * букву → закрыть»).
+     */
+    val useLetterChoices: Boolean = true,
 )
 
 private val Context.appSettingsStore by preferencesDataStore("app_settings")
@@ -38,6 +45,7 @@ object AppSettingsStore {
     private val NOTIFY_MOCK = booleanPreferencesKey("notify_mock_exams")
     private val NOTIFY_STREAK = booleanPreferencesKey("notify_streak")
     private val NOTIFY_REMINDERS = booleanPreferencesKey("notify_reminders")
+    private val USE_LETTER_CHOICES = booleanPreferencesKey("use_letter_choices")
 
     fun settingsFlow(context: Context): Flow<AppSettings> =
         context.appSettingsStore.data.map { prefs ->
@@ -47,6 +55,7 @@ object AppSettingsStore {
                 notifyMockExams = prefs[NOTIFY_MOCK] ?: true,
                 notifyStreak = prefs[NOTIFY_STREAK] ?: true,
                 notifyReminders = prefs[NOTIFY_REMINDERS] ?: true,
+                useLetterChoices = prefs[USE_LETTER_CHOICES] ?: true,
             )
         }
 
@@ -73,6 +82,10 @@ object AppSettingsStore {
         context.appSettingsStore.edit { it[NOTIFY_REMINDERS] = value }
     }
 
+    suspend fun setUseLetterChoices(context: Context, value: Boolean) {
+        context.appSettingsStore.edit { it[USE_LETTER_CHOICES] = value }
+    }
+
     /** Stage P3-A part Д: восстановление из бэкапа. */
     suspend fun restore(context: Context, settings: AppSettings) {
         context.appSettingsStore.edit { prefs ->
@@ -81,6 +94,7 @@ object AppSettingsStore {
             prefs[NOTIFY_MOCK] = settings.notifyMockExams
             prefs[NOTIFY_STREAK] = settings.notifyStreak
             prefs[NOTIFY_REMINDERS] = settings.notifyReminders
+            prefs[USE_LETTER_CHOICES] = settings.useLetterChoices
         }
     }
 }

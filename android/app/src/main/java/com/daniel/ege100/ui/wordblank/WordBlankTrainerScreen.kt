@@ -128,6 +128,33 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun trainerId(): String = "blank_${_state.value.typeNumber}"
 
+    // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance Job
+    // на ViewModel, чтобы AI-bottom-sheet мог его отменить.
+    private var pendingAdvanceJob: kotlinx.coroutines.Job? = null
+
+    private fun scheduleAutoAdvance(delayMs: Long = 1000L) {
+        pendingAdvanceJob?.cancel()
+        pendingAdvanceJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(delayMs)
+            goNext()
+            pendingAdvanceJob = null
+        }
+    }
+
+    fun onAskAiOpened() {
+        pendingAdvanceJob?.cancel()
+        pendingAdvanceJob = null
+    }
+
+    fun lastVerdictWasRight(): Boolean =
+        (_state.value.state as? BlankInputState.Verdict)?.isRight == true
+
+    fun onAskAiClosed(wasRight: Boolean) {
+        if (wasRight && _state.value.state is BlankInputState.Verdict) {
+            scheduleAutoAdvance(delayMs = 500L)
+        }
+    }
+
     fun start(typeNumber: Int, defaultOrder: String) {
         if (initializedFor == typeNumber) return
         initializedFor = typeNumber
@@ -222,6 +249,18 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = cur.copy(userInput = sanitized)
     }
 
+    /**
+     * Phase 4 Stage P4-C2 part Б (Convention #57) — комбинированный вызов
+     * для LetterChoiceRow: ставит input и сразу проверяет. Экономит
+     * пользователю один тап («Проверить»).
+     */
+    fun checkLetter(letter: String) {
+        val cur = _state.value
+        if (cur.state is BlankInputState.Verdict) return
+        _state.value = cur.copy(userInput = letter)
+        check()
+    }
+
     fun check() {
         val cur = _state.value
         val word = cur.currentWord ?: return
@@ -278,6 +317,8 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 isRight = isRight,
             ),
         )
+        // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance Job.
+        if (isRight) scheduleAutoAdvance(delayMs = 1000L)
     }
 
     fun goNext() {
@@ -336,15 +377,14 @@ fun WordBlankTrainerScreen(
     val st by vm.state.collectAsState()
     val haptic = LocalHapticFeedback.current
     var showAi by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Phase 4 Stage P4-C2 part Б (Convention #58) — toggle из AppSettings.
+    val appSettings by com.daniel.ege100.data.AppSettingsStore.settingsFlow(context)
+        .collectAsState(initial = com.daniel.ege100.data.AppSettings())
+    val useLetterChoices = appSettings.useLetterChoices
 
-    // Авто-переход при правильном.
-    LaunchedEffect(st.state, st.position) {
-        val v = st.state
-        if (v is BlankInputState.Verdict && v.isRight) {
-            delay(1000L)
-            vm.goNext()
-        }
-    }
+    // Phase 4 Stage P4-C2 part А (Convention #56) — auto-advance перенесён
+    // во ViewModel.scheduleAutoAdvance(); здесь только haptic.
 
     // Haptic при verdict.
     LaunchedEffect(st.state) {
@@ -380,7 +420,12 @@ fun WordBlankTrainerScreen(
             when {
                 st.loading -> CenteredText("Загрузка словаря…")
                 st.currentWord == null -> CenteredText("Слова не найдены")
-                else -> Body(st = st, vm = vm, onAiClick = { showAi = true })
+                else -> Body(
+                    st = st,
+                    vm = vm,
+                    useLetterChoices = useLetterChoices,
+                    onAiClick = { showAi = true },
+                )
             }
         }
     }
@@ -395,6 +440,12 @@ fun WordBlankTrainerScreen(
             onStartOver = { vm.acceptStartOver() },
             onDismiss = { vm.acceptStartOver() },
         )
+    }
+
+    // Phase 4 Stage P4-C2 part А (Convention #56) — отменяем auto-advance
+    // при открытии AI-окна.
+    LaunchedEffect(showAi) {
+        if (showAi) vm.onAskAiOpened()
     }
 
     // Phase 4 Stage P4-C part Д (Convention #53) — AI в тренажёре пропусков.
@@ -415,7 +466,11 @@ fun WordBlankTrainerScreen(
             com.daniel.ege100.ui.ai.AskAiBottomSheet(
                 problemContext = context,
                 userAnswerForHint = if (!verdict.isRight) verdict.userAnswer else null,
-                onDismiss = { showAi = false },
+                onDismiss = {
+                    showAi = false
+                    // Phase 4 Stage P4-C2 part А (Convention #56) — resume.
+                    vm.onAskAiClosed(verdict.isRight)
+                },
                 onOpenSettings = {
                     showAi = false
                     onOpenAiSettings()
@@ -454,6 +509,7 @@ private fun CenteredText(s: String) {
 private fun Body(
     st: WordBlankUi,
     vm: WordBlankTrainerViewModel,
+    useLetterChoices: Boolean,
     onAiClick: () -> Unit = {},
 ) {
     val word = st.currentWord ?: return
@@ -518,13 +574,24 @@ private fun Body(
                 ) {
                     WordDisplay(word = word, state = st.state)
                     Spacer(Modifier.height(24.dp))
-                    when (st.state) {
-                        is BlankInputState.Verdict -> VerdictPanel(st.state, word)
-                        else -> InputPanel(
-                            input = st.userInput,
-                            onChange = vm::setInput,
-                            onCheck = vm::check,
+                    // Phase 4 Stage P4-C2 part Б (Convention #57/58) — две
+                    // разные input-панели: кнопки букв (default) или
+                    // текстовое поле (toggle в Настройках).
+                    if (useLetterChoices) {
+                        LetterChoiceInputPanel(
+                            word = word,
+                            state = st.state,
+                            onSelect = vm::checkLetter,
                         )
+                    } else {
+                        when (st.state) {
+                            is BlankInputState.Verdict -> VerdictPanel(st.state, word)
+                            else -> InputPanel(
+                                input = st.userInput,
+                                onChange = vm::setInput,
+                                onCheck = vm::check,
+                            )
+                        }
                     }
                 }
             }
@@ -589,6 +656,66 @@ private fun WordDisplay(word: WordBlank, state: BlankInputState) {
         textAlign = TextAlign.Center,
         lineHeight = 56.sp,
     )
+}
+
+/**
+ * Phase 4 Stage P4-C2 part Б (Convention #57) — LetterChoiceInputPanel.
+ *
+ * Показывает 1-3 кнопки-варианта вместо ручного ввода. После Verdict
+ * сохраняем выбранный вариант + правильный для подсветки (зелёный/
+ * красный). Подсказка-правило `word.rule_hint` под кнопками при
+ * неверном ответе.
+ */
+@Composable
+private fun LetterChoiceInputPanel(
+    word: com.daniel.ege100.data.WordBlank,
+    state: BlankInputState,
+    onSelect: (String) -> Unit,
+) {
+    val choices = androidx.compose.runtime.remember(word.full, word.answer) {
+        com.daniel.ege100.data.WordBlankChoices.choicesFor(word.answer)
+    }
+    val verdict = state as? BlankInputState.Verdict
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Какая буква пропущена?",
+            color = LabelSecondary,
+            fontSize = 15.sp,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        com.daniel.ege100.ui.common.LetterChoiceRow(
+            choices = choices,
+            selected = verdict?.userAnswer,
+            correct = verdict?.correctAnswer,
+            showVerdict = verdict != null,
+            enabled = verdict == null,
+            onSelect = onSelect,
+        )
+        if (verdict != null) {
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = if (verdict.isRight) "✓ Верно" else "✕ Неверно",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (verdict.isRight) SystemGreen else SystemRed,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            if (!verdict.isRight) {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = word.rule_hint,
+                    fontSize = 14.sp,
+                    color = LabelTertiary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -78,7 +78,21 @@ object LatexCleaner {
     )
 
     fun clean(input: String): String {
-        if (input.isEmpty()) return input
+        if (input.isBlank()) return input
+        // Phase 4 Stage P4-C2 part Г (Convention #55) — try/catch вокруг всей
+        // регекс-цепочки. На непредвиденно длинном тексте или странных
+        // unicode-последовательностях возможны OOM / StackOverflow от Regex.
+        // Если чистка падает — возвращаем исходный текст; пусть пользователь
+        // увидит сырой `\frac` в ответе вместо краша приложения.
+        return try {
+            cleanImpl(input)
+        } catch (e: Throwable) {
+            android.util.Log.e("LatexCleaner", "clean() crash on input length=${input.length}", e)
+            input
+        }
+    }
+
+    private fun cleanImpl(input: String): String {
         var s = input
 
         // 1. Обёртки \( \) \[ \] $...$ → просто содержимое.

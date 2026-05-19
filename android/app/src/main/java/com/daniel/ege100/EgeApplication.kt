@@ -40,9 +40,31 @@ class EgeApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        installCrashHandler()
         NotificationHelper.ensureChannel(this)
         scheduleReminderWorkers()
         cleanupOldAiCache()
+    }
+
+    /**
+     * Phase 4 Stage P4-C2 part Г (Convention #55) — глобальный логгер
+     * непойманных исключений. По умолчанию Android просто завершает
+     * процесс — в release-сборке без crashlytics мы теряем stack trace.
+     * Здесь мы пишем его в Log.e("EgeApp", ...) перед передачей дальше
+     * в системный обработчик (он всё равно покажет диалог «Приложение
+     * остановлено»). Stack trace остаётся в logcat и доступен через
+     * `adb logcat -s EgeApp -d -t 200` при следующем подключении.
+     */
+    private fun installCrashHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
+            android.util.Log.e(
+                "EgeApp",
+                "UNCAUGHT EXCEPTION on thread '${thread.name}'",
+                exception,
+            )
+            defaultHandler?.uncaughtException(thread, exception)
+        }
     }
 
     /** Phase 4 Stage A5: чистим AI-кеш старше 30 дней. */

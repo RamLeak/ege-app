@@ -313,7 +313,10 @@ fun ApiKeyEditBottomSheet(
 @Composable
 fun DailyLimitBottomSheet(
     current: Int,
+    // Phase 4 Stage P4-C2 part В.2 (Convention #59) — показ usage + кнопка сброса.
+    todayUsage: Int,
     onSave: (Int) -> Unit,
+    onResetTodayUsage: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -333,8 +336,8 @@ fun DailyLimitBottomSheet(
             Text("Лимит в день", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Label)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Защита от случайных списаний при использовании платных моделей. " +
-                    "После N запросов в день кнопка ИИ отключается до завтра.",
+                "Это твой внутренний лимит (защита от случайных списаний на платных моделях). " +
+                    "Лимит провайдера — отдельный, у OpenRouter free ≈ 200/день, у Gemini ≈ 1500/день.",
                 fontSize = 13.sp,
                 color = LabelSecondary,
                 lineHeight = 18.sp,
@@ -355,6 +358,14 @@ fun DailyLimitBottomSheet(
                     color = SystemBlue,
                 )
             }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Сегодня использовано: $todayUsage из $current",
+                fontSize = 13.sp,
+                color = LabelSecondary,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf(10, 25, 50, 100, 200).forEach { preset ->
@@ -372,6 +383,12 @@ fun DailyLimitBottomSheet(
                 enabled = value != current,
             )
             Spacer(Modifier.height(10.dp))
+            com.daniel.ege100.ui.common.TertiaryButton(
+                text = "Сбросить счётчик сегодня",
+                onClick = onResetTodayUsage,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(6.dp))
             SecondaryButton(
                 text = "Отмена",
                 onClick = onDismiss,
