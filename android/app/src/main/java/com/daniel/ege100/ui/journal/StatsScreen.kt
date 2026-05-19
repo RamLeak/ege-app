@@ -41,6 +41,7 @@ import com.daniel.ege100.data.CatalogDao
 import com.daniel.ege100.data.DailyStat
 import com.daniel.ege100.data.EgeDatabase
 import com.daniel.ege100.data.FavoritesStore
+import com.daniel.ege100.data.ProgressRepository
 import com.daniel.ege100.data.StreakStore
 import com.daniel.ege100.data.TypeAccuracy
 import com.daniel.ege100.data.UserDataDatabase
@@ -84,11 +85,24 @@ data class StatsUi(
     val totalTypes: Int = 46,
     val wordsLearned: Int = 0,
     val favoritesCount: Int = 0,
+    /**
+     * Phase 4 Stage P4-D2 part В (Convention #66) — typeId → mastered.
+     * Используется в TypeAccuracyRow чтобы поставить ✓ только когда ВСЕ
+     * задачи типа решены правильно (а не по старой метрике
+     * `attempts >= 15 && accuracy >= 70%`).
+     */
+    val masteredTypes: Set<Long> = emptySet(),
 )
 
 data class TypeWithTitle(
     val accuracy: TypeAccuracy,
     val title: String?,
+    /** Phase 4 Stage P4-D2 part В: освоен ли тип целиком (solved == total). */
+    val mastered: Boolean = false,
+    /** total задач в типе из corpus.db — для отображения N/M в строке. */
+    val totalProblems: Int = 0,
+    /** solved (последняя попытка верная) — для N/M. */
+    val solvedProblems: Int = 0,
 )
 
 class StatsViewModel(app: Application) : AndroidViewModel(app) {
@@ -115,16 +129,42 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
             val mathStats = UserStatsStore.getTypeStats(ctx, "math", 19)
             val rusStats = UserStatsStore.getTypeStats(ctx, "rus", 27)
 
-            // Подтягиваем title типов из corpus.db.
+            // Подтягиваем title типов из corpus.db + прогресс (Phase 4 P4-D2 В).
             val mathSubject = catalogDao.getSubjectBySlug("mathb")
             val rusSubject = catalogDao.getSubjectBySlug("rus")
+            val mathProgress = mathSubject?.let { ProgressRepository.getTypeProgress(ctx, it.id) } ?: emptyMap()
+            val rusProgress = rusSubject?.let { ProgressRepository.getTypeProgress(ctx, it.id) } ?: emptyMap()
             val mathTypes = if (mathSubject != null) {
-                val titles = catalogDao.getTypesBySubject(mathSubject.id).associate { it.number to it.title }
-                mathStats.map { acc -> TypeWithTitle(accuracy = acc, title = titles[acc.typeNumber]) }
+                val typeRows = catalogDao.getTypesBySubject(mathSubject.id)
+                val titles = typeRows.associate { it.number to it.title }
+                val typeIdByNumber = typeRows.associate { it.number to it.id }
+                mathStats.map { acc ->
+                    val tid = typeIdByNumber[acc.typeNumber]
+                    val p = tid?.let { mathProgress[it] }
+                    TypeWithTitle(
+                        accuracy = acc,
+                        title = titles[acc.typeNumber],
+                        mastered = p?.isMastered ?: false,
+                        totalProblems = p?.total ?: 0,
+                        solvedProblems = p?.solved ?: 0,
+                    )
+                }
             } else emptyList()
             val rusTypes = if (rusSubject != null) {
-                val titles = catalogDao.getTypesBySubject(rusSubject.id).associate { it.number to it.title }
-                rusStats.map { acc -> TypeWithTitle(accuracy = acc, title = titles[acc.typeNumber]) }
+                val typeRows = catalogDao.getTypesBySubject(rusSubject.id)
+                val titles = typeRows.associate { it.number to it.title }
+                val typeIdByNumber = typeRows.associate { it.number to it.id }
+                rusStats.map { acc ->
+                    val tid = typeIdByNumber[acc.typeNumber]
+                    val p = tid?.let { rusProgress[it] }
+                    TypeWithTitle(
+                        accuracy = acc,
+                        title = titles[acc.typeNumber],
+                        mastered = p?.isMastered ?: false,
+                        totalProblems = p?.total ?: 0,
+                        solvedProblems = p?.solved ?: 0,
+                    )
+                }
             } else emptyList()
 
             // Achievements.
@@ -136,10 +176,13 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
             // ответов в тренажёрах из UserStatsStore.
             val wordsLearned = UserStatsStore.getTrainerWordsLearned(ctx)
             val favs = FavoritesStore.snapshot(ctx).size
-            // Phase 3 Stage FINAL part Д (Convention #37): «освоено» = 15+ попыток И accuracy >= 70%.
-            // Раньше было `count { it.attempts > 0 }` — это давало ложную мотивацию
-            // («Освоено: 1 из 46» после 1 решённой задачи).
-            val typesCovered = (mathStats + rusStats).count { it.attempts >= 15 && it.accuracy >= 0.70f }
+            // Phase 4 Stage P4-D2 part В (Convention #66): «освоено» = ВСЕ
+            // задачи типа решены правильно по последней попытке. Раньше
+            // (Convention #37) было «15+ попыток И accuracy ≥ 70%» — это
+            // мягкая метрика, но в каталоге пользователь видит прогресс-бар
+            // и хочет конкретный «100%» badge.
+            val typesCovered = mathProgress.values.count { it.isMastered } +
+                rusProgress.values.count { it.isMastered }
 
             _state.value = StatsUi(
                 loading = false,
@@ -460,8 +503,9 @@ private fun TypeAccuracyTableCard(types: List<TypeWithTitle>, emptyText: String)
 @Composable
 private fun TypeAccuracyRow(tw: TypeWithTitle) {
     val acc = tw.accuracy.accuracy
-    // Phase 3 Stage FINAL part Д: ✓ метка для освоенных типов.
-    val mastered = tw.accuracy.attempts >= 15 && acc >= 0.70f
+    // Phase 4 Stage P4-D2 part В (Convention #66): ✓ метка только если ВСЕ
+    // задачи типа решены правильно — это та же логика что в каталоге.
+    val mastered = tw.mastered
     val color = when {
         acc >= 0.8f -> SystemGreen
         acc >= 0.6f -> SystemBlue
@@ -539,7 +583,7 @@ private fun AchievementsRow(
                 emoji = "💪",
                 title = "Освоено типов",
                 value = "$typesCovered из $totalTypes",
-                hint = "15+ решений · точность 70%+",
+                hint = "Все задачи типа решены правильно",
                 accent = typesCovered > 0,
             )
             ThinDivider()

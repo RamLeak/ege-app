@@ -54,66 +54,81 @@ fun SwipeableProblemContent(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(hasPrev, hasNext) {
+                // Phase 4 Stage P4-D2 part Г (Convention #67) — defensive
+                // try/catch вокруг detectHorizontalDragGestures. Compose
+                // обычно ловит CancellationException сам, но если внутри
+                // onDragEnd/Drag/Cancel вылетит NPE из-за неожиданного
+                // состояния — не падаем, просто snapTo(0).
                 val screenWidth = size.width.toFloat()
                 val threshold = screenWidth * 0.25f
                 var skip = false
-                detectHorizontalDragGestures(
-                    onDragStart = { startOffset ->
-                        // Жест из edge-зоны — отдаём SwipeBackContainer.
-                        skip = startOffset.x < edgePx
-                        if (!skip) onSwipeStart()
-                    },
-                    onDragEnd = {
-                        if (skip) return@detectHorizontalDragGestures
-                        val cur = offsetX.value
-                        when {
-                            cur < -threshold && hasNext -> {
-                                scope.launch {
-                                    onNext()
-                                    offsetX.snapTo(0f)
+                try {
+                    detectHorizontalDragGestures(
+                        onDragStart = { startOffset ->
+                            // Жест из edge-зоны — отдаём SwipeBackContainer.
+                            skip = startOffset.x < edgePx
+                            if (!skip) onSwipeStart()
+                        },
+                        onDragEnd = {
+                            if (skip) return@detectHorizontalDragGestures
+                            val cur = offsetX.value
+                            when {
+                                cur < -threshold && hasNext -> {
+                                    scope.launch {
+                                        onNext()
+                                        offsetX.snapTo(0f)
+                                    }
+                                }
+                                cur > threshold && hasPrev -> {
+                                    scope.launch {
+                                        onPrev()
+                                        offsetX.snapTo(0f)
+                                    }
+                                }
+                                else -> {
+                                    scope.launch {
+                                        offsetX.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = spring(
+                                                dampingRatio = 0.85f,
+                                                stiffness = Spring.StiffnessMediumLow,
+                                            ),
+                                        )
+                                    }
                                 }
                             }
-                            cur > threshold && hasPrev -> {
+                            skip = false
+                        },
+                        onDragCancel = {
+                            if (!skip) {
                                 scope.launch {
-                                    onPrev()
-                                    offsetX.snapTo(0f)
+                                    offsetX.animateTo(0f, spring(0.85f, Spring.StiffnessMediumLow))
                                 }
                             }
-                            else -> {
-                                scope.launch {
-                                    offsetX.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = spring(
-                                            dampingRatio = 0.85f,
-                                            stiffness = Spring.StiffnessMediumLow,
-                                        ),
-                                    )
-                                }
+                            skip = false
+                        },
+                        onHorizontalDrag = { _, drag ->
+                            if (skip) return@detectHorizontalDragGestures
+                            val target = offsetX.value + drag
+                            // Резинка /3 на границах: если двигаемся в сторону где
+                            // нет prev/next — реальный сдвиг = 1/3 от пальца.
+                            val effective = when {
+                                target < 0f && !hasNext -> offsetX.value + drag / 3f
+                                target > 0f && !hasPrev -> offsetX.value + drag / 3f
+                                else -> target
                             }
-                        }
-                        skip = false
-                    },
-                    onDragCancel = {
-                        if (!skip) {
-                            scope.launch {
-                                offsetX.animateTo(0f, spring(0.85f, Spring.StiffnessMediumLow))
-                            }
-                        }
-                        skip = false
-                    },
-                    onHorizontalDrag = { _, drag ->
-                        if (skip) return@detectHorizontalDragGestures
-                        val target = offsetX.value + drag
-                        // Резинка /3 на границах: если двигаемся в сторону где
-                        // нет prev/next — реальный сдвиг = 1/3 от пальца.
-                        val effective = when {
-                            target < 0f && !hasNext -> offsetX.value + drag / 3f
-                            target > 0f && !hasPrev -> offsetX.value + drag / 3f
-                            else -> target
-                        }
-                        scope.launch { offsetX.snapTo(effective) }
-                    },
-                )
+                            scope.launch { offsetX.snapTo(effective) }
+                        },
+                    )
+                } catch (cancel: kotlinx.coroutines.CancellationException) {
+                    throw cancel  // CancellationException нужно пробросить дальше.
+                } catch (e: Throwable) {
+                    android.util.Log.e("SwipeableProblem", "gesture handler failed", e)
+                    com.daniel.ege100.data.BreadcrumbLog.add(
+                        "SwipeGesture failed: ${e.javaClass.simpleName} ${e.message?.take(80)}",
+                    )
+                    scope.launch { offsetX.snapTo(0f) }
+                }
             }
             .graphicsLayer { translationX = offsetX.value },
     ) {

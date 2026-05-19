@@ -211,6 +211,10 @@ class ProblemDetailViewModel(app: Application) : AndroidViewModel(app) {
         // статистику — повторные ответы — это та же задача.
         val isFirstCheck = cur.checkResult is CheckResult.Idle
         val correct = AnswerChecker.isCorrect(typed, expected, cur.problem.answerFormat)
+        // Phase 4 Stage P4-D2 part Г (Convention #67) — breadcrumb для crash report.
+        com.daniel.ege100.data.BreadcrumbLog.add(
+            "ProblemCheck: id=${cur.problem.id}, user='${typed.take(20)}', correct=$correct",
+        )
         _state.value = if (correct) cur.copy(checkResult = CheckResult.Correct)
                        else cur.copy(checkResult = CheckResult.Wrong(expected), isSolutionExpanded = true)
         if (isFirstCheck) recordAttempt(cur, correct)

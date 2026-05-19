@@ -272,6 +272,10 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
         // когда-нибудь начнёт давать варианты типа «о|а», AnswerChecker
         // обработает корректно.
         val isRight = AnswerChecker.isCorrect(typed, correct, "string")
+        // Phase 4 Stage P4-D2 part Г (Convention #67) — breadcrumb.
+        com.daniel.ege100.data.BreadcrumbLog.add(
+            "WordBlankCheck: t=${cur.typeNumber}, word='${word.full}', user='$typed', correct=$isRight",
+        )
         if (!isRight) {
             viewModelScope.launch {
                 WordBlankErrorsStore.recordError(

@@ -292,6 +292,10 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                 if (s.syllableIndex == syllableIdx) {
                     val correct = findSyllableContaining(syllables, word.stressed_index)
                     val isRight = syllableIdx == correct
+                    // Phase 4 Stage P4-D2 part Г (Convention #67) — breadcrumb.
+                    com.daniel.ege100.data.BreadcrumbLog.add(
+                        "AccentTap: word='${word.word}', syl=$syllableIdx, correct=$isRight",
+                    )
                     if (!isRight) {
                         viewModelScope.launch {
                             AccentErrorsStore.recordError(getApplication(), word.word)

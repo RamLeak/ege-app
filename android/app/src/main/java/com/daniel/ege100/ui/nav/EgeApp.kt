@@ -57,6 +57,7 @@ import androidx.navigation.toRoute
 import com.daniel.ege100.data.BackupRepository
 import com.daniel.ege100.data.BackupShare
 import com.daniel.ege100.data.BackupSnapshot
+import com.daniel.ege100.data.BreadcrumbLog
 import com.daniel.ege100.data.CsvExporter
 import com.daniel.ege100.data.ImportResult
 import com.daniel.ege100.ui.accent.AccentCategoriesScreen
@@ -146,6 +147,16 @@ fun EgeApp() {
     val currentDest: NavDestination? = backStack?.destination
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Phase 4 Stage P4-D2 part Г (Convention #67) — breadcrumb навигации.
+    // Логируем при смене текущей destination — попадает в crash report.
+    LaunchedEffect(currentDest?.route) {
+        val r = currentDest?.route
+        if (r != null) {
+            val short = r.substringAfterLast('.').substringBefore('?').substringBefore('/').take(80)
+            BreadcrumbLog.add("Navigate to $short")
+        }
+    }
 
     // Phase 3 Stage A part Д — share/import handlers поднимаем сюда, на
     // уровень Scaffold, чтобы Profile и Settings экраны могли вызвать одно

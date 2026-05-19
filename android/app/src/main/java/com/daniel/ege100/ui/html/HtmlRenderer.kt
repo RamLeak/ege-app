@@ -108,7 +108,25 @@ private data class ParsedBlock(
 
 // ----------------------- Jsoup-парсинг -----------------------
 
-private fun parse(html: String): List<ParsedBlock> {
+private fun parse(html: String): List<ParsedBlock> = try {
+    parseImpl(html)
+} catch (e: Throwable) {
+    // Phase 4 Stage P4-D2 part Г (Convention #67) — Jsoup может бросить
+    // на странном HTML из corpus.db; не падаем — возвращаем plain text как
+    // единственный сегмент, и пишем breadcrumb для crash report.
+    Log.e(TAG, "HtmlRenderer.parse failed", e)
+    com.daniel.ege100.data.BreadcrumbLog.add(
+        "HtmlRender.parse failed: ${e.javaClass.simpleName} ${e.message?.take(80)}",
+    )
+    listOf(
+        ParsedBlock(
+            inlineFlow = listOf(Seg.Text(html.replace(Regex("<[^>]+>"), " ").take(800))),
+            blockImages = emptyList(),
+        ),
+    )
+}
+
+private fun parseImpl(html: String): List<ParsedBlock> {
     val cleaned = sanitizeHtml(html)
     val doc = Jsoup.parse(cleaned)
     val body = doc.body()
@@ -508,7 +526,15 @@ fun HtmlRenderer(
 ) {
     if (html.isBlank()) return
 
-    val blocks = remember(html) { parse(html) }
+    // Phase 4 Stage P4-D2 part Г (Convention #67) — parse() уже обёрнут
+    // в try/catch внутри. Здесь — defensive remember с fallback на пустой
+    // список, чтобы рекомпозиция не унесла весь screen.
+    val blocks = remember(html) {
+        runCatching { parse(html) }.getOrElse {
+            Log.e(TAG, "HtmlRenderer.remember parse failed", it)
+            emptyList()
+        }
+    }
 
     // Phase 4 Stage P4-C part В (Convention #50) — крупнее формулы.
     // Inline-формулы: scaleFactor 1.4 → 1.6 и минимум 28sp. На base=18sp

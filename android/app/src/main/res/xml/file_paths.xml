@@ -6,4 +6,6 @@
 -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="backup_cache" path="." />
+    <!-- Phase 4 Stage P4-D2 part Г (Convention #68) — crash логи в files/crashes/. -->
+    <files-path name="crash_logs" path="crashes/" />
 </paths>

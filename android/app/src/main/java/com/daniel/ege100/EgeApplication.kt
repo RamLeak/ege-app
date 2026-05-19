@@ -9,6 +9,8 @@ import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.daniel.ege100.data.BreadcrumbLog
+import com.daniel.ege100.data.CrashLog
 import com.daniel.ege100.notifications.DailyReminderWorker
 import com.daniel.ege100.notifications.MockExamReminderWorker
 import com.daniel.ege100.notifications.NotificationHelper
@@ -41,6 +43,7 @@ class EgeApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         installCrashHandler()
+        BreadcrumbLog.add("App started")
         NotificationHelper.ensureChannel(this)
         scheduleReminderWorkers()
         cleanupOldAiCache()
@@ -48,12 +51,14 @@ class EgeApplication : Application(), ImageLoaderFactory {
 
     /**
      * Phase 4 Stage P4-C2 part Г (Convention #55) — глобальный логгер
-     * непойманных исключений. По умолчанию Android просто завершает
-     * процесс — в release-сборке без crashlytics мы теряем stack trace.
-     * Здесь мы пишем его в Log.e("EgeApp", ...) перед передачей дальше
-     * в системный обработчик (он всё равно покажет диалог «Приложение
-     * остановлено»). Stack trace остаётся в logcat и доступен через
-     * `adb logcat -s EgeApp -d -t 200` при следующем подключении.
+     * непойманных исключений.
+     *
+     * Phase 4 Stage P4-D2 part Г (Convention #67-68) — расширено: помимо
+     * Log.e в logcat (доступен через adb, недоступен пользователю),
+     * пишем подробный crash-report в `files/crashes/crash_<ts>.txt`. При
+     * следующем запуске MainActivity видит флаг `last_crash_unhandled`
+     * и показывает CrashRecoveryDialog с кнопкой «Отправить лог» —
+     * пользователь сам передаёт stack trace разработчику без adb.
      */
     private fun installCrashHandler() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -63,6 +68,9 @@ class EgeApplication : Application(), ImageLoaderFactory {
                 "UNCAUGHT EXCEPTION on thread '${thread.name}'",
                 exception,
             )
+            // Не должны рекурсивно крашиться — все ошибки внутри
+            // writeCrashReport проглочены через runCatching.
+            CrashLog.writeCrashReport(this, thread, exception)
             defaultHandler?.uncaughtException(thread, exception)
         }
     }

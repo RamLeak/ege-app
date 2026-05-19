@@ -60,10 +60,72 @@ interface AttemptLogDao {
 
     @Query("DELETE FROM attempt_log")
     suspend fun deleteAll()
+
+    /**
+     * Phase 4 Stage P4-D2 part А (Convention #64) — статусы последних попыток
+     * для подсветки карточек в ProblemListScreen.
+     *
+     * Для каждого `problem_id` из списка возвращаем `is_correct` самой свежей
+     * (по timestamp) попытки. JOIN c подзапросом MAX(timestamp) GROUP BY
+     * problem_id. Тренажёрные attempts (problem_id IS NULL) отфильтрованы
+     * через `problem_id IS NOT NULL`.
+     *
+     * Используется в ProblemListViewModel.load → строит Map<Long, Boolean>
+     * → UI отображает зелёный/красный/серый фон карточки.
+     */
+    @Query(
+        """
+        SELECT al.problem_id AS problemId, al.is_correct AS isCorrect
+        FROM attempt_log al
+        INNER JOIN (
+            SELECT problem_id, MAX(timestamp) AS max_ts
+            FROM attempt_log
+            WHERE problem_id IS NOT NULL AND problem_id IN (:problemIds)
+            GROUP BY problem_id
+        ) latest
+        ON al.problem_id = latest.problem_id AND al.timestamp = latest.max_ts
+        """
+    )
+    suspend fun getLastAttempts(problemIds: List<Long>): List<LastAttemptInfo>
+
+    /**
+     * Phase 4 Stage P4-D2 part Б (Convention #65) — для расчёта прогресса
+     * типа/подвида. Возвращает problem_id'ы, у которых ПОСЛЕДНЯЯ попытка
+     * правильная. Отсев по списку id'ов делает caller (ProgressRepository),
+     * передавая problem_id'ы из corpus.db.
+     */
+    @Query(
+        """
+        SELECT al.problem_id AS problemId
+        FROM attempt_log al
+        INNER JOIN (
+            SELECT problem_id, MAX(timestamp) AS max_ts
+            FROM attempt_log
+            WHERE problem_id IS NOT NULL AND problem_id IN (:problemIds)
+            GROUP BY problem_id
+        ) latest
+        ON al.problem_id = latest.problem_id AND al.timestamp = latest.max_ts
+        WHERE al.is_correct = 1
+        """
+    )
+    suspend fun getLastCorrectIds(problemIds: List<Long>): List<ProblemIdRow>
 }
 
 data class DailyStat(
     val day: String,    // "2026-05-18"
     val total: Int,
     val correct: Int,
+)
+
+/**
+ * Phase 4 Stage P4-D2 part А (Convention #64) — пара problem_id + последний
+ * результат, для подсветки карточек.
+ */
+data class LastAttemptInfo(
+    val problemId: Long,
+    val isCorrect: Boolean,
+)
+
+data class ProblemIdRow(
+    val problemId: Long,
 )

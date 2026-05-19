@@ -13,12 +13,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.daniel.ege100.data.AppSettings
 import com.daniel.ege100.data.AppSettingsStore
+import com.daniel.ege100.data.BreadcrumbLog
+import com.daniel.ege100.data.CrashLog
+import com.daniel.ege100.ui.common.CrashRecoveryDialog
 import com.daniel.ege100.ui.nav.EgeApp
 import com.daniel.ege100.ui.theme.EgeTheme
 
@@ -38,7 +43,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        BreadcrumbLog.add("MainActivity.onCreate")
         requestNotificationPermissionIfNeeded()
+
+        // Phase 4 Stage P4-D2 part Г (Convention #68) — проверяем флаг
+        // незавершённого краша от прошлой сессии.
+        val showCrashDialogInitial = CrashLog.hasUnhandledCrash(this)
+        if (showCrashDialogInitial) {
+            // Сразу сбрасываем флаг — диалог покажем один раз. Файл остаётся
+            // в filesDir/crashes/, доступен через Настройки → «Отправить crash log».
+            CrashLog.clearUnhandledFlag(this)
+        }
+
         setContent {
             // Phase 3 Stage A part Г: подписка на AppSettings.themeMode.
             // При смене темы в Настройках — этот flow эмитит новое значение,
@@ -47,12 +63,23 @@ class MainActivity : ComponentActivity() {
             val settingsFlow = remember(context) { AppSettingsStore.settingsFlow(context) }
             val settings by settingsFlow.collectAsState(initial = AppSettings())
 
+            var showCrashDialog by remember { mutableStateOf(showCrashDialogInitial) }
+
             EgeTheme(themeMode = settings.themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     EgeApp()
+                    if (showCrashDialog) {
+                        CrashRecoveryDialog(
+                            onSend = {
+                                CrashLog.shareLatest(this@MainActivity)
+                                showCrashDialog = false
+                            },
+                            onDismiss = { showCrashDialog = false },
+                        )
+                    }
                 }
             }
         }

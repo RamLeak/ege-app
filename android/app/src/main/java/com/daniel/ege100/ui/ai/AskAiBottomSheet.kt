@@ -121,6 +121,10 @@ class AskAiViewModel(app: Application) : AndroidViewModel(app) {
     fun ask(question: String, context: String) {
         if (_state.value.isLoading) return
         val ctx = getApplication<Application>()
+        // Phase 4 Stage P4-D2 part Г (Convention #67) — breadcrumb перед запросом.
+        com.daniel.ege100.data.BreadcrumbLog.add(
+            "AskAI: q='${question.take(40)}', ctx_len=${context.length}",
+        )
         viewModelScope.launch {
             try {
                 askImpl(ctx, question, context)

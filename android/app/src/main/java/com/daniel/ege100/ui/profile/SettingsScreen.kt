@@ -41,10 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.daniel.ege100.ai.AiProviderRegistry
 import com.daniel.ege100.ai.AiProviderType
+import android.widget.Toast
 import com.daniel.ege100.data.AiSettings
 import com.daniel.ege100.data.AiSettingsStore
 import com.daniel.ege100.data.AppSettings
 import com.daniel.ege100.data.AppSettingsStore
+import com.daniel.ege100.data.CrashLog
 import com.daniel.ege100.data.RadarStyle
 import com.daniel.ege100.data.SecureKeyStore
 import com.daniel.ege100.data.ThemeMode
@@ -240,6 +242,42 @@ fun SettingsScreen(
                         )
                     }
                 }
+                // Phase 4 Stage P4-D2 part Г (Convention #68) — поддержка и
+                // отчёты о крашах. Кнопка показывает счётчик имеющихся логов;
+                // нет → подсказка серым, есть → SystemBlueTint и share-sheet
+                // отправляет самый свежий файл.
+                item("support_title") { SectionTitle("Поддержка") }
+                item("support") {
+                    val crashFiles = remember(settings) { CrashLog.listFiles(context) }
+                    val hasCrashes = crashFiles.isNotEmpty()
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppleListRow(
+                            title = "Отправить crash log",
+                            subtitle = if (hasCrashes)
+                                "Найдено ${crashFiles.size} ${crashLogWord(crashFiles.size)} — отправь разработчику"
+                            else
+                                "Логи отсутствуют",
+                            leadingEmoji = "🐛",
+                            leadingTint = if (hasCrashes) SystemRedTint else SystemBlueTint,
+                            onClick = {
+                                if (hasCrashes) {
+                                    val ok = CrashLog.shareLatest(context)
+                                    if (!ok) Toast.makeText(
+                                        context,
+                                        "Не удалось открыть share-sheet",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Пока что не было крашей — здорово!",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                        )
+                    }
+                }
                 item("footer_pad") { Spacer(Modifier.height(24.dp)) }
             }
         }
@@ -369,6 +407,16 @@ private fun SwitchRow(
                 checkedThumbColor = Color.White,
             ),
         )
+    }
+}
+
+private fun crashLogWord(n: Int): String {
+    val mod10 = n % 10
+    val mod100 = n % 100
+    return when {
+        mod10 == 1 && mod100 != 11 -> "лог"
+        mod10 in 2..4 && mod100 !in 12..14 -> "лога"
+        else -> "логов"
     }
 }
 

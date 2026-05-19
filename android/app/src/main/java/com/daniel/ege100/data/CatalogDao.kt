@@ -203,4 +203,16 @@ interface CatalogDao {
         """
     )
     suspend fun getProblemIdsByTypeNumber(subjectSlug: String, typeNumber: Int): List<Long>
+
+    /**
+     * Phase 4 Stage P4-D2 part Б (Convention #65) — problem_id'ы конкретного
+     * типа. Используется ProgressRepository для расчёта прогресса —
+     * перекидывает их в attempt_log.getLastCorrectIds().
+     */
+    @Query("SELECT id FROM problems WHERE type_id = :typeId")
+    suspend fun getProblemIdsByType(typeId: Long): List<Long>
+
+    /** Аналог для подвида (для SubtypesScreen прогресс-бары). */
+    @Query("SELECT id FROM problems WHERE subtype_id = :subtypeId")
+    suspend fun getProblemIdsBySubtype(subtypeId: Long): List<Long>
 }

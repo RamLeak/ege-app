@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.daniel.ege100.ui.theme.BgElevated2
@@ -34,6 +35,7 @@ fun AppleProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     height: Dp = 6.dp,
+    fillColor: Color? = null,
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
@@ -44,6 +46,10 @@ fun AppleProgressBar(
         label = "progress-fill",
     )
     val capsule = RoundedCornerShape(height / 2)
+    // Phase 4 Stage P4-D2 part Б (Convention #65) — кастомный цвет для
+    // прогресс-баров типов/подвидов (серый/оранжевый/синий/зелёный по %).
+    // Default остаётся SystemBlue для обратной совместимости с journal+stats.
+    val color = fillColor ?: SystemBlue
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -56,7 +62,7 @@ fun AppleProgressBar(
                 .fillMaxWidth(animatedProgress)
                 .fillMaxHeight()
                 .clip(capsule)
-                .background(SystemBlue),
+                .background(color),
         )
     }
 }
