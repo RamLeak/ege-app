@@ -7,13 +7,17 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 /**
@@ -36,6 +40,11 @@ import kotlinx.coroutines.launch
  *   MockExamHistoryScreen, FipiVariantsScreen, AccentTrainerScreen,
  *   WordBlankTrainerScreen, ProfileScreen, SettingsScreen, QuickTrainerScreen,
  *   AccentCategoriesScreen, TypesScreen, SubtypesScreen, FavoritesScreen.
+ *
+ * Phase 5 perf fix P1 (tag `phase-5-fix-1-swipe-perf`): drag tracking
+ * переписан через CONFLATED Channel + один LaunchedEffect вместо
+ * `scope.launch { offsetX.snapTo(...) }` на каждое drag event (60+/сек).
+ * См. подробности в `SwipeableProblemContent`.
  */
 @Composable
 fun SwipeBackContainer(
@@ -47,6 +56,15 @@ fun SwipeBackContainer(
     val edgeWidthPx = with(density) { 24.dp.toPx() }
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
+    val currentOnBack by rememberUpdatedState(onBack)
+
+    // Phase 5 perf fix P1 — CONFLATED канал для drag delta.
+    val dragChannel = remember { Channel<Float>(capacity = Channel.CONFLATED) }
+    LaunchedEffect(Unit) {
+        for (target in dragChannel) {
+            offsetX.snapTo(target)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -73,7 +91,7 @@ fun SwipeBackContainer(
                                             stiffness = Spring.StiffnessMediumLow,
                                         ),
                                     )
-                                    onBack()
+                                    currentOnBack()
                                     offsetX.snapTo(0f)
                                 }
                             } else {
@@ -93,7 +111,9 @@ fun SwipeBackContainer(
                         },
                         onDragCancel = {
                             if (startedFromEdge) {
-                                scope.launch { offsetX.animateTo(0f, spring(0.85f, Spring.StiffnessMediumLow)) }
+                                scope.launch {
+                                    offsetX.animateTo(0f, spring(0.85f, Spring.StiffnessMediumLow))
+                                }
                             }
                             startedFromEdge = false
                             accumulatedDrag = 0f
@@ -101,11 +121,13 @@ fun SwipeBackContainer(
                         onHorizontalDrag = { _, drag ->
                             if (startedFromEdge && drag > 0f) {
                                 accumulatedDrag += drag
-                                scope.launch { offsetX.snapTo(accumulatedDrag.coerceAtLeast(0f)) }
+                                // Phase 5 perf fix P1 — trySend вместо
+                                // scope.launch { snapTo }.
+                                dragChannel.trySend(accumulatedDrag.coerceAtLeast(0f))
                             } else if (startedFromEdge && drag < 0f && offsetX.value > 0f) {
                                 // Откат — позволяем тянуть обратно к нулю.
                                 accumulatedDrag = (accumulatedDrag + drag).coerceAtLeast(0f)
-                                scope.launch { offsetX.snapTo(accumulatedDrag) }
+                                dragChannel.trySend(accumulatedDrag)
                             }
                         },
                     )

@@ -7,13 +7,17 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
 /**
@@ -33,6 +37,22 @@ import kotlinx.coroutines.launch
  * **В тренажёрах**: `onSwipeStart` зовётся когда жест начался — в
  * AccentTrainer/WordBlankTrainer это отменяет `pendingAdvanceJob` чтобы
  * auto-advance не сработал во время свайпа.
+ *
+ * Phase 5 perf fix P1+P2 (tag `phase-5-fix-1-swipe-perf`):
+ *  1. `Channel<Float>(CONFLATED)` + один LaunchedEffect для drag-tracking
+ *     вместо `scope.launch { offsetX.snapTo(...) }` на каждое drag event.
+ *     Старая версия запускала 60+ coroutine/сек, новая — одна coroutine
+ *     на весь life-cycle, drag events идут через `trySend` (non-suspend,
+ *     дешёвый). Если drag event приходит быстрее чем previous обработан,
+ *     CONFLATED-канал перезаписывает — для translation важно только
+ *     последнее значение.
+ *  2. `pointerInput(Unit)` вместо `pointerInput(hasPrev, hasNext)` —
+ *     раньше при смене availability prev/next Compose **пересоздавал
+ *     gesture detector целиком**, отменяя текущие drag-coroutine. На
+ *     крайних задачах (когда hasPrev/hasNext меняется на границах)
+ *     свайпы дёргались. Теперь detector создаётся один раз; свежие
+ *     значения hasPrev/hasNext/onPrev/onNext/onSwipeStart забираются
+ *     через `rememberUpdatedState` (без пересоздания detector'а).
  */
 @Composable
 fun SwipeableProblemContent(
@@ -50,38 +70,55 @@ fun SwipeableProblemContent(
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
 
+    // Phase 5 perf fix P2 — свежие значения замыкаемых callback'ов и
+    // флагов hasPrev/hasNext без пересоздания pointerInput-блока.
+    val currentHasPrev by rememberUpdatedState(hasPrev)
+    val currentHasNext by rememberUpdatedState(hasNext)
+    val currentOnPrev by rememberUpdatedState(onPrev)
+    val currentOnNext by rememberUpdatedState(onNext)
+    val currentOnSwipeStart by rememberUpdatedState(onSwipeStart)
+
+    // Phase 5 perf fix P1 — single-producer/single-consumer канал для
+    // drag delta. CONFLATED дропает старые непрочитанные значения —
+    // нам важно только последнее (текущее положение пальца).
+    val dragChannel = remember { Channel<Float>(capacity = Channel.CONFLATED) }
+    LaunchedEffect(Unit) {
+        for (target in dragChannel) {
+            offsetX.snapTo(target)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(hasPrev, hasNext) {
+            .pointerInput(Unit) {
                 // Phase 4 Stage P4-D2 part Г (Convention #67) — defensive
-                // try/catch вокруг detectHorizontalDragGestures. Compose
-                // обычно ловит CancellationException сам, но если внутри
-                // onDragEnd/Drag/Cancel вылетит NPE из-за неожиданного
-                // состояния — не падаем, просто snapTo(0).
+                // try/catch вокруг detectHorizontalDragGestures.
                 val screenWidth = size.width.toFloat()
                 val threshold = screenWidth * 0.25f
                 var skip = false
                 try {
                     detectHorizontalDragGestures(
                         onDragStart = { startOffset ->
-                            // Жест из edge-зоны — отдаём SwipeBackContainer.
                             skip = startOffset.x < edgePx
-                            if (!skip) onSwipeStart()
+                            if (!skip) currentOnSwipeStart()
                         },
                         onDragEnd = {
-                            if (skip) return@detectHorizontalDragGestures
+                            if (skip) {
+                                skip = false
+                                return@detectHorizontalDragGestures
+                            }
                             val cur = offsetX.value
                             when {
-                                cur < -threshold && hasNext -> {
+                                cur < -threshold && currentHasNext -> {
                                     scope.launch {
-                                        onNext()
+                                        currentOnNext()
                                         offsetX.snapTo(0f)
                                     }
                                 }
-                                cur > threshold && hasPrev -> {
+                                cur > threshold && currentHasPrev -> {
                                     scope.launch {
-                                        onPrev()
+                                        currentOnPrev()
                                         offsetX.snapTo(0f)
                                     }
                                 }
@@ -113,11 +150,13 @@ fun SwipeableProblemContent(
                             // Резинка /3 на границах: если двигаемся в сторону где
                             // нет prev/next — реальный сдвиг = 1/3 от пальца.
                             val effective = when {
-                                target < 0f && !hasNext -> offsetX.value + drag / 3f
-                                target > 0f && !hasPrev -> offsetX.value + drag / 3f
+                                target < 0f && !currentHasNext -> offsetX.value + drag / 3f
+                                target > 0f && !currentHasPrev -> offsetX.value + drag / 3f
                                 else -> target
                             }
-                            scope.launch { offsetX.snapTo(effective) }
+                            // Phase 5 perf fix P1 — trySend дешёвый, не suspend,
+                            // не создаёт новую coroutine на каждый кадр.
+                            dragChannel.trySend(effective)
                         },
                     )
                 } catch (cancel: kotlinx.coroutines.CancellationException) {
@@ -127,7 +166,7 @@ fun SwipeableProblemContent(
                     com.daniel.ege100.data.BreadcrumbLog.add(
                         "SwipeGesture failed: ${e.javaClass.simpleName} ${e.message?.take(80)}",
                     )
-                    scope.launch { offsetX.snapTo(0f) }
+                    dragChannel.trySend(0f)
                 }
             }
             .graphicsLayer { translationX = offsetX.value },
