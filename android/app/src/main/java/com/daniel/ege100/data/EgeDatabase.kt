@@ -37,12 +37,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     // Phase 4 Stage P4-D6 (Convention #91) — бамп с 4 до 5 (+60 объяснений).
     // Phase 4 Stage P4-D6 ночная (Convention #91) — бамп с 5 до 6 (+209 объяснений).
     // Phase 4 Stage P4-D7 (Convention #95) — бамп с 6 до 7 (+179 объяснений за ночь).
-    // Phase 5 Stage D1 — бамп с 7 до 8: pre-gen rebuild из накопительного JSON.
-    // Полностью заменены word_blank/paronym/pleonasm на 2613 свежих объяснений.
-    // Финальное распределение 2879: 229 accent + 2399 word_blank (t9 760, t10 617,
-    // t11 457, t12 565) + 157 paronyms + 57 pleonasms + 37 math. Accent и math не
-    // тронуты. Тот же destructive-recreate паттерн (Convention #86).
-    version = 8,
+    // Phase 5 Stage D1 — бамп с 7 до 8: pre-gen rebuild из накопительного JSON
+    // (2613 свежих, total 2879). Accent и math не тронуты.
+    // Phase 5 Stage D2 — бамп с 8 до 9: догенерация 307 missing объяснений
+    // (полное покрытие первых букв алфавита t9–t12). Финальное распределение 3186:
+    // 229 accent + 2649 word_blank (t9 833, t10 705, t11 516, t12 595) + 187 paronym
+    // + 84 pleonasm + 37 math. Accent и math по-прежнему не тронуты. Тот же
+    // destructive-recreate паттерн (Convention #86).
+    version = 9,
     exportSchema = true,
 )
 abstract class EgeDatabase : RoomDatabase() {
