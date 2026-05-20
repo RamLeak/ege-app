@@ -149,6 +149,18 @@ class PleonasmTrainerViewModel(app: Application) : AndroidViewModel(app) {
                     ),
                 )
             }
+            // Phase 5 Stage E2 — автосоздание SRS-карточки на ошибку.
+            // word = current.extra_word (тот же ключ что в ExplanationBottomSheet).
+            if (!isRight) {
+                runCatching {
+                    com.daniel.ege100.srs.SrsRepository.addCardOnMistake(
+                        context = ctx,
+                        word = current.extra_word,
+                        kind = "pleonasm",
+                        subtype = "rus6",
+                    )
+                }
+            }
         }
     }
 

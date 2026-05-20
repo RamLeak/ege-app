@@ -62,4 +62,22 @@ object AccentWordsRepository {
         if (categoryId == null) return "Все слова"
         return dict.categories.firstOrNull { it.id == categoryId }?.title ?: "Тренажёр"
     }
+
+    /**
+     * Phase 5 Stage E2 — определить категорию слова (nouns/verbs/...).
+     *
+     * Нужен для SrsRepository.addCardOnMistake: subtype в SRS-карточке должен
+     * совпадать с реальной категорией, чтобы карточки на одно и то же слово
+     * не дублировались в зависимости от режима пользователя (категория vs «все»).
+     *
+     * Возвращает id первой категории, в которой встречается слово, либо null
+     * если слово не найдено в словнике.
+     */
+    suspend fun categoryFor(context: Context, word: String): String? {
+        val dict = load(context)
+        val normalized = word.lowercase()
+        return dict.categories.firstOrNull { cat ->
+            cat.words.any { it.word.lowercase() == normalized }
+        }?.id
+    }
 }

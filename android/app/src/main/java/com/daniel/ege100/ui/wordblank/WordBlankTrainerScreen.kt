@@ -284,6 +284,19 @@ class WordBlankTrainerViewModel(app: Application) : AndroidViewModel(app) {
                     word.masked,
                 )
             }
+            // Phase 5 Stage E2 — автосоздание SRS-карточки.
+            // word = word.full (lowercase, как в trainer_explanations).
+            // subtype = "t9"/"t10"/"t11"/"t12" — формат БД.
+            viewModelScope.launch {
+                runCatching {
+                    com.daniel.ege100.srs.SrsRepository.addCardOnMistake(
+                        context = getApplication(),
+                        word = word.full,
+                        kind = "word_blank",
+                        subtype = "t${cur.typeNumber}",
+                    )
+                }
+            }
         }
         // Phase 3 part В + Г: тренажёр №9-12 русского → subject="rus",
         // typeNumber = текущий тип (9/10/11/12). subtypeId=null.

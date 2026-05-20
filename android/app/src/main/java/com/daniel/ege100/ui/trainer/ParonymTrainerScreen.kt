@@ -167,6 +167,19 @@ class ParonymTrainerViewModel(app: Application) : AndroidViewModel(app) {
                     ),
                 )
             }
+            // Phase 5 Stage E2 — автосоздание SRS-карточки на ошибку.
+            // Ключ word = "${wrong}/${correct}".lowercase() — тот же что
+            // в ExplanationBottomSheet (см. строка 307).
+            if (!isRight) {
+                runCatching {
+                    com.daniel.ege100.srs.SrsRepository.addCardOnMistake(
+                        context = ctx,
+                        word = "${current.wrong_word}/${current.correct_word}".lowercase(),
+                        kind = "paronym",
+                        subtype = "rus5",
+                    )
+                }
+            }
         }
     }
 

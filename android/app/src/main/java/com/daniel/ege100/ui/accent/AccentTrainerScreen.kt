@@ -300,6 +300,21 @@ class AccentTrainerViewModel(app: Application) : AndroidViewModel(app) {
                         viewModelScope.launch {
                             AccentErrorsStore.recordError(getApplication(), word.word)
                         }
+                        // Phase 5 Stage E2 — автосоздание SRS-карточки на ошибку.
+                        // subtype = реальная категория слова (nouns/verbs/...) — чтобы
+                        // карточка не дублировалась между режимом «категория» и «все слова».
+                        viewModelScope.launch {
+                            runCatching {
+                                val ctx = getApplication<Application>()
+                                val sub = AccentWordsRepository.categoryFor(ctx, word.word) ?: "default"
+                                com.daniel.ege100.srs.SrsRepository.addCardOnMistake(
+                                    context = ctx,
+                                    word = word.word,
+                                    kind = "accent",
+                                    subtype = sub,
+                                )
+                            }
+                        }
                     }
                     // Phase 3 part В + Г: тренажёр №4 ударений → subject="rus",
                     // typeNumber=4, subtypeId=null (нет подвидов у тренажёра).
