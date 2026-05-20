@@ -201,10 +201,20 @@ private fun Modifier.liquidGlassBackground(isDark: Boolean): Modifier {
     // opacity поднят с 0.75/0.78 до 0.92. Это даёт «деликатное стеклянное»
     // ощущение без разрушения читаемости. Иконки теперь рисуются ПОВЕРХ
     // этого фонового слоя через matchParentSize Box — они НЕ размываются.
+    //
+    // Phase 5 perf fix P4 (tag `phase-5-fix-3-glass-opacity`) — opacity
+    // снижен с 0.92 до 0.78. Раньше при 0.92 backdrop был почти
+    // непрозрачным и blur 8px физически не был виден — GPU тратил
+    // 2-5 ms/кадр на эффект, который пользователь не замечал. При 0.78
+    // позади подложки угадывается scroll-контент (текст / прогресс-бары /
+    // карточки) — RenderEffect blur визуально оправдан, и кадровый
+    // бюджет освобождается для AnimatedContent transitions. Convention
+    // #92 (двухслойная архитектура) сохранена: иконки на отдельном
+    // слое поверх backdrop без blur'а — читаемость не страдает.
     val backgroundColor = if (isDark) {
-        Color(0xFF1C1C1E).copy(alpha = 0.92f)
+        Color(0xFF1C1C1E).copy(alpha = 0.78f)
     } else {
-        Color(0xFFFFFFFF).copy(alpha = 0.92f)
+        Color(0xFFFFFFFF).copy(alpha = 0.78f)
     }
     val borderTop = if (isDark) {
         Color.White.copy(alpha = 0.10f)
