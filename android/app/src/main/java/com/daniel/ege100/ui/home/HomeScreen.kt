@@ -44,6 +44,7 @@ fun HomeScreen(
     onStartMockMath: () -> Unit,
     onStartMockRus: () -> Unit,
     onFipiVariants: () -> Unit,
+    onSrsReview: () -> Unit,
     vm: HomeViewModel = viewModel(),
 ) {
     val st by vm.state.collectAsState()
@@ -132,6 +133,16 @@ fun HomeScreen(
                             },
                             solveWeakEnabled = st.hasWeakMix,
                         )
+                    }
+                    // Phase 5 Stage E3 — блок «Повторение на сегодня» после Радара.
+                    // Если карточек 0 — блок не отображается (Master prompt §1.4).
+                    if (st.srsDueCount > 0) {
+                        item("srs") {
+                            HomeSrsBlock(
+                                dueCount = st.srsDueCount,
+                                onStart = onSrsReview,
+                            )
+                        }
                     }
                     item("mock") {
                         MockExamPreviewCard(

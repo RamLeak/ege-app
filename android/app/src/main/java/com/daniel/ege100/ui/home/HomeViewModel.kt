@@ -50,6 +50,11 @@ data class HomeUiState(
     val daysUntilNextMock: Int = 28,
     val hasWeakMix: Boolean = false,
     val guards: GuardsState = GuardsState(),
+    /**
+     * Phase 5 Stage E3 — счётчик SRS-карточек на повторение. Пересчитывается
+     * в refresh(). Если 0 — HomeSrsBlock не показывается.
+     */
+    val srsDueCount: Int = 0,
 )
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
@@ -111,6 +116,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             // Phase 3 Stage FINAL — реальный расчёт через MockExamSchedule.
             val daysUntilMock = MockExamSchedule.getDaysUntilNext(ctx, profile.examDateParsed) ?: 0
 
+            // Phase 5 Stage E3 — счётчик SRS-карточек на повторение.
+            val srsDue = runCatching {
+                com.daniel.ege100.srs.SrsRepository.countDueToday(ctx)
+            }.getOrDefault(0)
+
             _state.value = _state.value.copy(
                 loading = false,
                 quote = quote,
@@ -119,6 +129,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 stats = combined,
                 daysUntilNextMock = daysUntilMock,
                 hasWeakMix = combined.any { it.attempts > 0 },
+                srsDueCount = srsDue,
             )
         }
     }

@@ -71,6 +71,7 @@ import com.daniel.ege100.ui.profile.ProfileScreen
 import com.daniel.ege100.ui.profile.ResetProgressBottomSheet
 import com.daniel.ege100.ui.profile.SettingsScreen
 import com.daniel.ege100.ui.quick.QuickTrainerScreen
+import com.daniel.ege100.ui.srs.SrsReviewScreen
 import com.daniel.ege100.ui.theme.Bg
 import com.daniel.ege100.ui.wordblank.WordBlankTrainerScreen
 import kotlinx.coroutines.launch
@@ -238,7 +239,16 @@ fun EgeApp() {
                         navController.navigate(MockExamRunnerRoute(planIndex = -1, subject = "rus", fipiVariantId = null))
                     },
                     onFipiVariants = { navController.navigate(FipiVariantsRoute) },
+                    onSrsReview = { navController.navigate(SrsReviewRoute) },
                 )
+            }
+            composable<SrsReviewRoute> {
+                SwipeBackContainer(onBack = { navController.popBackStack() }) {
+                    SrsReviewScreen(
+                        contentPadding = padding,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
             composable<JournalStubRoute> {
                 JournalScreen(

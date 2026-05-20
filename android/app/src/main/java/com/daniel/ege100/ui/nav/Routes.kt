@@ -188,3 +188,11 @@ object GeometryTrainerRoute
 
 // Phase 4 Stage P4-D4 (Convention #81) — AllTrainersRoute удалён. Тренажёры теперь
 // открываются исключительно через каталог (TrainerCatalogMapping → SubtypesScreen).
+
+/**
+ * Phase 5 Stage E3 — экран SRS-повторения. Заходим с главного по тапу на
+ * HomeSrsBlock («Начать повторение»). Внутри — Front / Back / Grade
+ * state-machine. Practice state добавится в E4.
+ */
+@Serializable
+object SrsReviewRoute

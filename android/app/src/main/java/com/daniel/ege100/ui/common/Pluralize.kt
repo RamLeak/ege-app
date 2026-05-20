@@ -27,3 +27,6 @@ fun daysWord(n: Int): String = pluralize(n, "день", "дня", "дней")
 fun problemsWord(n: Int): String = pluralize(n, "задача", "задачи", "задач")
 
 fun attemptsWord(n: Int): String = pluralize(n, "попытка", "попытки", "попыток")
+
+/** Phase 5 Stage E3 — для счётчика SRS-карточек на главном. */
+fun cardsWord(n: Int): String = pluralize(n, "карточка", "карточки", "карточек")
