@@ -140,6 +140,7 @@ fun HomeScreen(
                         item("srs") {
                             HomeSrsBlock(
                                 dueCount = st.srsDueCount,
+                                streak = st.srsStreak,
                                 onStart = onSrsReview,
                             )
                         }

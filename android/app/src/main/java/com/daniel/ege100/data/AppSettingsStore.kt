@@ -3,6 +3,7 @@ package com.daniel.ege100.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -42,6 +43,18 @@ data class AppSettings(
      * ProblemDetail/Trainer выводится tooltip, после показа = true.
      */
     val swipeHintsShown: Boolean = false,
+    /**
+     * Phase 5 Stage E4 — лимит SRS-карточек на сессию. Default 50.
+     * Диапазон 10..200 (валидируется в UI slider'е). При исчерпании за день
+     * — пользователь возвращается завтра либо ловит ошибки в тренажёрах
+     * чтобы карточек стало больше.
+     */
+    val srsDailyLimit: Int = 50,
+    /**
+     * Phase 5 Stage E4 — после Back state показывать Practice
+     * (задача из тренажёра на это же слово) перед Grade. Default ON.
+     */
+    val srsPracticeAfterCard: Boolean = true,
 )
 
 private val Context.appSettingsStore by preferencesDataStore("app_settings")
@@ -54,6 +67,8 @@ object AppSettingsStore {
     private val NOTIFY_REMINDERS = booleanPreferencesKey("notify_reminders")
     private val USE_LETTER_CHOICES = booleanPreferencesKey("use_letter_choices")
     private val SWIPE_HINTS_SHOWN = booleanPreferencesKey("swipe_hints_shown")
+    private val SRS_DAILY_LIMIT = intPreferencesKey("srs_daily_limit")
+    private val SRS_PRACTICE_AFTER_CARD = booleanPreferencesKey("srs_practice_after_card")
 
     fun settingsFlow(context: Context): Flow<AppSettings> =
         context.appSettingsStore.data.map { prefs ->
@@ -65,6 +80,8 @@ object AppSettingsStore {
                 notifyReminders = prefs[NOTIFY_REMINDERS] ?: true,
                 useLetterChoices = prefs[USE_LETTER_CHOICES] ?: true,
                 swipeHintsShown = prefs[SWIPE_HINTS_SHOWN] ?: false,
+                srsDailyLimit = (prefs[SRS_DAILY_LIMIT] ?: 50).coerceIn(10, 200),
+                srsPracticeAfterCard = prefs[SRS_PRACTICE_AFTER_CARD] ?: true,
             )
         }
 
@@ -100,6 +117,17 @@ object AppSettingsStore {
         context.appSettingsStore.edit { it[SWIPE_HINTS_SHOWN] = true }
     }
 
+    /** Phase 5 Stage E4 — лимит SRS-карточек на день (10..200). */
+    suspend fun setSrsDailyLimit(context: Context, value: Int) {
+        val clamped = value.coerceIn(10, 200)
+        context.appSettingsStore.edit { it[SRS_DAILY_LIMIT] = clamped }
+    }
+
+    /** Phase 5 Stage E4 — переключатель Practice mode после Back. */
+    suspend fun setSrsPracticeAfterCard(context: Context, value: Boolean) {
+        context.appSettingsStore.edit { it[SRS_PRACTICE_AFTER_CARD] = value }
+    }
+
     /** Stage P3-A part Д: восстановление из бэкапа. */
     suspend fun restore(context: Context, settings: AppSettings) {
         context.appSettingsStore.edit { prefs ->
@@ -110,6 +138,8 @@ object AppSettingsStore {
             prefs[NOTIFY_REMINDERS] = settings.notifyReminders
             prefs[USE_LETTER_CHOICES] = settings.useLetterChoices
             prefs[SWIPE_HINTS_SHOWN] = settings.swipeHintsShown
+            prefs[SRS_DAILY_LIMIT] = settings.srsDailyLimit.coerceIn(10, 200)
+            prefs[SRS_PRACTICE_AFTER_CARD] = settings.srsPracticeAfterCard
         }
     }
 }

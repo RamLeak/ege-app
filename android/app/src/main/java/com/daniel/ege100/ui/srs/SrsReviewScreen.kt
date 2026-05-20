@@ -43,8 +43,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.daniel.ege100.data.AppSettingsStore
+import com.daniel.ege100.data.ParonymsRepository
+import com.daniel.ege100.data.PleonasmsRepository
+import com.daniel.ege100.data.WordBlanksRepository
 import com.daniel.ege100.srs.SrsCardEntity
 import com.daniel.ege100.srs.SrsRepository
+import com.daniel.ege100.srs.SrsStreakStore
+import com.daniel.ege100.ui.common.IosTextField
+import com.daniel.ege100.ui.common.SecondaryButton
 import com.daniel.ege100.ui.common.AppleCard
 import com.daniel.ege100.ui.common.AppleProgressBar
 import com.daniel.ege100.ui.common.LargeTitleBar
@@ -81,12 +88,37 @@ sealed class SrsReviewState {
     data object Empty : SrsReviewState()
     data class Front(val cardIndex: Int) : SrsReviewState()
     data class Back(val cardIndex: Int) : SrsReviewState()
+    /**
+     * Phase 5 Stage E4 — Practice state между Back и Grade.
+     * `userInput` пуст пока пользователь не нажал «Проверить».
+     * `verdict == null` → input form; `true/false` → результат.
+     */
+    data class Practice(
+        val cardIndex: Int,
+        val userInput: String = "",
+        val verdict: Boolean? = null,
+    ) : SrsReviewState()
     data class Done(val total: Int) : SrsReviewState()
 }
+
+/**
+ * Phase 5 Stage E4 — данные тренажёра для Practice state, извлекаются
+ * lookup'ом по (kind, subtype, word) при start(). Если для карточки данные
+ * не нашлись (rare race condition), Practice пропускается → сразу Grade.
+ *
+ *   answer — что должен напечатать пользователь.
+ *   prompt — фраза-контекст ("слово с пропуском a..гитатор", или sentence).
+ */
+data class PracticeData(
+    val answer: String,
+    val prompt: String,
+)
 
 data class SrsReviewUi(
     val cards: List<SrsCardEntity> = emptyList(),
     val texts: Map<Long, SrsRepository.CardTexts> = emptyMap(),
+    val practiceByCard: Map<Long, PracticeData> = emptyMap(),
+    val practiceEnabled: Boolean = true,
     val state: SrsReviewState = SrsReviewState.Loading,
 )
 
@@ -96,31 +128,80 @@ class SrsReviewViewModel(app: Application) : AndroidViewModel(app) {
 
     private var initialized = false
 
-    fun start(limit: Int = 50) {
+    fun start() {
         if (initialized) return
         initialized = true
         viewModelScope.launch {
             val ctx = getApplication<Application>()
-            val due = runCatching { SrsRepository.getDueCards(ctx, limit) }
+            val settings = AppSettingsStore.snapshot(ctx)
+            val due = runCatching { SrsRepository.getDueCards(ctx, settings.srsDailyLimit) }
                 .getOrDefault(emptyList())
             if (due.isEmpty()) {
                 _state.value = SrsReviewUi(state = SrsReviewState.Empty)
                 return@launch
             }
-            // Preload объяснений для всех карточек одной пачкой —
-            // когда пользователь дойдёт до конкретной, текст уже в state.
             val textsMap = mutableMapOf<Long, SrsRepository.CardTexts>()
+            val practiceMap = mutableMapOf<Long, PracticeData>()
             due.forEach { card ->
                 val t = runCatching { SrsRepository.getTextsForCard(ctx, card) }
                     .getOrDefault(SrsRepository.CardTexts(null, null, null, null))
                 textsMap[card.id] = t
+
+                // Phase 5 Stage E4 — lookup тренажёрных данных для Practice.
+                if (settings.srsPracticeAfterCard) {
+                    val p = runCatching { loadPracticeData(ctx, card) }.getOrNull()
+                    if (p != null) practiceMap[card.id] = p
+                }
             }
             _state.value = SrsReviewUi(
                 cards = due,
                 texts = textsMap,
+                practiceByCard = practiceMap,
+                practiceEnabled = settings.srsPracticeAfterCard,
                 state = SrsReviewState.Front(0),
             )
         }
+    }
+
+    /**
+     * Phase 5 Stage E4 — pull данных для Practice из репозиториев тренажёров.
+     * Поддерживаются word_blank, paronym, pleonasm. Для accent возвращает
+     * null (нет компактного «напечатать ответ» для тренажёра ударений).
+     */
+    private suspend fun loadPracticeData(
+        ctx: android.content.Context,
+        card: SrsCardEntity,
+    ): PracticeData? = when (card.kind) {
+        "word_blank" -> {
+            val typeNumber = card.subtype.removePrefix("t").toIntOrNull()
+            if (typeNumber == null) null else {
+                val type = WordBlanksRepository.loadType(ctx, typeNumber)
+                val w = type?.words?.firstOrNull { it.full.equals(card.word, ignoreCase = true) }
+                if (w == null) null else PracticeData(
+                    answer = w.answer.lowercase(),
+                    prompt = "Слово с пропуском: ${w.masked.replace("..", "_")}",
+                )
+            }
+        }
+        "paronym" -> {
+            val items = ParonymsRepository.load(ctx)
+            val item = items.firstOrNull {
+                "${it.wrong_word}/${it.correct_word}".lowercase() == card.word.lowercase()
+            }
+            if (item == null) null else PracticeData(
+                answer = item.correct_word.lowercase(),
+                prompt = item.sentence,
+            )
+        }
+        "pleonasm" -> {
+            val items = PleonasmsRepository.load(ctx)
+            val item = items.firstOrNull { it.extra_word.equals(card.word, ignoreCase = true) }
+            if (item == null) null else PracticeData(
+                answer = item.extra_word.lowercase(),
+                prompt = item.sentence,
+            )
+        }
+        else -> null
     }
 
     fun showAnswer() {
@@ -129,10 +210,39 @@ class SrsReviewViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = s.copy(state = SrsReviewState.Back(front.cardIndex))
     }
 
-    fun submitGrade(grade: Int) {
+    /** Phase 5 Stage E4 — переход из Back в Practice (либо сразу в Grade если данных нет). */
+    fun startPractice() {
         val s = _state.value
         val back = s.state as? SrsReviewState.Back ?: return
-        val card = s.cards.getOrNull(back.cardIndex) ?: return
+        _state.value = s.copy(state = SrsReviewState.Practice(back.cardIndex))
+    }
+
+    fun setPracticeInput(value: String) {
+        val s = _state.value
+        val p = s.state as? SrsReviewState.Practice ?: return
+        if (p.verdict != null) return  // после проверки ввод заморожен
+        _state.value = s.copy(state = p.copy(userInput = value))
+    }
+
+    fun checkPractice() {
+        val s = _state.value
+        val p = s.state as? SrsReviewState.Practice ?: return
+        val card = s.cards.getOrNull(p.cardIndex) ?: return
+        val data = s.practiceByCard[card.id] ?: return
+        val normalized = p.userInput.trim().lowercase().replace('ё', 'е')
+        val target = data.answer.lowercase().replace('ё', 'е')
+        val isRight = normalized == target
+        _state.value = s.copy(state = p.copy(verdict = isRight))
+    }
+
+    fun submitGrade(grade: Int) {
+        val s = _state.value
+        val cardIdx = when (val cur = s.state) {
+            is SrsReviewState.Back -> cur.cardIndex
+            is SrsReviewState.Practice -> cur.cardIndex
+            else -> return
+        }
+        val card = s.cards.getOrNull(cardIdx) ?: return
         viewModelScope.launch {
             runCatching {
                 SrsRepository.submitReview(
@@ -141,8 +251,12 @@ class SrsReviewViewModel(app: Application) : AndroidViewModel(app) {
                     grade = grade,
                 )
             }
+            // Phase 5 Stage E4 (§1.7) — streak инкрементируется только на успешную оценку.
+            if (grade >= 3) {
+                runCatching { SrsStreakStore.onSuccessfulReview(getApplication()) }
+            }
         }
-        val nextIdx = back.cardIndex + 1
+        val nextIdx = cardIdx + 1
         _state.value = if (nextIdx >= s.cards.size) {
             s.copy(state = SrsReviewState.Done(s.cards.size))
         } else {
@@ -159,6 +273,9 @@ fun SrsReviewScreen(
 ) {
     LaunchedEffect(Unit) { vm.start() }
     val st by vm.state.collectAsState()
+    // Phase 5 Stage E4 — текущий streak для DoneState.
+    val srsStreak by SrsStreakStore.stateFlow(androidx.compose.ui.platform.LocalContext.current)
+        .collectAsState(initial = com.daniel.ege100.srs.SrsStreakState())
 
     Scaffold(
         topBar = {
@@ -185,13 +302,45 @@ fun SrsReviewScreen(
                     cardIndex = s.cardIndex,
                     onShowAnswer = vm::showAnswer,
                 )
-                is SrsReviewState.Back -> BackView(
-                    cards = st.cards,
-                    cardIndex = s.cardIndex,
-                    texts = st.texts,
-                    onGrade = vm::submitGrade,
+                is SrsReviewState.Back -> {
+                    val card = st.cards.getOrNull(s.cardIndex)
+                    val hasPractice = card != null &&
+                        st.practiceEnabled &&
+                        st.practiceByCard.containsKey(card.id)
+                    BackView(
+                        cards = st.cards,
+                        cardIndex = s.cardIndex,
+                        texts = st.texts,
+                        hasPractice = hasPractice,
+                        onPractice = vm::startPractice,
+                        onGrade = vm::submitGrade,
+                    )
+                }
+                is SrsReviewState.Practice -> {
+                    val card = st.cards.getOrNull(s.cardIndex)
+                    val data = card?.let { st.practiceByCard[it.id] }
+                    if (data == null) {
+                        // race condition fallback — данные исчезли, скипаем в Grade
+                        LaunchedEffect(s.cardIndex) { vm.submitGrade(3) }
+                        CenteredText("…")
+                    } else {
+                        PracticeView(
+                            cards = st.cards,
+                            cardIndex = s.cardIndex,
+                            data = data,
+                            userInput = s.userInput,
+                            verdict = s.verdict,
+                            onInputChange = vm::setPracticeInput,
+                            onCheck = vm::checkPractice,
+                            onGrade = vm::submitGrade,
+                        )
+                    }
+                }
+                is SrsReviewState.Done -> DoneState(
+                    total = s.total,
+                    streak = srsStreak.currentStreak,
+                    onBack = onBack,
                 )
-                is SrsReviewState.Done -> DoneState(total = s.total, onBack = onBack)
             }
         }
     }
@@ -202,6 +351,7 @@ private fun subtitleFor(ui: SrsReviewUi): String = when (val s = ui.state) {
     SrsReviewState.Empty -> ""
     is SrsReviewState.Front -> "${s.cardIndex + 1} из ${ui.cards.size}"
     is SrsReviewState.Back -> "${s.cardIndex + 1} из ${ui.cards.size}"
+    is SrsReviewState.Practice -> "${s.cardIndex + 1} из ${ui.cards.size} · практика"
     is SrsReviewState.Done -> "Готово · ${s.total} ${cardsWord(s.total)}"
 }
 
@@ -239,7 +389,7 @@ private fun EmptyState(onBack: () -> Unit) {
 }
 
 @Composable
-private fun DoneState(total: Int, onBack: () -> Unit) {
+private fun DoneState(total: Int, streak: Int, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "✓", fontSize = 64.sp, color = SystemGreen)
@@ -256,6 +406,15 @@ private fun DoneState(total: Int, onBack: () -> Unit) {
                 fontSize = 15.sp,
                 color = LabelSecondary,
             )
+            if (streak >= 1) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "🔥 SRS-streak: $streak ${com.daniel.ege100.ui.common.daysWord(streak)}",
+                    fontSize = 16.sp,
+                    color = SystemOrange,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             Spacer(Modifier.height(24.dp))
             PrimaryButton(text = "На главный", onClick = onBack, modifier = Modifier.fillMaxWidth())
         }
@@ -324,6 +483,8 @@ private fun BackView(
     cards: List<SrsCardEntity>,
     cardIndex: Int,
     texts: Map<Long, SrsRepository.CardTexts>,
+    hasPractice: Boolean,
+    onPractice: () -> Unit,
     onGrade: (Int) -> Unit,
 ) {
     val card = cards.getOrNull(cardIndex) ?: return
@@ -370,7 +531,107 @@ private fun BackView(
             }
             Spacer(Modifier.height(18.dp))
         }
+        if (hasPractice) {
+            SecondaryButton(
+                text = "🎯 Закрепить задачей",
+                onClick = onPractice,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+        }
         GradeRow(onGrade = onGrade)
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+/**
+ * Phase 5 Stage E4 — Practice state. Простой recall: пользователь печатает
+ * ответ (буква для word_blank, слово для paronym/pleonasm), нажимает
+ * «Проверить», видит ✓/✗ с правильным ответом, дальше выставляет Grade.
+ *
+ * Это упрощённая версия настоящего тренажёра — без auto-advance, без
+ * нескольких подвидов UI per kind. Цель — заставить пользователя
+ * проговорить ответ в голове перед самооценкой, что усиливает recall
+ * по сравнению с просто «прочитал правило → оценил себя».
+ */
+@Composable
+private fun PracticeView(
+    cards: List<SrsCardEntity>,
+    cardIndex: Int,
+    data: PracticeData,
+    userInput: String,
+    verdict: Boolean?,
+    onInputChange: (String) -> Unit,
+    onCheck: () -> Unit,
+    onGrade: (Int) -> Unit,
+) {
+    val card = cards.getOrNull(cardIndex) ?: return
+    Column(modifier = Modifier.fillMaxSize()) {
+        AppleProgressBar(
+            progress = (cardIndex + 1).toFloat() / cards.size.coerceAtLeast(1),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, bottom = 16.dp),
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Закрепи задачей",
+                    fontSize = 13.sp,
+                    color = LabelSecondary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                KindBadge(kind = card.kind)
+            }
+            Spacer(Modifier.height(14.dp))
+            AppleCard(paddingDp = 18) {
+                Column {
+                    Text(
+                        text = data.prompt,
+                        fontSize = 17.sp,
+                        color = Label,
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "Напечатай правильный ответ:",
+                        fontSize = 13.sp,
+                        color = LabelSecondary,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    IosTextField(
+                        value = userInput,
+                        onValueChange = onInputChange,
+                        placeholder = "ответ",
+                    )
+                }
+            }
+            if (verdict != null) {
+                Spacer(Modifier.height(14.dp))
+                val color = if (verdict) SystemGreen else SystemRed
+                Text(
+                    text = if (verdict) "✓ Верно!" else "✗ Правильный ответ: ${data.answer}",
+                    color = color,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+        }
+        if (verdict == null) {
+            PrimaryButton(
+                text = "Проверить",
+                onClick = onCheck,
+                enabled = userInput.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            GradeRow(onGrade = onGrade)
+        }
         Spacer(Modifier.height(20.dp))
     }
 }

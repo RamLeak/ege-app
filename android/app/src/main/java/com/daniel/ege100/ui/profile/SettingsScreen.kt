@@ -88,6 +88,11 @@ fun SettingsScreen(
     var showProviderSheet by remember { mutableStateOf(false) }
     var showModelSheet by remember { mutableStateOf(false) }
     var showKeySheet by remember { mutableStateOf(false) }
+    // Phase 5 Stage E4 — SRS settings sheets.
+    var showSrsLimitSheet by remember { mutableStateOf(false) }
+    var showSrsResetSheet by remember { mutableStateOf(false) }
+    val srsStreak by com.daniel.ege100.srs.SrsStreakStore.stateFlow(context)
+        .collectAsState(initial = com.daniel.ege100.srs.SrsStreakState())
     var showLimitSheet by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -213,6 +218,42 @@ fun SettingsScreen(
                             onChange = { v ->
                                 scope.launch { AppSettingsStore.setUseLetterChoices(context, v) }
                             },
+                        )
+                    }
+                }
+                // Phase 5 Stage E4 — секция «Повторения (SRS)».
+                item("srs_title") { SectionTitle("Повторения (SRS)") }
+                item("srs") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        AppleListRow(
+                            title = "Карточек в день",
+                            subtitle = "Лимит сессии повторения · ${settings.srsDailyLimit}",
+                            leadingEmoji = "📚",
+                            leadingTint = SystemBlueTint,
+                            onClick = { showSrsLimitSheet = true },
+                        )
+                        AppleCard(paddingDp = 4) {
+                            SwitchRow(
+                                emoji = "🎯",
+                                title = "Закреплять задачей",
+                                subtitle = "После правила — мини-задача из тренажёра",
+                                checked = settings.srsPracticeAfterCard,
+                                onChange = { v ->
+                                    scope.launch {
+                                        AppSettingsStore.setSrsPracticeAfterCard(context, v)
+                                    }
+                                },
+                            )
+                        }
+                        AppleListRow(
+                            title = "SRS-streak",
+                            subtitle = if (srsStreak.currentStreak == 0 && srsStreak.maxStreak == 0)
+                                "Ещё ни одного успешного повторения"
+                            else
+                                "${srsStreak.currentStreak} ${com.daniel.ege100.ui.common.daysWord(srsStreak.currentStreak)} · максимум ${srsStreak.maxStreak}",
+                            leadingEmoji = "🔥",
+                            leadingTint = SystemRedTint,
+                            onClick = { showSrsResetSheet = true },
                         )
                     }
                 }
@@ -356,6 +397,28 @@ fun SettingsScreen(
                 showLimitSheet = false
             },
             onDismiss = { showLimitSheet = false },
+        )
+    }
+    // Phase 5 Stage E4 — SRS sheets.
+    if (showSrsLimitSheet) {
+        SrsDailyLimitBottomSheet(
+            current = settings.srsDailyLimit,
+            onSave = { newLimit ->
+                scope.launch { AppSettingsStore.setSrsDailyLimit(context, newLimit) }
+                showSrsLimitSheet = false
+            },
+            onDismiss = { showSrsLimitSheet = false },
+        )
+    }
+    if (showSrsResetSheet) {
+        SrsStreakResetBottomSheet(
+            currentStreak = srsStreak.currentStreak,
+            maxStreak = srsStreak.maxStreak,
+            onReset = {
+                scope.launch { com.daniel.ege100.srs.SrsStreakStore.reset(context) }
+                showSrsResetSheet = false
+            },
+            onDismiss = { showSrsResetSheet = false },
         )
     }
 }

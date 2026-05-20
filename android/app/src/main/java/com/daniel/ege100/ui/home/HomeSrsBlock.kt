@@ -20,6 +20,7 @@ import com.daniel.ege100.ui.common.cardsWord
 import com.daniel.ege100.ui.theme.Label
 import com.daniel.ege100.ui.theme.LabelSecondary
 import com.daniel.ege100.ui.theme.SystemBlue
+import com.daniel.ege100.ui.theme.SystemOrange
 
 /**
  * Phase 5 Stage E3 (§1.4) — карточка «Повторение на сегодня» на главном
@@ -40,6 +41,7 @@ import com.daniel.ege100.ui.theme.SystemBlue
 @Composable
 fun HomeSrsBlock(
     dueCount: Int,
+    streak: Int = 0,
     onStart: () -> Unit,
 ) {
     AppleCard(paddingDp = 22) {
@@ -52,7 +54,17 @@ fun HomeSrsBlock(
                     fontSize = 15.sp,
                     color = LabelSecondary,
                     fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
                 )
+                // Phase 5 Stage E4 (§1.7) — SRS streak в шапке блока.
+                if (streak >= 1) {
+                    Text(
+                        text = "🔥 $streak",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = SystemOrange,
+                    )
+                }
             }
             Spacer(Modifier.height(14.dp))
             Row(
