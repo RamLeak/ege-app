@@ -118,4 +118,8 @@ dependencies {
     // Ktor — пустое подключение под Фазу 4 (AI). В Stage 1 не используется.
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
+
+    // Phase 5 Stage E1 — JUnit для юнит-тестов SrsAlgorithm (pure JVM,
+    // без эмулятора). Гонится через `./gradlew test`.
+    testImplementation(libs.junit)
 }

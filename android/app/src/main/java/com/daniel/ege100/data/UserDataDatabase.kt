@@ -10,6 +10,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.daniel.ege100.srs.SrsCardDao
+import com.daniel.ege100.srs.SrsCardEntity
 import kotlinx.serialization.Serializable
 
 /**
@@ -29,6 +31,7 @@ import kotlinx.serialization.Serializable
  *   v3 (P4-A1): mock_exam_results перестроена — отдельная строка per subject.
  *                Старые данные конвертируются в Migration 2→3.
  *   v4 (P4-A5): + ai_response_cache.
+ *   v5 (P5-E1): + srs_cards (SRS-карточки для интервальных повторений, SM-2).
  */
 
 @Entity(
@@ -136,8 +139,9 @@ data class AttemptLogRecord(
         AttemptLogEntity::class,
         MockExamResultEntity::class,
         AiResponseCacheEntity::class,
+        SrsCardEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class UserDataDatabase : RoomDatabase() {
@@ -145,6 +149,7 @@ abstract class UserDataDatabase : RoomDatabase() {
     abstract fun attemptLogDao(): AttemptLogDao
     abstract fun mockExamResultDao(): MockExamResultDao
     abstract fun aiResponseCacheDao(): AiResponseCacheDao
+    abstract fun srsCardDao(): SrsCardDao
 
     companion object {
         @Volatile
@@ -261,6 +266,52 @@ abstract class UserDataDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Phase 5 Stage E1: миграция 4→5 добавляет таблицу `srs_cards`.
+         *
+         * Ключ карточки — (word, kind, subtype) с уникальным индексом
+         * (см. Convention для SrsCardEntity). Добавляем индексы:
+         *   - index_srs_cards_word_kind_subtype (UNIQUE) — для INSERT OR IGNORE
+         *     при автосоздании карточки в `addCardOnMistake`;
+         *   - index_srs_cards_next_review_at — для запроса `getDueCards`
+         *     (`WHERE next_review_at <= now ORDER BY next_review_at ASC`);
+         *   - index_srs_cards_kind_subtype — для будущих stats / фильтров.
+         */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `srs_cards` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `word` TEXT NOT NULL,
+                        `kind` TEXT NOT NULL,
+                        `subtype` TEXT NOT NULL,
+                        `ease_factor` REAL NOT NULL DEFAULT 2.5,
+                        `interval_days` INTEGER NOT NULL DEFAULT 1,
+                        `repetitions` INTEGER NOT NULL DEFAULT 0,
+                        `created_at` INTEGER NOT NULL,
+                        `last_review_at` INTEGER,
+                        `next_review_at` INTEGER NOT NULL,
+                        `total_reviews` INTEGER NOT NULL DEFAULT 0,
+                        `total_lapses` INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_srs_cards_word_kind_subtype` " +
+                        "ON `srs_cards` (`word`, `kind`, `subtype`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_srs_cards_next_review_at` " +
+                        "ON `srs_cards` (`next_review_at`)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_srs_cards_kind_subtype` " +
+                        "ON `srs_cards` (`kind`, `subtype`)",
+                )
+            }
+        }
+
         fun get(context: Context): UserDataDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -268,7 +319,7 @@ abstract class UserDataDatabase : RoomDatabase() {
                     UserDataDatabase::class.java,
                     "user_data.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { INSTANCE = it }
             }
