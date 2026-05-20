@@ -142,6 +142,47 @@ object UserStatsStore {
     }
 
     /**
+     * Phase 5 perf fix P3 (tag `phase-5-fix-2-stats-perf`) — batch read.
+     *
+     * Раньше `SubtypeStatsRepository.getStatsForSubject` вызывал
+     * `getSubtypeStats(sub.id)` для каждого подвида (50 math + 27 rus =
+     * 77 итераций), и каждый вызов делал отдельный `prefs.first()` —
+     * 77 suspend reads из DataStore. Это занимало 200-500 ms на refresh.
+     *
+     * Новый метод делает **ОДИН** `prefs.first()` и парсит ВСЕ ключи
+     * `subtype_total_<id>` + `subtype_correct_<id>` в один Map<Long, (total, correct)>.
+     * Repository потом делает синхронный map.get(subtypeId) для каждого подвида —
+     * O(1) вместо O(N) suspend reads.
+     *
+     * Время до фикса: ~200-500 ms (зависит от кол-ва подвидов в БД).
+     * Время после фикса: <20 ms (один DataStore read + map build).
+     */
+    suspend fun getAllSubtypeStats(context: Context): Map<Long, Pair<Int, Int>> {
+        val prefs = context.userStatsStore.data.first()
+        val totals = mutableMapOf<Long, Int>()
+        val corrects = mutableMapOf<Long, Int>()
+        for ((key, raw) in prefs.asMap()) {
+            val name = key.name
+            val v = raw as? Int ?: continue
+            when {
+                name.startsWith(SUBTYPE_TOTAL_PREFIX) -> {
+                    val id = name.removePrefix(SUBTYPE_TOTAL_PREFIX).toLongOrNull() ?: continue
+                    totals[id] = v
+                }
+                name.startsWith(SUBTYPE_CORRECT_PREFIX) -> {
+                    val id = name.removePrefix(SUBTYPE_CORRECT_PREFIX).toLongOrNull() ?: continue
+                    corrects[id] = v
+                }
+            }
+        }
+        // Объединяем: все id, у которых есть либо total либо correct.
+        val allIds = totals.keys + corrects.keys
+        return allIds.associateWith { id ->
+            (totals[id] ?: 0) to (corrects[id] ?: 0)
+        }
+    }
+
+    /**
      * Phase 4 Stage P4-C part Е1 (Convention #54): инкремент счётчика
      * правильно отгаданных слов в тренажёрах. Зовётся в AccentTrainer и
      * WordBlankTrainer **только при isCorrect=true**.

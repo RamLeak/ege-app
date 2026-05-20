@@ -109,41 +109,64 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { SafetyGuardsStore.dismissEightWeek(getApplication()) }
     }
 
-    /** Зовётся из HomeScreen.LaunchedEffect(Unit) — при первом show и при возвратах. */
+    /**
+     * Зовётся из HomeScreen.LaunchedEffect(Unit) — при первом show и при возвратах.
+     *
+     * Phase 5 perf fix P3 (tag `phase-5-fix-2-stats-perf`) — batch read
+     * SubtypeStats: один `UserStatsStore.getAllSubtypeStats()` для обоих
+     * предметов вместо 77 sequential `getSubtypeStats(sub.id)` calls.
+     *
+     * `measureTimeMillis` логирует время для диагностики; в P6+ можно убрать
+     * если perf стабилен (cap ~20 ms).
+     */
     fun refresh() {
         viewModelScope.launch {
             val ctx = getApplication<Application>()
-            val profile = UserProfileStore.snapshot(ctx)
+            val totalElapsed = kotlin.system.measureTimeMillis {
+                val profile = UserProfileStore.snapshot(ctx)
 
-            val quote = QuotesRepository.getTodayQuote(ctx)
-            val math = ScorePredictor.predictMath(ctx)
-            val rus = ScorePredictor.predictRus(ctx)
-            val mathStats = SubtypeStatsRepository.getStatsForSubject(ctx, dao, "mathb", "math")
-            val rusStats = SubtypeStatsRepository.getStatsForSubject(ctx, dao, "rus", "rus")
-            val combined = mathStats + rusStats
-            // Phase 3 Stage FINAL — реальный расчёт через MockExamSchedule.
-            val daysUntilMock = MockExamSchedule.getDaysUntilNext(ctx, profile.examDateParsed) ?: 0
+                val quote = QuotesRepository.getTodayQuote(ctx)
+                val math = ScorePredictor.predictMath(ctx)
+                val rus = ScorePredictor.predictRus(ctx)
 
-            // Phase 5 Stage E3 — счётчик SRS-карточек на повторение.
-            val srsDue = runCatching {
-                com.daniel.ege100.srs.SrsRepository.countDueToday(ctx)
-            }.getOrDefault(0)
-            // Phase 5 Stage E4 — текущий SRS-streak.
-            val srsStreak = runCatching {
-                com.daniel.ege100.srs.SrsStreakStore.snapshot(ctx).currentStreak
-            }.getOrDefault(0)
+                // Phase 5 perf fix P3 — один batch read для обоих subject'ов.
+                val statsElapsed = kotlin.system.measureTimeMillis {
+                    val allStats = com.daniel.ege100.data.UserStatsStore.getAllSubtypeStats(ctx)
+                    val mathStats = SubtypeStatsRepository.getStatsForSubject(
+                        ctx, dao, "mathb", "math", preloadedStats = allStats,
+                    )
+                    val rusStats = SubtypeStatsRepository.getStatsForSubject(
+                        ctx, dao, "rus", "rus", preloadedStats = allStats,
+                    )
+                    val combined = mathStats + rusStats
+                    // Phase 3 Stage FINAL — реальный расчёт через MockExamSchedule.
+                    val daysUntilMock =
+                        MockExamSchedule.getDaysUntilNext(ctx, profile.examDateParsed) ?: 0
 
-            _state.value = _state.value.copy(
-                loading = false,
-                quote = quote,
-                mathResult = math,
-                rusResult = rus,
-                stats = combined,
-                daysUntilNextMock = daysUntilMock,
-                hasWeakMix = combined.any { it.attempts > 0 },
-                srsDueCount = srsDue,
-                srsStreak = srsStreak,
-            )
+                    // Phase 5 Stage E3 — счётчик SRS-карточек на повторение.
+                    val srsDue = runCatching {
+                        com.daniel.ege100.srs.SrsRepository.countDueToday(ctx)
+                    }.getOrDefault(0)
+                    // Phase 5 Stage E4 — текущий SRS-streak.
+                    val srsStreak = runCatching {
+                        com.daniel.ege100.srs.SrsStreakStore.snapshot(ctx).currentStreak
+                    }.getOrDefault(0)
+
+                    _state.value = _state.value.copy(
+                        loading = false,
+                        quote = quote,
+                        mathResult = math,
+                        rusResult = rus,
+                        stats = combined,
+                        daysUntilNextMock = daysUntilMock,
+                        hasWeakMix = combined.any { it.attempts > 0 },
+                        srsDueCount = srsDue,
+                        srsStreak = srsStreak,
+                    )
+                }
+                android.util.Log.d("HomePerf", "stats block: ${statsElapsed}ms")
+            }
+            android.util.Log.d("HomePerf", "refresh total: ${totalElapsed}ms")
         }
     }
 

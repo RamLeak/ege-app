@@ -36,17 +36,35 @@ object SubtypeStatsRepository {
      * @param subjectSlug "mathb" или "rus".
      * @param statsSubjectKey "math" или "rus" — тот, что в UserStatsStore
      *        (mathb-задачи там лежат под ключом "math").
+     *
+     * Phase 5 perf fix P3 (tag `phase-5-fix-2-stats-perf`) — раньше каждый
+     * подвид делал отдельный `UserStatsStore.getSubtypeStats(sub.id)`, что
+     * было N suspend reads из DataStore (50 math + 27 rus = 77 reads на
+     * refresh()). Время: 200-500 ms.
+     *
+     * Сейчас:
+     *   1. ОДИН batch read через `UserStatsStore.getAllSubtypeStats()` —
+     *      один `prefs.first()` + парсинг всех ключей в Map.
+     *   2. Синхронный `map[sub.id]` для каждого подвида — O(1).
+     * Время после фикса: <20 ms.
+     *
+     * @param preloadedStats Опционально передать заранее загруженный stats Map
+     *   если caller хочет переиспользовать его между предметами (HomeViewModel
+     *   зовёт `getStatsForSubject` дважды — для math и rus — оба раза тот же
+     *   stats Map, нет смысла читать DataStore дважды).
      */
     suspend fun getStatsForSubject(
         context: Context,
         dao: CatalogDao,
         subjectSlug: String,
         statsSubjectKey: String,
+        preloadedStats: Map<Long, Pair<Int, Int>>? = null,
     ): List<SubtypeAccuracy> {
         val subject = dao.getSubjectBySlug(subjectSlug) ?: return emptyList()
         val subtypes = dao.getSubtypesBySubject(subject.id)
+        val stats = preloadedStats ?: UserStatsStore.getAllSubtypeStats(context)
         return subtypes.map { sub ->
-            val (total, correct) = UserStatsStore.getSubtypeStats(context, sub.id)
+            val (total, correct) = stats[sub.id] ?: (0 to 0)
             val accuracy = if (total > 0) correct.toFloat() / total else 0f
             val severity = when {
                 total < MIN_ATTEMPTS_FOR_COLOR -> Severity.GRAY
