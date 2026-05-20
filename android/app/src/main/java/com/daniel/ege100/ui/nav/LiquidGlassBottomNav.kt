@@ -83,21 +83,35 @@ fun LiquidGlassBottomNav(
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Row(
+        // Phase 4 Stage P4-D7 (Convention #92) — двухслойная структура:
+        // (1) backdrop с blur+тинт, (2) иконки поверх через matchParentSize.
+        // Это критично: blur не должен применяться к иконкам — они становятся
+        // нечитаемыми. Резкие иконки на размытом фоне = настоящий iOS-glass.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .liquidGlassBackground(isDark = isDark),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
+                .clip(RoundedCornerShape(28.dp)),
         ) {
-            items.forEach { tab ->
-                LiquidGlassTabItem(
-                    tab = tab,
-                    isSelected = tab.key == selectedKey,
-                    onClick = { onTabClick(tab) },
-                )
+            // Слой 1 — размытый фон ПОЗАДИ.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .liquidGlassBackground(isDark = isDark),
+            )
+            // Слой 2 — иконки ПОВЕРХ, РЕЗКИЕ (без blur'а).
+            Row(
+                modifier = Modifier.matchParentSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                items.forEach { tab ->
+                    LiquidGlassTabItem(
+                        tab = tab,
+                        isSelected = tab.key == selectedKey,
+                        onClick = { onTabClick(tab) },
+                    )
+                }
             }
         }
     }
@@ -183,12 +197,14 @@ private fun LiquidGlassTabItem(
  */
 @Composable
 private fun Modifier.liquidGlassBackground(isDark: Boolean): Modifier {
+    // Phase 4 Stage P4-D7 (Convention #92) — blur снижен с 20f до 8f,
+    // opacity поднят с 0.75/0.78 до 0.92. Это даёт «деликатное стеклянное»
+    // ощущение без разрушения читаемости. Иконки теперь рисуются ПОВЕРХ
+    // этого фонового слоя через matchParentSize Box — они НЕ размываются.
     val backgroundColor = if (isDark) {
-        // Тёмный режим — тёмный полупрозрачный.
-        Color(0xFF1C1C1E).copy(alpha = 0.75f)
+        Color(0xFF1C1C1E).copy(alpha = 0.92f)
     } else {
-        // Светлый режим — белый полупрозрачный.
-        Color(0xFFFFFFFF).copy(alpha = 0.78f)
+        Color(0xFFFFFFFF).copy(alpha = 0.92f)
     }
     val borderTop = if (isDark) {
         Color.White.copy(alpha = 0.10f)
@@ -206,12 +222,11 @@ private fun Modifier.liquidGlassBackground(isDark: Boolean): Modifier {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 Modifier.graphicsLayer {
                     renderEffect = RenderEffect.createBlurEffect(
-                        20f, 20f,
+                        8f, 8f,
                         Shader.TileMode.CLAMP,
                     ).asComposeRenderEffect()
                 }
             } else {
-                // Android < 12 — без blur, но фон чуть плотнее для читаемости.
                 Modifier
             },
         )

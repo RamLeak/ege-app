@@ -55,16 +55,68 @@ data class PleonasmTrainerUi(
     val verdict: TapVerdict = TapVerdict.NONE,
     val tappedWord: String? = null,
     val completed: Boolean = false,
+    // Phase 4 Stage P4-D7 (Convention #93).
+    val pendingResume: com.daniel.ege100.data.TrainerProgress? = null,
 )
 
 class PleonasmTrainerViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(PleonasmTrainerUi())
     val state: StateFlow<PleonasmTrainerUi> = _state.asStateFlow()
 
+    private val trainerId = "rus_pleonasm"
+
     init {
         viewModelScope.launch {
-            val items = PleonasmsRepository.load(getApplication()).shuffled()
-            _state.value = PleonasmTrainerUi(items = items)
+            // Phase 4 Stage P4-D7 (Convention #94) — stable order.
+            val items = PleonasmsRepository.load(getApplication())
+                .sortedBy { it.problem_id ?: 0 }
+
+            val ctx = getApplication<Application>()
+            val saved = com.daniel.ege100.data.TrainerProgressStore.get(ctx, trainerId)
+            val savedValid = saved != null &&
+                saved.total == items.size &&
+                saved.position in 1 until items.size
+
+            _state.value = PleonasmTrainerUi(
+                items = items,
+                position = if (savedValid) saved!!.position else 0,
+                pendingResume = if (savedValid) saved else null,
+            )
+        }
+    }
+
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        _state.value = cur.copy(position = saved.position, pendingResume = null)
+    }
+
+    fun acceptStartOver() {
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+        }
+        _state.value = _state.value.copy(
+            position = 0,
+            verdict = TapVerdict.NONE,
+            tappedWord = null,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.items.isEmpty()) return
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.save(
+                getApplication(),
+                trainerId,
+                com.daniel.ege100.data.TrainerProgress(
+                    position = cur.position,
+                    total = cur.items.size,
+                    order = "alphabetical",
+                    indices = cur.items.indices.toList(),
+                ),
+            )
         }
     }
 
@@ -105,10 +157,14 @@ class PleonasmTrainerViewModel(app: Application) : AndroidViewModel(app) {
         val n = s.position + 1
         if (n >= s.items.size) {
             _state.value = s.copy(completed = true)
+            viewModelScope.launch {
+                com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+            }
             onCompleted(s.items.size)
             return
         }
         _state.value = s.copy(position = n, verdict = TapVerdict.NONE, tappedWord = null)
+        persistProgress()
     }
 
     private fun normalize(s: String) = s.trim('.', ',', ';', '!', '?', ':').lowercase().replace('ё', 'е')
@@ -124,6 +180,19 @@ fun PleonasmTrainerScreen(
 ) {
     val st by vm.state.collectAsState()
     var showExplanation by remember { mutableStateOf(false) }
+
+    // Phase 4 Stage P4-D7 (Convention #93) — ResumeBottomSheet.
+    val pending = st.pendingResume
+    if (pending != null) {
+        com.daniel.ege100.ui.common.ResumeBottomSheet(
+            trainerTitle = "Плеоназмы",
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
+    }
 
     TapTrainerScaffold(
         title = "Плеоназмы",

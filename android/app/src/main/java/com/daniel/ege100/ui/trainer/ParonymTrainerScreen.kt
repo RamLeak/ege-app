@@ -73,16 +73,69 @@ data class ParonymTrainerUi(
     val verdict: TapVerdict = TapVerdict.NONE,
     val selectedAnswer: String? = null,
     val completed: Boolean = false,
+    // Phase 4 Stage P4-D7 (Convention #93) — TrainerProgressStore resume.
+    val pendingResume: com.daniel.ege100.data.TrainerProgress? = null,
 )
 
 class ParonymTrainerViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(ParonymTrainerUi())
     val state: StateFlow<ParonymTrainerUi> = _state.asStateFlow()
 
+    private val trainerId = "rus_paronym"
+
     init {
         viewModelScope.launch {
-            val items = ParonymsRepository.load(getApplication()).shuffled()
-            _state.value = ParonymTrainerUi(items = items)
+            // Phase 4 Stage P4-D7 (Convention #94) — stable order. Без shuffle —
+            // иначе сохранённый position указывает на другой пароним при возврате.
+            val items = ParonymsRepository.load(getApplication())
+                .sortedBy { it.problem_id ?: 0 }
+
+            val ctx = getApplication<Application>()
+            val saved = com.daniel.ege100.data.TrainerProgressStore.get(ctx, trainerId)
+            val savedValid = saved != null &&
+                saved.total == items.size &&
+                saved.position in 1 until items.size
+
+            _state.value = ParonymTrainerUi(
+                items = items,
+                position = if (savedValid) saved!!.position else 0,
+                pendingResume = if (savedValid) saved else null,
+            )
+        }
+    }
+
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        _state.value = cur.copy(position = saved.position, pendingResume = null)
+    }
+
+    fun acceptStartOver() {
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+        }
+        _state.value = _state.value.copy(
+            position = 0,
+            verdict = TapVerdict.NONE,
+            selectedAnswer = null,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.items.isEmpty()) return
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.save(
+                getApplication(),
+                trainerId,
+                com.daniel.ege100.data.TrainerProgress(
+                    position = cur.position,
+                    total = cur.items.size,
+                    order = "alphabetical",
+                    indices = cur.items.indices.toList(),
+                ),
+            )
         }
     }
 
@@ -122,10 +175,14 @@ class ParonymTrainerViewModel(app: Application) : AndroidViewModel(app) {
         val nextPos = s.position + 1
         if (nextPos >= s.items.size) {
             _state.value = s.copy(completed = true)
+            viewModelScope.launch {
+                com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+            }
             onCompleted(s.items.size)
             return
         }
         _state.value = s.copy(position = nextPos, verdict = TapVerdict.NONE, selectedAnswer = null)
+        persistProgress()
     }
 }
 
@@ -139,6 +196,19 @@ fun ParonymTrainerScreen(
 ) {
     val st by vm.state.collectAsState()
     var showExplanation by remember { mutableStateOf(false) }
+
+    // Phase 4 Stage P4-D7 (Convention #93) — ResumeBottomSheet.
+    val pending = st.pendingResume
+    if (pending != null) {
+        com.daniel.ege100.ui.common.ResumeBottomSheet(
+            trainerTitle = "Паронимы",
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
+    }
 
     Scaffold(
         topBar = {

@@ -94,6 +94,8 @@ data class MathChoiceUi(
     val completed: Boolean = false,
     val timerEnabled: Boolean = false,
     val timeLeftMs: Long = 5000L,
+    // Phase 4 Stage P4-D7 (Convention #93) — TrainerProgressStore resume.
+    val pendingResume: com.daniel.ege100.data.TrainerProgress? = null,
 )
 
 abstract class MathChoiceViewModel(app: Application) : AndroidViewModel(app) {
@@ -103,6 +105,74 @@ abstract class MathChoiceViewModel(app: Application) : AndroidViewModel(app) {
     abstract val trainerKind: String   // "math"
     abstract val subjectSlug: String   // "math"
     abstract val typeNumber: Int
+
+    /** Phase 4 Stage P4-D7 (Convention #93) — stable trainerId. */
+    protected fun trainerId(): String = "math_$trainerKind"
+
+    /**
+     * Phase 4 Stage P4-D7 (Convention #94) — вызывается каждым подклассом после
+     * установки questions (в стабильном порядке, БЕЗ shuffle). Загружает saved
+     * прогресс из TrainerProgressStore и устанавливает pendingResume если есть.
+     */
+    protected suspend fun applyResumeIfAvailable() {
+        val ctx = getApplication<Application>()
+        val items = _state.value.questions
+        if (items.isEmpty()) return
+        val saved = com.daniel.ege100.data.TrainerProgressStore.get(ctx, trainerId())
+        val savedValid = saved != null &&
+            saved.total == items.size &&
+            saved.position in 1 until items.size
+        if (savedValid) {
+            _state.value = _state.value.copy(
+                position = saved!!.position,
+                pendingResume = saved,
+            )
+        }
+    }
+
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        _state.value = cur.copy(position = saved.position, pendingResume = null)
+    }
+
+    fun acceptStartOver() {
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId())
+        }
+        _state.value = _state.value.copy(
+            position = 0,
+            verdict = TapVerdict.NONE,
+            selectedOption = null,
+            timeLeftMs = 5000L,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.questions.isEmpty()) return
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.save(
+                getApplication(),
+                trainerId(),
+                com.daniel.ege100.data.TrainerProgress(
+                    position = cur.position,
+                    total = cur.questions.size,
+                    order = "alphabetical",
+                    indices = cur.questions.indices.toList(),
+                ),
+            )
+        }
+    }
+
+    protected fun persistProgressInternal() = persistProgress()
+
+    protected fun clearProgressOnComplete() {
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId())
+        }
+    }
 
     fun answer(picked: String) {
         val s = _state.value
@@ -137,10 +207,12 @@ abstract class MathChoiceViewModel(app: Application) : AndroidViewModel(app) {
         val n = s.position + 1
         if (n >= s.questions.size) {
             _state.value = s.copy(completed = true)
+            clearProgressOnComplete()
             onCompleted(s.questions.size)
             return
         }
         _state.value = s.copy(position = n, verdict = TapVerdict.NONE, selectedOption = null, timeLeftMs = 5000L)
+        persistProgressInternal()
     }
 
     fun toggleTimer() {
@@ -186,6 +258,19 @@ fun MathChoiceTrainerScreen(
                 vm.tickTimer(100)
             }
         }
+    }
+
+    // Phase 4 Stage P4-D7 (Convention #93) — ResumeBottomSheet для всех 5 math.
+    val pending = st.pendingResume
+    if (pending != null) {
+        com.daniel.ege100.ui.common.ResumeBottomSheet(
+            trainerTitle = title,
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
     }
 
     Scaffold(
@@ -409,7 +494,9 @@ class TrigTrainerViewModel(app: Application) : MathChoiceViewModel(app) {
                     )
                 }
             }
-            _state.value = MathChoiceUi(questions = questions.shuffled())
+            // Phase 4 Stage P4-D7 (Convention #94) — stable order (без shuffle).
+            _state.value = MathChoiceUi(questions = questions)
+            applyResumeIfAvailable()
         }
     }
 
@@ -438,7 +525,8 @@ class ShortMultTrainerViewModel(app: Application) : MathChoiceViewModel(app) {
                     distractors = distractors,
                 )
             }
-            _state.value = MathChoiceUi(questions = questions.shuffled())
+            _state.value = MathChoiceUi(questions = questions)
+            applyResumeIfAvailable()
         }
     }
 }
@@ -460,7 +548,8 @@ class LogPowerTrainerViewModel(app: Application) : MathChoiceViewModel(app) {
                     distractors = distractors,
                 )
             }
-            _state.value = MathChoiceUi(questions = questions.shuffled())
+            _state.value = MathChoiceUi(questions = questions)
+            applyResumeIfAvailable()
         }
     }
 }
@@ -482,7 +571,8 @@ class DerivativesTrainerViewModel(app: Application) : MathChoiceViewModel(app) {
                     distractors = distractors,
                 )
             }
-            _state.value = MathChoiceUi(questions = questions.shuffled())
+            _state.value = MathChoiceUi(questions = questions)
+            applyResumeIfAvailable()
         }
     }
 }
@@ -504,7 +594,8 @@ class GeometryTrainerViewModel(app: Application) : MathChoiceViewModel(app) {
                     distractors = distractors,
                 )
             }
-            _state.value = MathChoiceUi(questions = questions.shuffled())
+            _state.value = MathChoiceUi(questions = questions)
+            applyResumeIfAvailable()
         }
     }
 }

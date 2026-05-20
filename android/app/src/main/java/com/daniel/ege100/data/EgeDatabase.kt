@@ -33,15 +33,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SolutionEntity::class,
         TrainerExplanationEntity::class,
     ],
-    // Phase 4 Stage P4-D5 fix (Convention #86) — бамп с 3 до 4 БЕЗ migration,
-    // чтобы fallbackToDestructiveMigration перетащил свежий corpus.db из asset'а.
-    // Phase 4 Stage P4-D6 (Convention #91) — бамп с 4 до 5 БЕЗ migration: в asset
-    // добавлено ещё +60 pre-gen объяснений (304 → 364).
-    // Phase 4 Stage P4-D6 ночная сессия (Convention #91) — бамп с 5 до 6 БЕЗ
-    // migration: pre-gen вырос до 573 (+209 за ночь): math полностью закрыт
-    // (37), paronyms 28, pleonasms 27, t12 30, plus добавления в t10/t11.
-    // Тот же destructive-recreate паттерн.
-    version = 6,
+    // Phase 4 Stage P4-D5 fix (Convention #86) — бамп с 3 до 4.
+    // Phase 4 Stage P4-D6 (Convention #91) — бамп с 4 до 5 (+60 объяснений).
+    // Phase 4 Stage P4-D6 ночная (Convention #91) — бамп с 5 до 6 (+209 объяснений).
+    // Phase 4 Stage P4-D7 (Convention #95) — бамп с 6 до 7 (+179 объяснений за ночь):
+    // pre-gen вырос до 752. Распределение: 229 accent + 327 word_blank (t9 105,
+    // t10 148, t11 119, t12 60) + 57 paronyms + 57 pleonasms + 37 math.
+    // Тот же destructive-recreate паттерн (Convention #86).
+    version = 7,
     exportSchema = true,
 )
 abstract class EgeDatabase : RoomDatabase() {

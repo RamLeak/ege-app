@@ -103,18 +103,77 @@ data class CollocationTrainerUi(
     val step: CollocationStep = CollocationStep.SelectPhrase,
     val verdict: TapVerdict = TapVerdict.NONE,
     val completed: Boolean = false,
+    // Phase 4 Stage P4-D7 (Convention #93) — TrainerProgressStore resume.
+    val pendingResume: com.daniel.ege100.data.TrainerProgress? = null,
 )
 
 class WordCollocationTrainerViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(CollocationTrainerUi())
     val state: StateFlow<CollocationTrainerUi> = _state.asStateFlow()
 
+    private val trainerId = "rus_collocation"
+
     init {
         viewModelScope.launch {
+            // Phase 4 Stage P4-D7 (Convention #94) — stable order (по problem_id),
+            // НЕТ shuffle. Иначе сохранённый position указывает на другую задачу
+            // при следующем заходе.
             val items = CollocationsRepository.load(getApplication())
                 .filter { it.items.size == 5 && it.correct_answers.isNotEmpty() }
-                .shuffled()
-            _state.value = CollocationTrainerUi(items = items)
+                .sortedBy { it.problem_id ?: 0 }
+
+            val ctx = getApplication<Application>()
+            val saved = com.daniel.ege100.data.TrainerProgressStore.get(ctx, trainerId)
+            val savedValid = saved != null &&
+                saved.total == items.size &&
+                saved.position in 1 until items.size
+
+            _state.value = CollocationTrainerUi(
+                items = items,
+                position = if (savedValid) saved!!.position else 0,
+                pendingResume = if (savedValid) saved else null,
+            )
+        }
+    }
+
+    fun acceptResume() {
+        val cur = _state.value
+        val saved = cur.pendingResume ?: return
+        _state.value = cur.copy(
+            position = saved.position,
+            pendingResume = null,
+        )
+    }
+
+    fun acceptStartOver() {
+        val cur = _state.value
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+        }
+        _state.value = cur.copy(
+            position = 0,
+            selectedIndex = null,
+            userInput = "",
+            step = CollocationStep.SelectPhrase,
+            verdict = TapVerdict.NONE,
+            pendingResume = null,
+        )
+    }
+
+    private fun persistProgress() {
+        val cur = _state.value
+        if (cur.items.isEmpty()) return
+        viewModelScope.launch {
+            com.daniel.ege100.data.TrainerProgressStore.save(
+                getApplication(),
+                trainerId,
+                com.daniel.ege100.data.TrainerProgress(
+                    position = cur.position,
+                    total = cur.items.size,
+                    order = "alphabetical",
+                    indices = cur.items.indices.toList(),
+                ),
+            )
         }
     }
 
@@ -166,6 +225,11 @@ class WordCollocationTrainerViewModel(app: Application) : AndroidViewModel(app) 
         val n = s.position + 1
         if (n >= s.items.size) {
             _state.value = s.copy(completed = true)
+            // Phase 4 Stage P4-D7 (Convention #93) — после прохождения полностью
+            // ↓ сброс прогресса, чтобы следующий заход начинался с нуля.
+            viewModelScope.launch {
+                com.daniel.ege100.data.TrainerProgressStore.clear(getApplication(), trainerId)
+            }
             onCompleted(s.items.size)
             return
         }
@@ -176,6 +240,7 @@ class WordCollocationTrainerViewModel(app: Application) : AndroidViewModel(app) 
             step = CollocationStep.SelectPhrase,
             verdict = TapVerdict.NONE,
         )
+        persistProgress()
     }
 
     private fun recordAttempt(current: CollocationItem, isCorrect: Boolean) {
@@ -222,6 +287,20 @@ fun WordCollocationTrainerScreen(
         if (st.step == CollocationStep.InputCorrection) {
             runCatching { focusRequester.requestFocus() }
         }
+    }
+
+    // Phase 4 Stage P4-D7 (Convention #93) — ResumeBottomSheet при наличии
+    // сохранённого прогресса.
+    val pending = st.pendingResume
+    if (pending != null) {
+        com.daniel.ege100.ui.common.ResumeBottomSheet(
+            trainerTitle = "Словосочетания",
+            savedPosition = pending.position,
+            total = pending.total,
+            onResume = { vm.acceptResume() },
+            onStartOver = { vm.acceptStartOver() },
+            onDismiss = { vm.acceptStartOver() },
+        )
     }
 
     Scaffold(
@@ -300,7 +379,10 @@ fun WordCollocationTrainerScreen(
                     IosTextField(
                         value = st.userInput,
                         onValueChange = vm::updateInput,
-                        placeholder = "например: ${current.correct_answers.first()}",
+                        // Phase 4 Stage P4-D7 (Convention #93) — плейсхолдер
+                        // НЕ должен подсказывать ответ. Был "например: туфель"
+                        // → стал нейтральный "...".
+                        placeholder = "...",
                         modifier = Modifier.focusRequester(focusRequester),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
