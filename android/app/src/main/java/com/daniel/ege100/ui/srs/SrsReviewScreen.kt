@@ -2,11 +2,14 @@ package com.daniel.ege100.ui.srs
 
 import android.app.Application
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -392,7 +395,16 @@ private fun EmptyState(onBack: () -> Unit) {
 private fun DoneState(total: Int, streak: Int, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "✓", fontSize = 64.sp, color = SystemGreen)
+            // Phase 5 Stage E5 polish — анимация ✓ scale-bounce при появлении.
+            AnimatedVisibility(
+                visible = true,
+                enter = scaleIn(
+                    spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium),
+                    initialScale = 0.3f,
+                ) + fadeIn(tween(280)),
+            ) {
+                Text(text = "✓", fontSize = 64.sp, color = SystemGreen)
+            }
             Spacer(Modifier.height(16.dp))
             Text(
                 text = "Готово!",
@@ -408,12 +420,21 @@ private fun DoneState(total: Int, streak: Int, onBack: () -> Unit) {
             )
             if (streak >= 1) {
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "🔥 SRS-streak: $streak ${com.daniel.ege100.ui.common.daysWord(streak)}",
-                    fontSize = 16.sp,
-                    color = SystemOrange,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                // Phase 5 Stage E5 polish — анимация streak бейджа (slide + scale).
+                AnimatedVisibility(
+                    visible = true,
+                    enter = scaleIn(
+                        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
+                        initialScale = 0.6f,
+                    ) + fadeIn(tween(360)),
+                ) {
+                    Text(
+                        text = "🔥 SRS-streak: $streak ${com.daniel.ege100.ui.common.daysWord(streak)}",
+                        fontSize = 16.sp,
+                        color = SystemOrange,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
             Spacer(Modifier.height(24.dp))
             PrimaryButton(text = "На главный", onClick = onBack, modifier = Modifier.fillMaxWidth())

@@ -156,4 +156,53 @@ object SrsRepository {
     suspend fun clearAll(context: Context) {
         UserDataDatabase.get(context).srsCardDao().deleteAll()
     }
+
+    /** Phase 5 Stage E5 — для BackupSnapshot: дамп всех карточек в Record-форме. */
+    suspend fun snapshot(context: Context): List<SrsCardRecord> {
+        val all = UserDataDatabase.get(context).srsCardDao().getAll()
+        return all.map { e ->
+            SrsCardRecord(
+                word = e.word,
+                kind = e.kind,
+                subtype = e.subtype,
+                easeFactor = e.easeFactor,
+                intervalDays = e.intervalDays,
+                repetitions = e.repetitions,
+                createdAt = e.createdAt,
+                lastReviewAt = e.lastReviewAt,
+                nextReviewAt = e.nextReviewAt,
+                totalReviews = e.totalReviews,
+                totalLapses = e.totalLapses,
+            )
+        }
+    }
+
+    /**
+     * Phase 5 Stage E5 — восстанавливает карточки из бэкапа. Полная замена:
+     * сначала deleteAll, потом INSERT IGNORE каждой записи (с новым id —
+     * autoGenerate). Если в JSON две записи с одинаковым (word, kind, subtype)
+     * — UNIQUE INDEX оставит первую.
+     */
+    suspend fun restore(context: Context, records: List<SrsCardRecord>) {
+        val dao = UserDataDatabase.get(context).srsCardDao()
+        dao.deleteAll()
+        records.forEach { r ->
+            dao.insertIgnore(
+                SrsCardEntity(
+                    id = 0,
+                    word = r.word,
+                    kind = r.kind,
+                    subtype = r.subtype,
+                    easeFactor = r.easeFactor,
+                    intervalDays = r.intervalDays,
+                    repetitions = r.repetitions,
+                    createdAt = r.createdAt,
+                    lastReviewAt = r.lastReviewAt,
+                    nextReviewAt = r.nextReviewAt,
+                    totalReviews = r.totalReviews,
+                    totalLapses = r.totalLapses,
+                ),
+            )
+        }
+    }
 }

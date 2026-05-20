@@ -1,5 +1,11 @@
 package com.daniel.ege100.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,23 +73,34 @@ fun HomeSrsBlock(
                 }
             }
             Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+            // Phase 5 Stage E5 polish — анимация появления счётчика
+            // (scaleIn 0.7 spring + fadeIn) — лёгкий «pop» когда блок
+            // впервые рендерится после refresh.
+            AnimatedVisibility(
+                visible = true,
+                enter = scaleIn(
+                    spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
+                    initialScale = 0.7f,
+                ) + fadeIn(tween(280)),
             ) {
-                Text(
-                    text = dueCount.toString(),
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SystemBlue,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = cardsWord(dueCount),
-                    fontSize = 17.sp,
-                    color = Label,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = dueCount.toString(),
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SystemBlue,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = cardsWord(dueCount),
+                        fontSize = 17.sp,
+                        color = Label,
+                    )
+                }
             }
             Spacer(Modifier.height(18.dp))
             PrimaryButton(

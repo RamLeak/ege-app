@@ -50,16 +50,18 @@ data class BackupSnapshot(
     // Phase 4 Stage B3: aiSettings (БЕЗ API ключей — Convention #40).
     // aiResponseCache НЕ в бэкапе — можно восстановить запросами, не критично.
     val aiSettings: AiSettings = AiSettings(),
+    // Phase 5 Stage E5: SRS-стейт (карточки + streak). Старые бэкапы v1.0-v1.8
+    // парсятся OK благодаря default-значениям + ignoreUnknownKeys.
+    val srsStreak: com.daniel.ege100.srs.SrsStreakState = com.daniel.ege100.srs.SrsStreakState(),
+    val srsCards: List<com.daniel.ege100.srs.SrsCardRecord> = emptyList(),
 ) {
     companion object {
-        // Phase 4 Stage P4-D (Convention #77) — v1.8.
-        // Добавлено поле UserStatsSnapshot.trainersCompleted (Set<String> = empty).
-        // Хранит имена пройденных тренажёров (paronym/pleonasm/grammar/math_trig/...).
-        // Старые бэкапы v1.0-v1.7 парсятся OK (default + ignoreUnknownKeys).
-        const val CURRENT_VERSION = "1.8"
+        // Phase 5 Stage E5 — v1.9. Добавлены поля srsStreak + srsCards.
+        // Старые бэкапы v1.0-v1.8 парсятся OK (default + ignoreUnknownKeys).
+        const val CURRENT_VERSION = "1.9"
         /** Версии, которые мы можем восстановить (forward-compat). */
         private val SUPPORTED_VERSIONS = setOf(
-            "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8",
+            "1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9",
         )
         fun isSupported(version: String): Boolean = version in SUPPORTED_VERSIONS
     }
@@ -86,6 +88,9 @@ object BackupRepository {
             val installDate = MockExamSchedule.peekInstallDate(context)?.toString()
             val guards = SafetyGuardsStore.snapshot(context)
             val aiSettings = AiSettingsStore.snapshot(context)
+            // Phase 5 Stage E5 — SRS снепшоты.
+            val srsStreak = com.daniel.ege100.srs.SrsStreakStore.snapshot(context)
+            val srsCards = com.daniel.ege100.srs.SrsRepository.snapshot(context)
             val snapshot = BackupSnapshot(
                 version = BackupSnapshot.CURRENT_VERSION,
                 exportedAt = Instant.now().toString(),
@@ -105,6 +110,8 @@ object BackupRepository {
                 installDate = installDate,
                 guardsState = guards,
                 aiSettings = aiSettings,
+                srsStreak = srsStreak,
+                srsCards = srsCards,
             )
             json.encodeToString(BackupSnapshot.serializer(), snapshot)
         }
@@ -163,6 +170,9 @@ object BackupRepository {
                 SafetyGuardsStore.restore(context, snapshot.guardsState)
                 // Phase 4 B3: aiSettings без ключей.
                 AiSettingsStore.restore(context, snapshot.aiSettings)
+                // Phase 5 Stage E5: SRS-карточки + streak.
+                com.daniel.ege100.srs.SrsStreakStore.restore(context, snapshot.srsStreak)
+                com.daniel.ege100.srs.SrsRepository.restore(context, snapshot.srsCards)
                 ImportResult.Success(snapshot.exportedAt)
             } catch (e: Throwable) {
                 ImportResult.Error(e.message ?: "Неизвестная ошибка")
@@ -196,5 +206,8 @@ object BackupRepository {
         // API ключи также сбрасываем — пользователь "сбрасывает прогресс",
         // ключи привязаны к нему, не к устройству на новом начале.
         SecureKeyStore(context).clearAll()
+        // Phase 5 Stage E5 — SRS-карточки + streak.
+        userDb.srsCardDao().deleteAll()
+        com.daniel.ege100.srs.SrsStreakStore.reset(context)
     }
 }

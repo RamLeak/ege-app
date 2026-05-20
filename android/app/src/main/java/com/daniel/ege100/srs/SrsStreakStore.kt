@@ -104,4 +104,13 @@ object SrsStreakStore {
             prefs.remove(LAST_DATE)
         }
     }
+
+    /** Phase 5 Stage E5 — BackupSnapshot integration. */
+    suspend fun restore(context: Context, state: SrsStreakState) {
+        context.srsStreakStore.edit { prefs ->
+            prefs[CURRENT] = state.currentStreak
+            prefs[MAX] = state.maxStreak
+            state.lastReviewDate?.let { prefs[LAST_DATE] = it }
+        }
+    }
 }
