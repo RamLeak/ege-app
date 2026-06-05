@@ -84,3 +84,5 @@ parser/fipi-recon-archive/
 
 # Большие сырые HTML архивы — оставляем recon-sdamgia/ для дебага, но если разрастётся:
 # parser/recon-sdamgia/  # раскомментируй если папка станет >5 МБ
+# Экспорт math для Claude.ai (генерится parser/scrapers/export_math_for_claude.py) — не в репо.
+exports/
